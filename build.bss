@@ -1,0 +1,38 @@
+print("~nBuilding {"#"}~n~n");
+
+this = {
+    src = quoteit(getfiles("#\src\**\*.c")),
+    objs = {
+        ""
+    },
+    libs = {
+        ""
+    },
+};
+
+exePath = "#\builds\main.exe";
+
+if hasflag("-build")
+{
+    compiler = "cl";
+
+    includeArg = "/I" + "src";
+    outputName = "/Fe~"{exePath}~"";
+    objFolder = "/Fo~"{"#\builds/"}~"";
+    
+    command = "{compiler} /Zi {includeArg} src\tests\main.c {outputName} {objFolder} /LARGEADDRESSAWARE";
+    output = run command;
+
+    // for some BS reason msvc c compiler dumps errors in the stdout not stderr?
+    print("{output.out}~n");
+
+    deleteObjsCommand = run "del ~"{"#\builds\*.obj"}~"";
+    print("{deleteObjsCommand}");
+}
+
+if hasflag("-test")
+{
+    print("{(run "~"{exePath}~"").out}");
+}
+
+print("~nFinished Building {"#"}~n");
