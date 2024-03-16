@@ -20,7 +20,7 @@ if hasflag("-build")
     outputName = "/Fe~"{exePath}~"";
     objFolder = "/Fo~"{"#\builds/"}~"";
     
-    command = "{compiler} /Zi {includeArg} src\tests\main.c {outputName} {objFolder} /LARGEADDRESSAWARE";
+    command = "{compiler} /Zi {includeArg} src\tests\main.c {outputName} {objFolder} /DBUILD_CONSOLE_APP";
     output = run command;
 
     // for some BS reason msvc c compiler dumps errors in the stdout not stderr?

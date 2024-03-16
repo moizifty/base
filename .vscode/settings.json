@@ -1,0 +1,13 @@
+{
+    "files.associations": {
+        "*.amp": "jai",
+        "*.bss": "csharp",
+        "*.h": "c",
+        "vector": "c",
+        "xhash": "c",
+        "xstring": "c",
+        "xutility": "c",
+        "chrono": "c",
+        "utility": "c"
+    }
+}

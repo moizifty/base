@@ -3,5 +3,7 @@
 
 #include "baseMemory.c"
 #include "baseThreads.c"
+#include "baseStrings.c"
+#include "baseCore.c"
 
 #endif

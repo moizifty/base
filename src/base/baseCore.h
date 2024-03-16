@@ -20,6 +20,64 @@
 // Bitwise
 #define BASE_SET_FLAG(n, f)    ((n) |= (f));
 
+// memory
 #define BASE_MEMSET memset
 #define BASE_MEMZERO(DEST, SZ) BASE_MEMSET((DEST), 0, (SZ))
+
+// lists, and stuff
+#define CheckNull(p) ((p)==0)
+#define SetNull(p) ((p)=0)
+
+#define BaseDllNodeInsertEx(f, l, p, n, prev, next)  \
+((CheckNull(f)) ? ((f) = (l) = (n), (n)->prev = (n)->next = null) \
+: ((CheckNull(p)) ? ((n)->next = (f), (n)->prev = null, (f)->prev = (n), (f) = (n)) \
+: ((!CheckNull((p)->next)) ? (p)->next->prev = (n) : 0), ((n)->next = (p)->next, (n)->prev = (p), (p)->next = (n), (((p) == (l)) ? (l) = (n) : 0))))
+
+#define BaseDllNodeInsert(f, l, p, n)   BaseDllNodeInsertEx(f, l, p, n, prev, next)
+#define BaseDllNodePushLast(f, l, n)    BaseDllNodeInsertEx(f, l, l, n, prev, next)
+#define BaseDllNodePushFirst(f, l, n)   BaseDllNodeInsertEx(l, f, f, n, next, prev)
+
+#define BASE_CREATE_LL_STRUCT_EX(NAME, NODENAME, ELEM) \
+typedef struct NODENAME NODENAME; \
+typedef struct NAME NAME; \
+typedef struct NODENAME \
+{ \
+	NODENAME *next; \
+	NODENAME *prev; \
+	ELEM val; \
+}NODENAME; \
+ \
+typedef struct NAME \
+{ \
+	NODENAME *first; \
+	NODENAME *last; \
+	u64 len; \
+	u64 totalSize; \
+}NAME; \
+void NAME##PushNodeLast(NAME *l, NODENAME *node) \
+{ \
+	BaseDllNodePushLast(l->first, l->first, node); \
+	l->len += 1; \
+	l->totalSize += l->len * sizeof(node->val); \
+} \
+void NAME##PushNodeFirst(NAME *l, NODENAME *node) \
+{ \
+	BaseDllNodePushFirst(l->first, l->first, node); \
+	l->len += 1; \
+	l->totalSize += l->len * sizeof(node->val); \
+} \
+void NAME##InsertNode(NAME *l, NODENAME *prev, NODENAME *node) \
+{ \
+	BaseDllNodeInsert(l->first, l->first, prev, node); \
+	l->len += 1; \
+	l->totalSize += l->len * sizeof(node->val); \
+} \
+
+#define BASE_CREATE_LL_STRUCT(NAME, ELEM)   BASE_CREATE_LL_STRUCT_EX(NAME, NAME##Node, ELEM)
+
+
+// program entry related
+typedef void(*ProgramMainFunc)(void);
+
+void BaseMainThreadEntry(ProgramMainFunc programMain, u64 argc, u8 **argv);
 #endif

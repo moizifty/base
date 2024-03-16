@@ -5,13 +5,37 @@
 
 #include "..\base\base.c"
 #include "..\os\core\win32\osCoreWin32.c"
+#include "..\os\core\osEntryPoint.c"
 
-int main(void)
+BASE_CREATE_LL_STRUCT(IntList, int);
+
+void ProgramMain(void)
 {
-	BaseThreadCtx ctx = baseThreadsCreateCtx();
-	baseThreadsSetCtx(&ctx);
-
 	BaseArena *arena = baseArenaAlloc(BASE_GIGABYTES(64));
 
-	return 0;
+	BaseStringBuilder builder = baseStringsCreateSB(arena, 2);
+
+	baseStringsSBAppendCStr(&builder, "Hii ", -1);
+	baseStringsSBAppendFmt(&builder, "everyone i am %d years old", 90);
+
+	printf("%s\n", builder.data);
+
+
+	IntListNode *first = NULL;
+	IntListNode *last = NULL;
+
+	for(int i = 0; i < 10; i++)
+	{
+		IntListNode *m = baseArenaPush(arena, sizeof(IntListNode));
+		m->val = i;
+
+		BaseDllNodeInsert(first, last, last, m);
+	}
+	
+	
+	for(int i = 0; i < 10; i++)
+	{
+		IntListNode *m = baseArenaPush(arena, sizeof(IntListNode));
+		m->val = i + 10;
+	}
 }
