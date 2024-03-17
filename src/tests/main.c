@@ -12,15 +12,6 @@ BASE_CREATE_LL_DECLS_DEFS(IntList, int);
 void ProgramMain(void)
 {
 	BaseArena *generalArena = baseArenaAlloc(BASE_GIGABYTES(2));
-	BaseArena *builderArena = baseArenaAlloc(BASE_GIGABYTES(2));
-	BaseStringBuilder builder = baseStringsCreateSB(builderArena, 2);
-
-	str8 s = baseStringsPushStr8Fmt(generalArena, "Hi i am %d years old\n", 9001);
-	baseStringsSBAppendCStr(&builder, "Hii ", -1);
-	baseStringsSBAppendFmt(&builder, "everyone i am %d years old\n", 90);
-	baseStringsSBAppendStr8(&builder, s);
-
-	printf("%s\n", builder.data);
 
 	IntList list = {0};
 
@@ -44,6 +35,4 @@ void ProgramMain(void)
 	printf("%s\n%s\n", output.data, errput.data);
 
 	baseArenaFree(generalArena);
-	baseArenaFree(builderArena);
-
 }

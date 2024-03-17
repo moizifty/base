@@ -1,6 +1,7 @@
 #ifndef BASE_CORE_H
 #define BASE_CORE_H
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -17,8 +18,26 @@
 #define BASE_ARRAY_SIZE(ARR)  ((sizeof(ARR)) / (sizeof((ARR[0]))))
 #define BASE_MAX(A, B)  (((A) > (B)) ? (A) : (B))
 
+#define BASE_UNUSED_PARAM(P)	((void)(P))
+
 // Bitwise
 #define BASE_SET_FLAG(n, f)    ((n) |= (f));
+
+// printing
+#define BASE_TERMINAL_ESC_CODE   			"\033"
+#define BASE_TERMINAL_RESET_CODE   			TERMINAL_ESC_CODE "[0m"
+#define BASE_TERMINAL_BOLD_CODE   			TERMINAL_ESC_CODE "[1m"
+#define BASE_TERMINAL_UNDERLINE_CODE   		TERMINAL_ESC_CODE "[4m"
+
+#define BASE_TERMINAL_FG_RED_CODE  		TERMINAL_ESC_CODE "[31m"
+#define BASE_TERMINAL_FG_BLUE_CODE  		TERMINAL_ESC_CODE "[34m"
+#define BASE_TERMINAL_FG_ORANGE_1_CODE  	TERMINAL_ESC_CODE "[38;2;255;127;80m"
+#define BASE_TERMINAL_FG_GREEN_CODE  		TERMINAL_ESC_CODE "[38;2;156;254;220m"
+
+#define TERMINAL_BG_RED_CODE  			TERMINAL_ESC_CODE "[41m"
+
+#define baseColPrintf(FMT,...) (baseColFprintf(stdout, FMT, ##__VA_ARGS__))
+#define baseColEPrintf(FMT,...) (baseColFprintf((stderr), (FMT), ##__VA_ARGS__))
 
 // memory
 #define BASE_MEMCPY memcpy
@@ -113,5 +132,5 @@ BASE_CREATE_LL_DEFS_EX(NAME, NAME##Node, ELEM) \
 // program entry related
 typedef void(*ProgramMainFunc)(void);
 
-void BaseMainThreadEntry(ProgramMainFunc programMain, u64 argc, u8 **argv);
+void BaseMainThreadEntry(ProgramMainFunc programMain, i64 argc, i8 **argv);
 #endif

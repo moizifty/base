@@ -27,10 +27,10 @@ BaseArenaTemp baseTempBegin(BaseArena **conflictsToCheck, u64 count)
     BaseArenaTemp temp = {0};
     BaseThreadCtx *ctx = baseThreadsGetCtx();
 
-    for(int i = 0; i < BASE_THREADS_NUM_ARENAS; i++)
+    for(u64 i = 0; i < BASE_THREADS_NUM_ARENAS; i++)
     {
         bool isConflicting = false;
-        for(int c = 0; c < count; c++)
+        for(u64 c = 0; c < count; c++)
         {
             BaseArena *conflict = conflictsToCheck[c];
             if(conflict == ctx->scratchArenas[i])

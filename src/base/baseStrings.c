@@ -42,7 +42,7 @@ void Str8ListPushInsert(BaseArena *arena, Str8List *l, Str8ListNode *prev, str8 
 	Str8ListInsertNode(l, prev, n);
 }
 
-void Str8ListPushLastFmt(BaseArena *arena, Str8List *l, const u8 *fmt, ...)
+void Str8ListPushLastFmt(BaseArena *arena, Str8List *l, const i8 *fmt, ...)
 {
     va_list list;
     va_start(list, fmt);
@@ -118,22 +118,22 @@ str8 baseStringsPushStr8Copy(BaseArena *arena, str8 str)
 
     return s;
 }
-str8 baseStringsPushStr8FmtV(BaseArena *arena, const u8 *fmt, va_list args)
+str8 baseStringsPushStr8FmtV(BaseArena *arena, const i8 *fmt, va_list args)
 {
     va_list list;
     va_copy(list, args);
 
     char tempBuf[1];
-    i64 numWritten = vsnprintf(tempBuf, 1, fmt, list);
+    i64 numWritten = vsnprintf(tempBuf, 1, (i8 *)fmt, list);
 
     str8 s = {0};
     s.data = baseArenaPushNoZero(arena, numWritten + 1);
     s.len = numWritten;
 
-    vsnprintf(s.data, s.len + 1, fmt, list);
+    vsnprintf((i8 *)s.data, s.len + 1, (i8 *)fmt, list);
     return s;
 }
-str8 baseStringsPushStr8Fmt(BaseArena *arena, const u8* fmt, ...)
+str8 baseStringsPushStr8Fmt(BaseArena *arena, const i8* fmt, ...)
 {
     va_list list;
     va_start(list, fmt);
@@ -168,10 +168,10 @@ void baseStringsSBAppendBytes(BaseStringBuilder *sb, const u8 *bytes, u64 count)
     BASE_MEMCPY(sb->data + sb->len, bytes, count);
     sb->len += count;
 }
-void baseStringsSBAppendCStr(BaseStringBuilder *sb, const u8 *str, i64 strSize)
+void baseStringsSBAppendCStr(BaseStringBuilder *sb, const i8 *str, i64 strSize)
 {
-    u64 strLength = (strSize == -1) ? strlen(str) : strSize;
-    baseStringsSBAppendBytes(sb, str, strLength + 1); //+ 1 for coppying '\0'
+    u64 strLength = (strSize == -1) ? strlen((i8 *)str) : strSize;
+    baseStringsSBAppendBytes(sb, (u8*) str, strLength + 1); //+ 1 for coppying '\0'
     sb->len -= 1; //since we coppied the '\0' over
 }
 void baseStringsSBAppendStr8(BaseStringBuilder *sb, str8 str)
@@ -182,22 +182,22 @@ void baseStringsSBAppendStr8(BaseStringBuilder *sb, str8 str)
     baseStringsSBAppendBytes(sb, &ch, 1);
     sb->len -= 1;
 }
-void baseStringsSBAppendFmt(BaseStringBuilder *sb, const u8 *fmt, ...)
+void baseStringsSBAppendFmt(BaseStringBuilder *sb, const i8 *fmt, ...)
 {
     va_list list;
-    va_start(list, fmt);
+    va_start(list, (i8 *)fmt);
 
     char tempBuf[1];
-    i64 numWritten = vsnprintf(tempBuf, 1, fmt, list);
+    i64 numWritten = vsnprintf(tempBuf, 1, (i8 *)fmt, list);
 
     BaseArenaTemp temp = baseTempBegin(&sb->arena, 1);
     {
         BaseStringBuilder tempSb = baseStringsCreateSB(temp.arena, numWritten + 1);
         {
-            tempSb.len = vsnprintf(tempSb.data, tempSb.cap, fmt, list);
+            tempSb.len = vsnprintf((i8 *)tempSb.data, tempSb.cap, (i8 *)fmt, list);
         }
 
-        baseStringsSBAppendCStr(sb, tempSb.data, tempSb.len);
+        baseStringsSBAppendCStr(sb, (i8*) tempSb.data, tempSb.len);
     }
 
     baseTempEnd(temp);

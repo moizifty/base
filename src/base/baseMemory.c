@@ -89,7 +89,7 @@ void baseArenaPopTo(BaseArena *arena, u64 popTo)
     {
         u8 *base = (u8 *)arena;
         u64 sizeToDecommit = arena->commitPos - posAlignedToCommitChunks;
-        baseArenaDecommitImpl(arena + posAlignedToCommitChunks, sizeToDecommit);
+        baseArenaDecommitImpl(base + posAlignedToCommitChunks, sizeToDecommit);
 
         arena->commitPos -= sizeToDecommit;
     }

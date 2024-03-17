@@ -18,6 +18,8 @@ void OSDecommitMemory(void *ptr, u64 size)
 }
 void OSFreeMemory(void *ptr, u64 size)
 {
+    BASE_UNUSED_PARAM(size);
+
     VirtualFree(ptr, 0, MEM_RELEASE);
 }
 
@@ -53,7 +55,7 @@ bool OSRunProcessEx(BaseArena *arena, str8 app, str8 args, void *peb, str8 *outS
 
     // Launch the child process
     PROCESS_INFORMATION pi = {0};
-    if (!CreateProcessA(app.data, args.data, NULL, NULL, TRUE, 0, peb, NULL, &si, &pi)) 
+    if (!CreateProcessA((LPSTR) app.data, (LPSTR) args.data, NULL, NULL, TRUE, 0, peb, NULL, &si, &pi)) 
     {
         return false;
     }
@@ -75,7 +77,7 @@ bool OSRunProcessEx(BaseArena *arena, str8 app, str8 args, void *peb, str8 *outS
 
     while(true)
     {
-        int readSize = 0;
+        DWORD readSize = 0;
 
         GetExitCodeProcess(pi.hProcess, &exitCode);
         DWORD waitR = WaitForSingleObject(pi.hProcess, 0);
@@ -105,7 +107,7 @@ bool OSRunProcessEx(BaseArena *arena, str8 app, str8 args, void *peb, str8 *outS
             }
             else
             {
-                Str8ListPushLast(arena, &outList, baseStr8(buf, readSize));
+                Str8ListPushLast(arena, &outList, baseStr8((u8*)buf, readSize));
             }
 
             totalStdoutSize += readSize;
@@ -133,7 +135,7 @@ bool OSRunProcessEx(BaseArena *arena, str8 app, str8 args, void *peb, str8 *outS
             }
             else
             {
-                Str8ListPushLast(arena, &errList, baseStr8(buf, readSize));
+                Str8ListPushLast(arena, &errList, baseStr8((u8*)buf, readSize));
             }
 
             totalStderrSize += readSize;
