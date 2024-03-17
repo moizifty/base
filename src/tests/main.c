@@ -36,7 +36,14 @@ void ProgramMain(void)
 	}
 
 	printf("%s\n", Str8ListJoin(generalArena, &strs, null).data);
+	
+	str8 output = {0};
+	str8 errput = {0};
+	OSRunProcessEx(generalArena, baseStr8(null, 0), STR8_LIT("cmd.exe /c \"echo hi\""), null, &output, &errput);
+
+	printf("%s\n%s\n", output.data, errput.data);
 
 	baseArenaFree(generalArena);
 	baseArenaFree(builderArena);
+
 }

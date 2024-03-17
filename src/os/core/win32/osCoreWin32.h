@@ -7,4 +7,6 @@
 
 #include "base\baseCoreTypes.h"
 
+bool OSRunProcessEx(BaseArena *arena, str8 app, str8 args, void *peb, str8 *outStr, str8 *errStr);
+
 #endif
