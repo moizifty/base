@@ -26,6 +26,8 @@
 #define BASE_MEMZERO(DEST, SZ) BASE_MEMSET((DEST), 0, (SZ))
 
 // lists, and stuff
+#define BASE_LIST_FOREACH(NODETYPE, NAME, LIST)		for(NODETYPE *NAME = (LIST)->first; (NAME) != null; (NAME) = (NAME)->next)
+
 #define CheckNull(p) ((p)==0)
 #define SetNull(p) ((p)=0)
 
@@ -48,7 +50,7 @@ void NAME##PushLast(BaseArena *arena, NAME *l, ELEM value); \
 void NAME##PushFirst(BaseArena *arena, NAME *l, ELEM value); \
 void NAME##PushInsert(BaseArena *arena, NAME *l, NODENAME *prev, ELEM value);
 
-#define BASE_CREATE_LL_DEFS_EX(NAME, NODENAME, ELEM, TOTALSIZEEXPR) \
+#define BASE_CREATE_LL_DEFS_EX(NAME, NODENAME, ELEM) \
 typedef struct NODENAME NODENAME; \
 typedef struct NAME NAME; \
 typedef struct NODENAME \
@@ -57,7 +59,6 @@ typedef struct NODENAME \
 	NODENAME *prev; \
 	ELEM val; \
 }NODENAME; \
- \
 typedef struct NAME \
 { \
 	NODENAME *first; \
@@ -69,19 +70,19 @@ void NAME##PushNodeLast(NAME *l, NODENAME *node) \
 { \
 	BaseDllNodePushLast(l->first, l->last, node); \
 	l->len += 1; \
-	l->totalSize += TOTALSIZEEXPR; \
+	l->totalSize += sizeof(node->val); \
 } \
 void NAME##PushNodeFirst(NAME *l, NODENAME *node) \
 { \
 	BaseDllNodePushFirst(l->first, l->last, node); \
 	l->len += 1; \
-	l->totalSize += TOTALSIZEEXPR; \
+	l->totalSize += sizeof(node->val); \
 } \
 void NAME##InsertNode(NAME *l, NODENAME *prev, NODENAME *node) \
 { \
 	BaseDllNodeInsert(l->first, l->last, prev, node); \
 	l->len += 1; \
-	l->totalSize += TOTALSIZEEXPR; \
+	l->totalSize += sizeof(node->val); \
 } \
 void NAME##PushLast(BaseArena *arena, NAME *l, ELEM value) \
 { \
@@ -103,10 +104,10 @@ void NAME##PushInsert(BaseArena *arena, NAME *l, NODENAME *prev, ELEM value) \
 } \
 
 #define BASE_CREATE_LL_DECLS(NAME, ELEM)   BASE_CREATE_LL_DECLS_EX(NAME, NAME##Node, ELEM)
-#define BASE_CREATE_LL_DEFS(NAME, ELEM)   BASE_CREATE_LL_DEFS_EX(NAME, NAME##Node, ELEM, sizeof(node->val))
+#define BASE_CREATE_LL_DEFS(NAME, ELEM)   BASE_CREATE_LL_DEFS_EX(NAME, NAME##Node, ELEM)
 #define BASE_CREATE_LL_DECLS_DEFS(NAME, ELEM)   \
-BASE_CREATE_LL_DECLS(NAME, ELEM) \
-BASE_CREATE_LL_DEFS(NAME, ELEM) \
+BASE_CREATE_LL_DECLS_EX(NAME, NAME##Node, ELEM) \
+BASE_CREATE_LL_DEFS_EX(NAME, NAME##Node, ELEM) \
 
 
 // program entry related

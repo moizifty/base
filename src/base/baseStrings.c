@@ -2,7 +2,45 @@
 #include "baseStrings.h"
 #include "baseThreads.h"
 
-BASE_CREATE_LL_DEFS_EX(Str8List, Str8ListNode, str8, sizeof(node->val.len));
+void Str8ListPushNodeLast(Str8List *l, Str8ListNode *node)
+{
+	BaseDllNodePushLast(l->first, l->last, node);
+	l->len += 1;
+	l->totalSize += sizeof(node->val);
+	l->totalBytes += node->val.len;
+}
+void Str8ListPushNodeFirst(Str8List *l, Str8ListNode *node)
+{
+	BaseDllNodePushFirst(l->first, l->last, node);
+	l->len += 1;
+	l->totalSize += sizeof(node->val);
+	l->totalBytes += node->val.len;
+}
+void Str8ListInsertNode(Str8List *l, Str8ListNode *prev, Str8ListNode *node)
+{
+	BaseDllNodeInsert(l->first, l->last, prev, node);
+	l->len += 1;
+	l->totalSize += sizeof(node->val);
+	l->totalBytes += node->val.len;
+}
+void Str8ListPushLast(BaseArena *arena, Str8List *l, str8 value)
+{
+	Str8ListNode *n = baseArenaPush(arena, sizeof(Str8ListNode));
+	n->val = value;
+	Str8ListPushNodeLast(l, n);
+}
+void Str8ListPushFirst(BaseArena *arena, Str8List *l, str8 value)
+{
+	Str8ListNode *n = baseArenaPush(arena, sizeof(Str8ListNode));
+	n->val = value;
+	Str8ListPushNodeFirst(l, n);
+}
+void Str8ListPushInsert(BaseArena *arena, Str8List *l, Str8ListNode *prev, str8 value)
+{
+	Str8ListNode *n = baseArenaPush(arena, sizeof(Str8ListNode));
+	n->val = value;
+	Str8ListInsertNode(l, prev, n);
+}
 
 void Str8ListPushLastFmt(BaseArena *arena, Str8List *l, const u8 *fmt, ...)
 {
@@ -24,7 +62,36 @@ str8 Str8ListJoin(BaseArena *arena, Str8List *l, Str8ListJoinParams *optionals)
         params = *optionals;
     }
 
+    u64 sepCount = (l->len > 0) ? l->len - 1 : 0;
+    u64 resultTotalSize = (params.pre.len + l->totalBytes + (sepCount * params.sep.len) + params.post.len);
+
     str8 result = {0};
+    result.data = baseArenaPushNoZero(arena, resultTotalSize + 1);
+    result.len = resultTotalSize;
+
+    u8 *destPtr = result.data;
+    BASE_MEMCPY(destPtr, params.pre.data, params.pre.len);
+
+    destPtr += params.pre.len;
+
+    BASE_LIST_FOREACH(Str8ListNode, node, l)
+    {
+        BASE_MEMCPY(destPtr, node->val.data, node->val.len);
+
+        destPtr += node->val.len;
+        if (node != l->last)
+        {
+            BASE_MEMCPY(destPtr, params.sep.data, params.sep.len);
+            destPtr += params.sep.len;
+        }
+    }
+
+    BASE_MEMCPY(destPtr, params.post.data, params.post.len);
+    destPtr += params.post.len;
+
+    *destPtr = '\0';
+
+    return result;
 }
 
 str8 baseStr8(u8 *bytes, u64 size)

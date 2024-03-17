@@ -32,8 +32,10 @@ void ProgramMain(void)
 	Str8List strs = {0};
 	for(int i = 0; i < 100; i++)
 	{
-		Str8ListPushLastFmt(generalArena, &strs, "Pushing string '%d'", i);
+		Str8ListPushLastFmt(generalArena, &strs, "Pushing string '%d'\n", i);
 	}
+
+	printf("%s\n", Str8ListJoin(generalArena, &strs, null).data);
 
 	baseArenaFree(generalArena);
 	baseArenaFree(builderArena);

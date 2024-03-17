@@ -18,6 +18,25 @@ typedef struct BaseStringBuilder
     BaseArena *arena;
 }BaseStringBuilder;
 
+// i define these here myself instead of using the BASE_CREATE_LL* macros
+// because i need custom behaviour for strlists
+typedef struct Str8ListNode Str8ListNode;
+typedef struct Str8List Str8List;
+typedef struct Str8ListNode
+{
+	Str8ListNode *next;
+	Str8ListNode *prev;
+	str8 val;
+}Str8ListNode;
+typedef struct Str8List
+{
+	Str8ListNode *first;
+	Str8ListNode *last;
+	u64 len;
+	u64 totalSize;
+	u64 totalBytes;
+}Str8List;
+
 typedef struct Str8ListJoinParams
 {
     str8 pre;
@@ -25,7 +44,12 @@ typedef struct Str8ListJoinParams
     str8 post;
 }Str8ListJoinParams;
 
-BASE_CREATE_LL_DECLS(Str8List, str8);
+void Str8ListPushNodeLast(Str8List *l, Str8ListNode *node);
+void Str8ListPushNodeFirst(Str8List *l, Str8ListNode *node);
+void Str8ListInsertNode(Str8List *l, Str8ListNode *prev, Str8ListNode *node);
+void Str8ListPushLast(BaseArena *arena, Str8List *l, str8 value);
+void Str8ListPushFirst(BaseArena *arena, Str8List *l, str8 value);
+void Str8ListPushInsert(BaseArena *arena, Str8List *l, Str8ListNode *prev, str8 value);
 void Str8ListPushLastFmt(BaseArena *arena, Str8List *l, const u8 *fmt, ...);
 
 str8 Str8ListJoin(BaseArena *arena, Str8List *l, Str8ListJoinParams *optionals);
