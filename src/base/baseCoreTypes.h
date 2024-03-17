@@ -30,29 +30,29 @@ typedef uint64_t u64;
 typedef float f32;
 typedef double f64;
 
-typedef struct BaseArrayView
+typedef struct ArrayView
 {
     void *data;
     u64 elemSize;
     u64 len;
-}BaseArrayView;
+}ArrayView;
 
-typedef struct BaseString8
+typedef struct str8
 {
     u8 *data;
     u64 len;
-}BaseString8;
+}str8;
 
-typedef struct BaseString16
+typedef struct str16
 {
     u16 *data;
     u64 len;
-}BaseString16;
+}str16;
 
-typedef struct BaseString32
+typedef struct str32
 {
     u32 *data;
     u64 len;
-}BaseString32;
+}str32;
 
 #endif

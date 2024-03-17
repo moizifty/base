@@ -7,35 +7,34 @@
 #include "..\os\core\win32\osCoreWin32.c"
 #include "..\os\core\osEntryPoint.c"
 
-BASE_CREATE_LL_STRUCT(IntList, int);
+BASE_CREATE_LL_DECLS_DEFS(IntList, int);
 
 void ProgramMain(void)
 {
-	BaseArena *arena = baseArenaAlloc(BASE_GIGABYTES(64));
+	BaseArena *generalArena = baseArenaAlloc(BASE_GIGABYTES(2));
+	BaseArena *builderArena = baseArenaAlloc(BASE_GIGABYTES(2));
+	BaseStringBuilder builder = baseStringsCreateSB(builderArena, 2);
 
-	BaseStringBuilder builder = baseStringsCreateSB(arena, 2);
-
+	str8 s = baseStringsPushStr8Fmt(generalArena, "Hi i am %d years old\n", 9001);
 	baseStringsSBAppendCStr(&builder, "Hii ", -1);
-	baseStringsSBAppendFmt(&builder, "everyone i am %d years old", 90);
+	baseStringsSBAppendFmt(&builder, "everyone i am %d years old\n", 90);
+	baseStringsSBAppendStr8(&builder, s);
 
 	printf("%s\n", builder.data);
 
+	IntList list = {0};
 
-	IntListNode *first = NULL;
-	IntListNode *last = NULL;
-
-	for(int i = 0; i < 10; i++)
+	for(int i = 0; i < 100; i++)
 	{
-		IntListNode *m = baseArenaPush(arena, sizeof(IntListNode));
-		m->val = i;
+		IntListPushFirst(generalArena, &list, i);
+	}
 
-		BaseDllNodeInsert(first, last, last, m);
-	}
-	
-	
-	for(int i = 0; i < 10; i++)
+	Str8List strs = {0};
+	for(int i = 0; i < 100; i++)
 	{
-		IntListNode *m = baseArenaPush(arena, sizeof(IntListNode));
-		m->val = i + 10;
+		Str8ListPushLastFmt(generalArena, &strs, "Pushing string '%d'", i);
 	}
+
+	baseArenaFree(generalArena);
+	baseArenaFree(builderArena);
 }

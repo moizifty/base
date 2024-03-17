@@ -21,6 +21,7 @@
 #define BASE_SET_FLAG(n, f)    ((n) |= (f));
 
 // memory
+#define BASE_MEMCPY memcpy
 #define BASE_MEMSET memset
 #define BASE_MEMZERO(DEST, SZ) BASE_MEMSET((DEST), 0, (SZ))
 
@@ -37,7 +38,17 @@
 #define BaseDllNodePushLast(f, l, n)    BaseDllNodeInsertEx(f, l, l, n, prev, next)
 #define BaseDllNodePushFirst(f, l, n)   BaseDllNodeInsertEx(l, f, f, n, next, prev)
 
-#define BASE_CREATE_LL_STRUCT_EX(NAME, NODENAME, ELEM) \
+#define BASE_CREATE_LL_DECLS_EX(NAME, NODENAME, ELEM) \
+typedef struct NODENAME NODENAME; \
+typedef struct NAME NAME; \
+void NAME##PushNodeLast(NAME *l, NODENAME *node); \
+void NAME##PushNodeFirst(NAME *l, NODENAME *node); \
+void NAME##InsertNode(NAME *l, NODENAME *prev, NODENAME *node); \
+void NAME##PushLast(BaseArena *arena, NAME *l, ELEM value); \
+void NAME##PushFirst(BaseArena *arena, NAME *l, ELEM value); \
+void NAME##PushInsert(BaseArena *arena, NAME *l, NODENAME *prev, ELEM value);
+
+#define BASE_CREATE_LL_DEFS_EX(NAME, NODENAME, ELEM, TOTALSIZEEXPR) \
 typedef struct NODENAME NODENAME; \
 typedef struct NAME NAME; \
 typedef struct NODENAME \
@@ -56,24 +67,46 @@ typedef struct NAME \
 }NAME; \
 void NAME##PushNodeLast(NAME *l, NODENAME *node) \
 { \
-	BaseDllNodePushLast(l->first, l->first, node); \
+	BaseDllNodePushLast(l->first, l->last, node); \
 	l->len += 1; \
-	l->totalSize += l->len * sizeof(node->val); \
+	l->totalSize += TOTALSIZEEXPR; \
 } \
 void NAME##PushNodeFirst(NAME *l, NODENAME *node) \
 { \
-	BaseDllNodePushFirst(l->first, l->first, node); \
+	BaseDllNodePushFirst(l->first, l->last, node); \
 	l->len += 1; \
-	l->totalSize += l->len * sizeof(node->val); \
+	l->totalSize += TOTALSIZEEXPR; \
 } \
 void NAME##InsertNode(NAME *l, NODENAME *prev, NODENAME *node) \
 { \
-	BaseDllNodeInsert(l->first, l->first, prev, node); \
+	BaseDllNodeInsert(l->first, l->last, prev, node); \
 	l->len += 1; \
-	l->totalSize += l->len * sizeof(node->val); \
+	l->totalSize += TOTALSIZEEXPR; \
+} \
+void NAME##PushLast(BaseArena *arena, NAME *l, ELEM value) \
+{ \
+	NODENAME *n = baseArenaPush(arena, sizeof(NODENAME)); \
+	n->val = value; \
+	NAME##PushNodeLast(l, n); \
+} \
+void NAME##PushFirst(BaseArena *arena, NAME *l, ELEM value) \
+{ \
+	NODENAME *n = baseArenaPush(arena, sizeof(NODENAME)); \
+	n->val = value; \
+	NAME##PushNodeFirst(l, n); \
+} \
+void NAME##PushInsert(BaseArena *arena, NAME *l, NODENAME *prev, ELEM value) \
+{ \
+	NODENAME *n = baseArenaPush(arena, sizeof(NODENAME)); \
+	n->val = value; \
+	NAME##InsertNode(l, prev, n); \
 } \
 
-#define BASE_CREATE_LL_STRUCT(NAME, ELEM)   BASE_CREATE_LL_STRUCT_EX(NAME, NAME##Node, ELEM)
+#define BASE_CREATE_LL_DECLS(NAME, ELEM)   BASE_CREATE_LL_DECLS_EX(NAME, NAME##Node, ELEM)
+#define BASE_CREATE_LL_DEFS(NAME, ELEM)   BASE_CREATE_LL_DEFS_EX(NAME, NAME##Node, ELEM, sizeof(node->val))
+#define BASE_CREATE_LL_DECLS_DEFS(NAME, ELEM)   \
+BASE_CREATE_LL_DECLS(NAME, ELEM) \
+BASE_CREATE_LL_DEFS(NAME, ELEM) \
 
 
 // program entry related
