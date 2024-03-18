@@ -11,28 +11,37 @@ BASE_CREATE_LL_DECLS_DEFS(IntList, int);
 
 void ProgramMain(void)
 {
+	HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    DWORD consoleMode;
+    GetConsoleMode(hConsole, &consoleMode);
+    consoleMode |= 0x0004; //enable_virtual_terminal_processing
+
+    SetConsoleMode(hConsole, consoleMode);
+
 	BaseArena *generalArena = baseArenaAlloc(BASE_GIGABYTES(2));
 
-	IntList list = {0};
+	// IntList list = {0};
 
-	for(int i = 0; i < 100; i++)
-	{
-		IntListPushFirst(generalArena, &list, i);
-	}
+	// for(int i = 0; i < 100; i++)
+	// {
+	// 	IntListPushFirst(generalArena, &list, i);
+	// }
 
-	Str8List strs = {0};
-	for(int i = 0; i < 100; i++)
-	{
-		Str8ListPushLastFmt(generalArena, &strs, "Pushing string '%d'\n", i);
-	}
+	// Str8List strs = {0};
+	// for(int i = 0; i < 100; i++)
+	// {
+	// 	Str8ListPushLastFmt(generalArena, &strs, "Pushing string '%d'\n", i);
+	// }
 
-	printf("%s\n", Str8ListJoin(generalArena, &strs, null).data);
+	// printf("%s\n", Str8ListJoin(generalArena, &strs, null).data);
 	
-	str8 output = {0};
-	str8 errput = {0};
-	OSRunProcessEx(generalArena, baseStr8(null, 0), STR8_LIT("cmd.exe /c \"echo hi\""), null, &output, &errput);
+	// str8 output = {0};
+	// str8 errput = {0};
+	// OSRunProcessEx(generalArena, baseStr8(null, 0), STR8_LIT("cmd.exe /c \"echo hi\""), null, &output, &errput);
 
-	printf("%s\n%s\n", output.data, errput.data);
+	// printf("%s\n%s\n", output.data, errput.data);
+
+	baseColPrintf("Hiiii {r} %d %s\n", 90, "sds");
 
 	baseArenaFree(generalArena);
 }
