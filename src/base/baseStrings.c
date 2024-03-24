@@ -138,14 +138,13 @@ str8 baseStringsPushStr8FmtV(BaseArena *arena, const i8 *fmt, va_list args)
     va_list list;
     va_copy(list, args);
 
-    char tempBuf[1];
-    i64 numWritten = vsnprintf(tempBuf, 1, (i8 *)fmt, list);
+    i64 numWritten = stbsp_vsnprintf(null, 0, (i8 *)fmt, list);
 
     str8 s = {0};
     s.data = baseArenaPushNoZero(arena, numWritten + 1);
     s.len = numWritten;
 
-    vsnprintf((i8 *)s.data, s.len + 1, (i8 *)fmt, list);
+    stbsp_vsnprintf((i8 *)s.data, s.len + 1, (i8 *)fmt, list);
     return s;
 }
 str8 baseStringsPushStr8Fmt(BaseArena *arena, const i8* fmt, ...)
@@ -176,13 +175,37 @@ i64 baseStringsStrCompare(str8 a, str8 b)
 
     return strcmp((char *)a.data, (char *) b.data);
 }
-bool baseStringsStrEquals(str8 a, str8 b)
+bool baseStringsStrEquals(str8 a, str8 b, StrMatchFlags flags)
 {
-    return !baseStringsStrCompare(a, b);
+    bool result = false;
+    if (a.len == b.len)
+    {
+        result = true;
+        for(u64 i = 0; i < a.len; i++)
+        {
+            bool match = a.data[i] == b.data[i];
+            if (flags & STR_MATCHFLAGS_CASE_INSENSITIVE)
+            {
+                match = (toupper(a.data[i]) == toupper(b.data[i]));
+            }
+
+            if (flags & STR_MATCHFLAGS_SLASH_INSENSITIVE)
+            {
+                match = ((a.data[i] == '\\' ? '/' : a.data[i])) == ((b.data[i] == '\\' ? '/' : b.data[i]));
+            }
+
+            if(!match)
+            {
+                return false;
+            }
+        }
+    }
+
+    return result;
 }
 bool baseStringsStrContains(str8 a, u8 ch)
 {
-    for(i64 i = 0; i < a.len; i++)
+    for(u64 i = 0; i < a.len; i++)
     {
         if(a.data[i] == ch)
         {
@@ -191,6 +214,66 @@ bool baseStringsStrContains(str8 a, u8 ch)
     }
 
     return false;
+}
+str8 baseStringsStrSubStr8(str8 str, u64 start, u64 end)
+{
+    u64 min = start;
+    u64 max = end;
+    if(max > str.len)
+    {
+        max = str.len;
+    }
+
+    if(min > str.len)
+    {
+        min = str.len;
+    }
+    if(min > max)
+    {
+        u64 swap = min;
+        min = max;
+        max = swap;
+    }
+    str.len = max - min;
+    str.data += min;
+    
+    return str;
+}
+u64 baseStringsStrFindSubStr8(str8 haystack, str8 needle, u64 startPos, StrMatchFlags flags)
+{
+    bool found = false;
+    u64 foundIndex = haystack.len;
+    for(u64 i = startPos; i < haystack.len; i += 1)
+    {
+        if(i + needle.len <= haystack.len)
+        {
+            str8 substr = baseStringsStrSubStr8(haystack, i, i + needle.len);
+            if(baseStringsStrEquals(substr, needle, flags))
+            {
+                foundIndex = i;
+                found = true;
+                if(!(flags & STR_MATCHFLAGS_FIND_LAST))
+                {
+                    break;
+                }
+            }
+        }
+    }
+    return foundIndex;
+}
+
+str8 baseStringsStrChopPastLastSlash(str8 str)
+{
+    u64 lastSlashIndex = baseStringsStrFindSubStr8(str,
+                                                   STR8_LIT("/"),
+                                                   0, 
+                                                   STR_MATCHFLAGS_SLASH_INSENSITIVE | STR_MATCHFLAGS_FIND_LAST);
+    if (lastSlashIndex < str.len)
+    {
+        str.len = lastSlashIndex;
+    }
+
+    return str;
 }
 
 BaseStringBuilder baseStringsCreateSB(BaseArena *arena, u64 cap)
@@ -236,14 +319,13 @@ void baseStringsSBAppendFmt(BaseStringBuilder *sb, const i8 *fmt, ...)
     va_list list;
     va_start(list, (i8 *)fmt);
 
-    char tempBuf[1];
-    i64 numWritten = vsnprintf(tempBuf, 1, (i8 *)fmt, list);
+    i64 numWritten = stbsp_vsnprintf(null, 0, (i8 *)fmt, list);
 
     BaseArenaTemp temp = baseTempBegin(&sb->arena, 1);
     {
         BaseStringBuilder tempSb = baseStringsCreateSB(temp.arena, numWritten + 1);
         {
-            tempSb.len = vsnprintf((i8 *)tempSb.data, tempSb.cap, (i8 *)fmt, list);
+            tempSb.len = stbsp_vsnprintf((i8 *)tempSb.data, tempSb.cap, (i8 *)fmt, list);
         }
 
         baseStringsSBAppendCStr(sb, (i8*) tempSb.data, tempSb.len);

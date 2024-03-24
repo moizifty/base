@@ -166,8 +166,6 @@ bool OSFindFileNext(struct BaseArena *arena, OSFileFindIter *iter, OSFileInfo *o
 
     if (result)
     {
-        i8 buf[1024];
-        
         bool topLevel = win32Iter->optParams.type == OS_FILEFIND_TYPE_TOP_LEVEL_DIR;
         if (topLevel)
         {
@@ -185,6 +183,29 @@ bool OSFindFileNext(struct BaseArena *arena, OSFileFindIter *iter, OSFileInfo *o
 }
 
 //process
+str8 OSGetProgramPath(BaseArena *arena)
+{
+    str8 ret = {0};
+    BaseArenaTemp temp = baseTempBegin(&arena, 1);
+    {
+        u64 bufSize = BASE_KILOBYTES(4);
+        u8 *buf = baseArenaPush(temp.arena, bufSize);
+        GetModuleFileNameA(NULL, (i8 *) buf, bufSize);
+
+        ret = baseStringsPushStr8Fmt(arena, "%s", buf);
+    }
+
+    baseTempEnd(temp);
+
+    return ret;
+}
+str8 OSGetProgramDirectoryPath(BaseArena *arena)
+{
+    str8 ret = OSGetProgramPath(arena);
+    ret = baseStringsStrChopPastLastSlash(ret);
+
+    return ret;
+}
 bool OSRunProcessEx(BaseArena *arena, str8 app, str8 args, void *peb, str8 *outStr, str8 *errStr)
 {
     SECURITY_ATTRIBUTES sa = 

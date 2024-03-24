@@ -35,6 +35,7 @@ void ProgramMain(CmdLineHashMap *cmdline)
 	printFiles(generalArena, STR8_LIT("..\\builds"));
 	
 	baseColPrintf("Hiiii {b}%d %s\n", 90, "sds");
-	
+	baseColPrintf("%S\n", OSGetProgramPath(generalArena));
+	baseColPrintf("%S\n", OSGetProgramDirectoryPath(generalArena));
 	baseArenaFree(generalArena);
 }

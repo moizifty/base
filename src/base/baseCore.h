@@ -6,6 +6,8 @@
 #include <string.h>
 
 #include "baseCoreTypes.h"
+#define STB_SPRINTF_IMPLEMENTATION
+#include "thirdparty\ts_stb_sprintf.h"
 
 // General
 #define BASE_BYTES(NUM) ((u64)(NUM))

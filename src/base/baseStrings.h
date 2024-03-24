@@ -45,6 +45,14 @@ typedef struct Str8ListJoinParams
     str8 post;
 }Str8ListJoinParams;
 
+typedef u64 StrMatchFlags;
+enum
+{
+    STR_MATCHFLAGS_CASE_INSENSITIVE  = (1<<0),
+    STR_MATCHFLAGS_SLASH_INSENSITIVE = (1<<2),
+    STR_MATCHFLAGS_FIND_LAST         = (1<<3),
+};
+
 void Str8ListPushNodeLast(Str8List *l, Str8ListNode *node);
 void Str8ListPushNodeFirst(Str8List *l, Str8ListNode *node);
 void Str8ListInsertNode(Str8List *l, Str8ListNode *prev, Str8ListNode *node);
@@ -67,8 +75,12 @@ str8 baseStringsPushStr8Fmt(BaseArena *arena, const i8* fmt, ...);
 
 bool baseStringsStrIsNullOrEmpty(str8 a);
 i64 baseStringsStrCompare(str8 a, str8 b);
-bool baseStringsStrEquals(str8 a, str8 b);
+bool baseStringsStrEquals(str8 a, str8 b, StrMatchFlags flags);
 bool baseStringsStrContains(str8 a, u8 ch);
+str8 baseStringsStrSubStr8(str8 str, u64 start, u64 end);
+u64 baseStringsStrFindSubStr8(str8 haystack, str8 needle, u64 start_pos, StrMatchFlags flags);
+
+str8 baseStringsStrChopPastLastSlash(str8 str);
 
 // string builder
 BaseStringBuilder baseStringsSBCreate(BaseArena *arena, u64 cap);

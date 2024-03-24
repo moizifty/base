@@ -94,6 +94,10 @@ i64 baseColFprintf(FILE *fp, const char *fmt, ...)
                                         }break;
                                     }
                                 }
+                                if (k == i + 1)
+                                {
+                                    Str8ListPushLastFmt(temp.arena, &strList, BASE_TERMINAL_RESET_CODE, -1);
+                                }
 
                                 i = k;
                             }break;
@@ -131,8 +135,12 @@ i64 baseColFprintf(FILE *fp, const char *fmt, ...)
         Str8ListPushLastFmt(temp.arena, &strList, BASE_TERMINAL_RESET_CODE, -1);
 
         str8 finalStr = Str8ListJoin(temp.arena, &strList, null);
-        res = vfprintf(fp, (char*)finalStr.data, list);
+        i64 needed = stbsp_vsnprintf(null, 0, (i8 *)finalStr.data, list) + 1;
 
+        i8 *data = baseArenaPush(temp.arena, needed);
+        res = stbsp_vsnprintf(data, (int)needed, (i8 *)finalStr.data, list);
+
+        fprintf(fp, data);
     }
 
     baseTempEnd(temp);
@@ -181,7 +189,7 @@ i64 baseCStyleIntLiteralToInt(str8 str)
     {
         //hex number
         int64_t num = 0;
-        char *numStr = str.data + 2;
+        i8 *numStr = (i8 *) str.data + 2;
 
         while(*numStr != '\0')
         {
@@ -196,7 +204,7 @@ i64 baseCStyleIntLiteralToInt(str8 str)
     {
         //binary number
         int64_t num = 0;
-        char *numStr = str.data + 2;
+        i8 *numStr = (i8 *) str.data + 2;
 
         while(*numStr != '\0')
         {

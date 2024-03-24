@@ -59,5 +59,7 @@ OSFileFindIter *OSFindFileBegin(struct BaseArena *arena, str8 path, OSFileFindOp
 bool OSFindFileNext(struct BaseArena *arena, OSFileFindIter *iter, OSFileInfo *out);
 
 // process
+str8 OSGetProgramPath(BaseArena *arena);
+str8 OSGetProgramDirectoryPath(BaseArena *arena);
 bool OSRunProcessEx(struct BaseArena *arena, str8 app, str8 args, void *peb, str8 *outStr, str8 *errStr);
 #endif
