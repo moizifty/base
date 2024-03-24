@@ -7,6 +7,14 @@
 
 #include "base\baseCoreTypes.h"
 
-bool OSRunProcessEx(BaseArena *arena, str8 app, str8 args, void *peb, str8 *outStr, str8 *errStr);
+typedef struct OSFindFileIterWin32
+{
+    WIN32_FIND_DATAA findData;
+    HANDLE handle;
+    str8 originalPath;
+    bool firstWasReturned;
+
+    struct OSFileFindOptionalParams optParams;
+}OSFindFileIterWin32;
 
 #endif

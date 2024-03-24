@@ -1,6 +1,7 @@
 #include "baseMemory.h"
 #include "baseStrings.h"
 #include "baseThreads.h"
+#include <string.h>
 
 void Str8ListPushNodeLast(Str8List *l, Str8ListNode *node)
 {
@@ -74,7 +75,7 @@ str8 Str8ListJoin(BaseArena *arena, Str8List *l, Str8ListJoinParams *optionals)
 
     destPtr += params.pre.len;
 
-    BASE_LIST_FOREACH(Str8ListNode, node, l)
+    BASE_PTR_LIST_FOREACH(Str8ListNode, node, l)
     {
         BASE_MEMCPY(destPtr, node->val.data, node->val.len);
 
@@ -92,6 +93,20 @@ str8 Str8ListJoin(BaseArena *arena, Str8List *l, Str8ListJoinParams *optionals)
     *destPtr = '\0';
 
     return result;
+}
+ArrayView Str8ListFlattenToArray(BaseArena *arena, Str8List *l)
+{
+    ArrayView view = {0};
+	view.data = baseArenaPushNoZero(arena, l->totalSize);
+	view.len = l->len;
+	i64 i = 0;
+	BASE_PTR_LIST_FOREACH(Str8ListNode, node, l)
+	{
+		str8 *elem = view.data;
+		elem[i] = node->val;
+		i++;
+	}
+	return view;
 }
 
 str8 baseStr8(u8 *bytes, u64 size)
@@ -142,6 +157,40 @@ str8 baseStringsPushStr8Fmt(BaseArena *arena, const i8* fmt, ...)
 
     va_end(list);
     return s;
+}
+
+bool baseStringsStrIsNullOrEmpty(str8 a)
+{
+    return a.data == null || a.len <= 0;
+}
+i64 baseStringsStrCompare(str8 a, str8 b)
+{
+    if (a.data == null || b.data == null)
+    {
+        if (a.len == b.len)
+        {
+            return 0;
+        }
+        else return INT64_MAX;
+    }
+
+    return strcmp((char *)a.data, (char *) b.data);
+}
+bool baseStringsStrEquals(str8 a, str8 b)
+{
+    return !baseStringsStrCompare(a, b);
+}
+bool baseStringsStrContains(str8 a, u8 ch)
+{
+    for(i64 i = 0; i < a.len; i++)
+    {
+        if(a.data[i] == ch)
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 
 BaseStringBuilder baseStringsCreateSB(BaseArena *arena, u64 cap)

@@ -20,11 +20,11 @@ if hasflag("-build")
     outputName = "/Fe~"{exePath}~"";
     objFolder = "/Fo~"{"#\builds/"}~"";
     
-    command = "{compiler} /Zi {includeArg} src\tests\main.c {outputName} {objFolder} /Wall /wd4464 /wd5045 /wd4820 /DBUILD_CONSOLE_APP";
+    command = "{compiler} /Zi {includeArg} src\tests\main.c {outputName} {objFolder} /Wall /wd4464 /wd5045 /wd4820 /DBUILD_CONSOLE_APP ";
     output = run command;
 
     // for some BS reason msvc c compiler dumps errors in the stdout not stderr?
-    print("{output.out}~n");
+    print("{output}~n");
 
     deleteObjsCommand = run "del ~"{"#\builds\*.obj"}~"";
     print("{deleteObjsCommand}");

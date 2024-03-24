@@ -45,7 +45,11 @@
 #define BASE_MEMZERO(DEST, SZ) BASE_MEMSET((DEST), 0, (SZ))
 
 // lists, and stuff
-#define BASE_LIST_FOREACH(NODETYPE, NAME, LIST)		for(NODETYPE *NAME = (LIST)->first; (NAME) != null; (NAME) = (NAME)->next)
+#define BASE_PTR_LIST_FOREACH(NODETYPE, NAME, LIST)		for(NODETYPE *NAME = (LIST)->first; (NAME) != null; (NAME) = (NAME)->next)
+#define BASE_LIST_FOREACH(NODETYPE, NAME, LIST)			for(NODETYPE *NAME = (LIST).first; (NAME) != null; (NAME) = (NAME)->next)
+
+#define BASE_PTR_LIST_FOREACH_INDEX(NODETYPE, NAME, LIST, INDEX)		for(NODETYPE *NAME = (LIST)->first; (NAME) != null; (NAME) = (NAME)->next, (INDEX)++)
+#define BASE_LIST_FOREACH_INDEX(NODETYPE, NAME, LIST, INDEX)			for(NODETYPE *NAME = (LIST).first; (NAME) != null; (NAME) = (NAME)->next, (INDEX)++)
 
 #define CheckNull(p) ((p)==0)
 #define SetNull(p) ((p)=0)
@@ -59,25 +63,36 @@
 #define BaseDllNodePushLast(f, l, n)    BaseDllNodeInsertEx(f, l, l, n, prev, next)
 #define BaseDllNodePushFirst(f, l, n)   BaseDllNodeInsertEx(l, f, f, n, next, prev)
 
-#define BASE_CREATE_LL_DECLS_EX(NAME, NODENAME, ELEM) \
-typedef struct NODENAME NODENAME; \
-typedef struct NAME NAME; \
-void NAME##PushNodeLast(NAME *l, NODENAME *node); \
-void NAME##PushNodeFirst(NAME *l, NODENAME *node); \
-void NAME##InsertNode(NAME *l, NODENAME *prev, NODENAME *node); \
-void NAME##PushLast(BaseArena *arena, NAME *l, ELEM value); \
-void NAME##PushFirst(BaseArena *arena, NAME *l, ELEM value); \
-void NAME##PushInsert(BaseArena *arena, NAME *l, NODENAME *prev, ELEM value);
+#define BASE_ANY_PTR(pL)     (((pL) != NULL) && (pL)->len != 0)
+#define BASE_ANY(L)     ((pL)->len != 0)
 
-#define BASE_CREATE_LL_DEFS_EX(NAME, NODENAME, ELEM) \
-typedef struct NODENAME NODENAME; \
+#define BASE_PTR_LL_FIRST(pLL, DEFVAL)     (BASE_ANY_PTR(pLL) ? (pLL)->first->val : DEFVAL)
+#define BASE_LL_FIRST(LL, DEFVAL)          (BASE_ANY(pLB) ? (pLB).first->val : DEFVAL)
+
+#define BASE_PTR_LL_LAST(pLL, DEFVAL)      (BASE_ANY_PTR(pLL) ? (pLL)->last->val : DEFVAL)
+#define BASE_LL_LAST(LL, DEFVAL)           (BASE_ANY(pLB) ? (pLB).last->val : DEFVAL)
+
+#define BASE_CREATE_LL_JUST_LIST_DECLS_EX(NAME, NODENAME, ELEM) \
 typedef struct NAME NAME; \
-typedef struct NODENAME \
-{ \
-	NODENAME *next; \
-	NODENAME *prev; \
-	ELEM val; \
-}NODENAME; \
+typedef struct NODENAME NODENAME; \
+inline void NAME##PushNodeLast(NAME *l, NODENAME *node); \
+inline void NAME##PushNodeFirst(NAME *l, NODENAME *node); \
+inline void NAME##InsertNode(NAME *l, NODENAME *prev, NODENAME *node); \
+inline void NAME##PushLast(BaseArena *arena, NAME *l, ELEM value); \
+inline void NAME##PushFirst(BaseArena *arena, NAME *l, ELEM value); \
+inline void NAME##PushInsert(BaseArena *arena, NAME *l, NODENAME *prev, ELEM value); \
+
+#define BASE_CREATE_LL_JUST_NODE_DECLS_EX(NAME, NODENAME, ELEM) \
+typedef struct NAME NAME; \
+typedef struct NODENAME NODENAME; \
+
+#define BASE_CREATE_LL_DECLS_EX(NAME, NODENAME, ELEM) \
+BASE_CREATE_LL_JUST_LIST_DECLS_EX(NAME, NODENAME, ELEM) \
+BASE_CREATE_LL_JUST_NODE_DECLS_EX(NAME, NODENAME, ELEM)  \
+
+#define BASE_CREATE_LL_JUST_LIST_DEFS_EX(NAME, NODENAME, ELEM) \
+typedef struct NAME NAME; \
+typedef struct NODENAME NODENAME; \
 typedef struct NAME \
 { \
 	NODENAME *first; \
@@ -85,42 +100,70 @@ typedef struct NAME \
 	u64 len; \
 	u64 totalSize; \
 }NAME; \
-void NAME##PushNodeLast(NAME *l, NODENAME *node) \
+inline void NAME##PushNodeLast(NAME *l, NODENAME *node) \
 { \
 	BaseDllNodePushLast(l->first, l->last, node); \
 	l->len += 1; \
 	l->totalSize += sizeof(node->val); \
 } \
-void NAME##PushNodeFirst(NAME *l, NODENAME *node) \
+inline void NAME##PushNodeFirst(NAME *l, NODENAME *node) \
 { \
 	BaseDllNodePushFirst(l->first, l->last, node); \
 	l->len += 1; \
 	l->totalSize += sizeof(node->val); \
 } \
-void NAME##InsertNode(NAME *l, NODENAME *prev, NODENAME *node) \
+inline void NAME##InsertNode(NAME *l, NODENAME *prev, NODENAME *node) \
 { \
 	BaseDllNodeInsert(l->first, l->last, prev, node); \
 	l->len += 1; \
 	l->totalSize += sizeof(node->val); \
 } \
-void NAME##PushLast(BaseArena *arena, NAME *l, ELEM value) \
+inline void NAME##PushLast(BaseArena *arena, NAME *l, ELEM value) \
 { \
 	NODENAME *n = baseArenaPush(arena, sizeof(NODENAME)); \
 	n->val = value; \
 	NAME##PushNodeLast(l, n); \
 } \
-void NAME##PushFirst(BaseArena *arena, NAME *l, ELEM value) \
+inline void NAME##PushFirst(BaseArena *arena, NAME *l, ELEM value) \
 { \
 	NODENAME *n = baseArenaPush(arena, sizeof(NODENAME)); \
 	n->val = value; \
 	NAME##PushNodeFirst(l, n); \
 } \
-void NAME##PushInsert(BaseArena *arena, NAME *l, NODENAME *prev, ELEM value) \
+inline void NAME##PushInsert(BaseArena *arena, NAME *l, NODENAME *prev, ELEM value) \
 { \
 	NODENAME *n = baseArenaPush(arena, sizeof(NODENAME)); \
 	n->val = value; \
 	NAME##InsertNode(l, prev, n); \
 } \
+inline ArrayView NAME##FlattenToArray(BaseArena *arena, NAME *l) \
+{ \
+	ArrayView view = {0}; \
+	view.data = baseArenaPushNoZero(arena, l->totalSize); \
+	view.len = l->len; \
+	i64 i = 0; \
+	BASE_PTR_LIST_FOREACH(NODENAME, node, l) \
+	{ \
+		ELEM *elem = view.data; \
+		elem[i] = node->val; \
+		i++; \
+	} \
+	return view;\
+} \
+
+#define BASE_CREATE_LL_JUST_NODE_DEFS_EX(NAME, NODENAME, ELEM) \
+typedef struct NAME NAME; \
+typedef struct NODENAME NODENAME; \
+typedef struct NODENAME \
+{ \
+	NODENAME *next; \
+	NODENAME *prev; \
+	ELEM val; \
+}NODENAME;
+
+#define BASE_CREATE_LL_DEFS_EX(NAME, NODENAME, ELEM) \
+BASE_CREATE_LL_JUST_NODE_DEFS_EX(NAME, NODENAME, ELEM) \
+BASE_CREATE_LL_JUST_LIST_DEFS_EX(NAME, NODENAME, ELEM) \
 
 #define BASE_CREATE_LL_DECLS(NAME, ELEM)   BASE_CREATE_LL_DECLS_EX(NAME, NAME##Node, ELEM)
 #define BASE_CREATE_LL_DEFS(NAME, ELEM)   BASE_CREATE_LL_DEFS_EX(NAME, NAME##Node, ELEM)
@@ -128,9 +171,41 @@ void NAME##PushInsert(BaseArena *arena, NAME *l, NODENAME *prev, ELEM value) \
 BASE_CREATE_LL_DECLS_EX(NAME, NAME##Node, ELEM) \
 BASE_CREATE_LL_DEFS_EX(NAME, NAME##Node, ELEM) \
 
+#define BASE_CREATE_LL_JUST_LIST_DECLS_DEFS(NAME, ELEM)   \
+BASE_CREATE_LL_JUST_LIST_DECLS_EX(NAME, NAME##Node, ELEM) \
+BASE_CREATE_LL_JUST_LIST_DEFS_EX(NAME, NAME##Node, ELEM) \
+
+#define BASE_CREATE_ARRAY_VIEW_DECLS_EX(NAME, ELEM)   \
+typedef struct NAME NAME; \
+
+#define BASE_CREATE_ARRAY_VIEW_DEFS_EX(NAME, ELEM)   \
+typedef struct NAME \
+{ \
+	ELEM *data; \
+	u64 len; \
+}NAME;\
+
+#define BASE_CREATE_ARRAY_VIEW_DECLS(NAME, ELEM)	BASE_CREATE_ARRAY_VIEW_DECLS_EX(NAME, ELEM)
+#define BASE_CREATE_ARRAY_VIEW_DEFS(NAME, ELEM)	BASE_CREATE_ARRAY_VIEW_DEFS_EX(NAME, ELEM)
+#define BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(NAME, ELEM)	\
+BASE_CREATE_ARRAY_VIEW_DECLS(NAME, ELEM) \
+BASE_CREATE_ARRAY_VIEW_DEFS(NAME, ELEM)
+
+#define ARRAY_VIEW_LIT_FROM_SIZED_EX(NAME, ARRAY)		((NAME){ARRAY, .len = BASE_ARRAY_SIZE(ARRAY)})
+#define ARRAY_VIEW_LIT_EX(NAME, ARRAY, SIZE)			((NAME){ARRAY, .len = SIZE})
+
+#define ARRAY_VIEW_LIT_FROM_SIZED(ARRAY)		((ArrayView){ARRAY, .len = BASE_ARRAY_SIZE(ARRAY)})
+#define ARRAY_VIEW_LIT(ARRAY, SIZE)			((ArrayView){ARRAY, .len = SIZE})
 
 // program entry related
-typedef void(*ProgramMainFunc)(void);
+typedef struct CmdLineHashMap CmdLineHashMap;
+typedef void(*ProgramMainFunc)(CmdLineHashMap *);
 
 void BaseMainThreadEntry(ProgramMainFunc programMain, i64 argc, i8 **argv);
+
+i64 baseColFprintf(FILE *fp, const char *fmt, ...);
+
+i64 baseHexDigitToInt(int ch);
+i64 baseBinDigitToInt(int ch);
+i64 baseCStyleIntLiteralToInt(str8 str);
 #endif

@@ -1,6 +1,7 @@
 #include "osCoreWin32.h"
 
-void ProgramMain(void);
+typedef struct CmdLineHashMap CmdLineHashMap;
+void ProgramMain(CmdLineHashMap *);
 
 #if BUILD_CONSOLE_APP
 int main(int argc, char **argv)

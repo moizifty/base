@@ -1,8 +1,10 @@
+#include "..\osCore.h"
 #include "osCoreWin32.h"
 
 #include "..\..\..\base\baseCore.h"
 #include "..\..\..\base\baseStrings.h"
 #include "..\..\..\base\baseMemory.h"
+#include "..\..\..\base\baseThreads.h"
 
 void* OSReserveMemory(u64 size)
 {
@@ -23,6 +25,166 @@ void OSFreeMemory(void *ptr, u64 size)
     VirtualFree(ptr, 0, MEM_RELEASE);
 }
 
+void OSEnableVirtualTerminalSequenceProcessing(void)
+{
+    {
+        HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+        DWORD consoleMode;
+        GetConsoleMode(hConsole, &consoleMode);
+        consoleMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING  ; //enable_virtual_terminal_processing
+
+        SetConsoleMode(hConsole, consoleMode);
+    }
+
+    {
+        HANDLE hConsole = GetStdHandle(STD_ERROR_HANDLE);
+        DWORD consoleMode;
+        GetConsoleMode(hConsole, &consoleMode);
+        consoleMode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING  ; //enable_virtual_terminal_processing
+
+        SetConsoleMode(hConsole, consoleMode);
+    }
+}
+
+// files
+bool OSPathIsDirectory(str8 path)
+{
+    WIN32_FILE_ATTRIBUTE_DATA data = {0};
+    GetFileAttributesExA((char *)path.data, GetFileExInfoStandard, &data);
+
+    return data.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY;
+}
+u64 OSGetFileSize(str8 path)
+{
+    WIN32_FILE_ATTRIBUTE_DATA data = {0};
+    GetFileAttributesExA((char *)path.data, GetFileExInfoStandard, &data);
+
+    u64 size = data.nFileSizeHigh;
+    size = (size << 32) | data.nFileSizeLow;
+
+    return size;
+}
+u64 OSGetFileSizeFromHandle(OSHandle handle)
+{
+    LARGE_INTEGER l = {0};
+    GetFileSizeEx((HANDLE)handle._u64, &l);
+
+    return l.QuadPart;
+}
+u8 *OSReadFileAll(BaseArena *arena, str8 path, u64 *outFileSize)
+{
+    HANDLE fileHandle = CreateFileA((char *)path.data, 
+                                    FILE_GENERIC_READ, 
+                                    FILE_SHARE_READ, 
+                                    NULL, 
+                                    OPEN_EXISTING, 
+                                    FILE_ATTRIBUTE_NORMAL,
+                                    NULL);
+
+    if (fileHandle == null || fileHandle == INVALID_HANDLE_VALUE)
+    {
+        return null;
+    }
+
+    u64 fileSize = OSGetFileSizeFromHandle((OSHandle){(u64)fileHandle});
+    u8 *data = baseArenaPushNoZero(arena, fileSize);
+    ReadFile(fileHandle, data, (u32)fileSize, null, null);
+
+    if (outFileSize != null)
+    {
+        *outFileSize = fileSize;
+    }
+
+    return data;
+}
+OSFileAttributeFlags OSFileAttributesFromWin32(DWORD fileAttr)
+{
+    OSFileAttributeFlags flags = 0;
+    if (fileAttr & FILE_ATTRIBUTE_DIRECTORY)
+    {
+        flags |= OS_FILEATTR_DIR;
+    }
+
+    return flags;
+}
+OSFileFindIter *OSFindFileBegin(struct BaseArena *arena, str8 path, OSFileFindOptionalParams *opt)
+{
+    OSFindFileIterWin32 *findFileData = baseArenaPush(arena, sizeof(OSFindFileIterWin32));
+    OSFileFindIter *findIter = (OSFileFindIter *) findFileData;
+    findFileData->optParams = (opt == null) ? (OSFileFindOptionalParams){0} : *opt;
+
+    if (!baseStringsStrContains(path, '*'))
+    {
+        bool topLevel = findFileData->optParams.type == OS_FILEFIND_TYPE_TOP_LEVEL_DIR;
+
+        if (path.len > 0)
+        {
+            str8 searchPath = path;
+            if (topLevel)
+            {
+                searchPath = baseStringsPushStr8Fmt(arena, "%s\\*", path.data);
+            }
+
+            findFileData->handle = FindFirstFileA((i8 *) searchPath.data, &findFileData->findData);
+            findFileData->originalPath = baseStringsPushStr8Fmt(arena, "%s", path.data);
+        }
+    }
+
+    return findIter;
+}
+
+bool OSFindFileNext(struct BaseArena *arena, OSFileFindIter *iter, OSFileInfo *out)
+{
+    bool result = false;
+    OSFindFileIterWin32 *win32Iter = (OSFindFileIterWin32 *) iter;
+    if (win32Iter->handle == INVALID_HANDLE_VALUE || win32Iter->handle == null)
+    {
+        return false;
+    }
+
+    while(true)
+    {
+        bool fileNameInvalid = (win32Iter->findData.cFileName[0] == '.') && 
+                                (win32Iter->findData.cFileName[1] == '\0' ||
+                                (win32Iter->findData.cFileName[1] == '.'));
+
+        if (!fileNameInvalid && !win32Iter->firstWasReturned)
+        {
+            result = true;
+            win32Iter->firstWasReturned = true;
+        }
+        else
+        {
+            result = FindNextFileA(win32Iter->handle, &win32Iter->findData);
+        }
+
+        if (!result || !fileNameInvalid)
+        {
+            break;
+        }
+    }
+
+    if (result)
+    {
+        i8 buf[1024];
+        
+        bool topLevel = win32Iter->optParams.type == OS_FILEFIND_TYPE_TOP_LEVEL_DIR;
+        if (topLevel)
+        {
+            out->path = baseStringsPushStr8Fmt(arena, "%s\\%s", win32Iter->originalPath.data, win32Iter->findData.cFileName);
+        }
+        else
+        {
+            out->path = baseStringsPushStr8Fmt(arena, "%s", win32Iter->originalPath.data);
+        }
+
+        out->attrs = OSFileAttributesFromWin32(win32Iter->findData.dwFileAttributes);
+    }
+
+    return result;
+}
+
+//process
 bool OSRunProcessEx(BaseArena *arena, str8 app, str8 args, void *peb, str8 *outStr, str8 *errStr)
 {
     SECURITY_ATTRIBUTES sa = 

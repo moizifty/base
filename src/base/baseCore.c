@@ -6,18 +6,30 @@
 #include "baseMemory.h"
 #include "baseThreads.h"
 #include "baseStrings.h"
+#include "baseCmdLine.h"
+#include "..\os\core\osCore.h"
 
 void BaseMainThreadEntry(ProgramMainFunc programMain, i64 argc, i8 **argv)
 {
     BASE_UNUSED_PARAM(argc);
     BASE_UNUSED_PARAM(argv);
-
+    
     setlocale(LC_ALL, ".utf8");
+    OSEnableVirtualTerminalSequenceProcessing();
 
     BaseThreadCtx ctx = baseThreadsCreateCtx();
     baseThreadsSetCtx(&ctx);
 
-    programMain();
+    Str8List argsList = {0};
+    CmdLineHashMap cmdLineMap = {0};
+
+    for(int i = 1; i < argc; i++)
+    {
+        Str8ListPushLastFmt(ctx.scratchArenas[0], &argsList, "%s", argv[i]);
+    }
+
+    cmdLineMap = cmdlineParseCmdLineFromStringList(ctx.scratchArenas[0], argsList);
+    programMain(&cmdLineMap);
 }
 
 i64 baseColFprintf(FILE *fp, const char *fmt, ...)
@@ -64,15 +76,21 @@ i64 baseColFprintf(FILE *fp, const char *fmt, ...)
                                         {
                                             Str8ListPushLastFmt(temp.arena, &strList, BASE_TERMINAL_FG_RED_CODE, -1);
                                         }break;
-
+                                        case 'g':
+                                        {
+                                            Str8ListPushLastFmt(temp.arena, &strList, BASE_TERMINAL_FG_GREEN_CODE, -1);
+                                        }break;
                                         case 'b':
                                         {
                                             Str8ListPushLastFmt(temp.arena, &strList, BASE_TERMINAL_FG_BLUE_CODE, -1);
                                         }break;
-
-                                        case 'g':
+                                        case 'u':
                                         {
-                                            Str8ListPushLastFmt(temp.arena, &strList, BASE_TERMINAL_FG_GREEN_CODE, -1);
+                                            Str8ListPushLastFmt(temp.arena, &strList, BASE_TERMINAL_UNDERLINE_CODE, -1);
+                                        }break;
+                                        case 'B':
+                                        {
+                                            Str8ListPushLastFmt(temp.arena, &strList, BASE_TERMINAL_BOLD_CODE, -1);
                                         }break;
                                     }
                                 }
@@ -122,4 +140,72 @@ i64 baseColFprintf(FILE *fp, const char *fmt, ...)
     va_end(list);
 
     return res;
+}
+
+i64 baseHexDigitToInt(int ch)
+{
+    if((ch >= '0') && (ch <= '9'))
+    {
+        return ch - '0';
+    }
+    else if((ch >= 'a') && (ch <= 'f'))
+    {
+        return 10 + (ch - 'a');
+    }
+    else if((ch >= 'A') && (ch <= 'Z'))
+    {
+        return 10 + (ch - 'A');
+    }
+    else
+    {
+        baseColEPrintf("{ur} Unexpected Hex digit '%c'", ch);
+    }
+
+    return 0;
+}
+
+i64 baseBinDigitToInt(int ch)
+{
+    switch(ch)
+    {
+        case '0': return 0;
+        case '1': return 1;
+    }
+
+    return -1;
+}
+
+i64 baseCStyleIntLiteralToInt(str8 str)
+{
+    if((str.data[0] == '0') && (str.data[1] == 'x'))
+    {
+        //hex number
+        int64_t num = 0;
+        char *numStr = str.data + 2;
+
+        while(*numStr != '\0')
+        {
+            num = (num * 16) + baseHexDigitToInt(*numStr);
+
+            numStr++;
+        }
+
+        return num;
+    }
+    else if((str.data[0] == '0') && (str.data[1] == 'b'))
+    {
+        //binary number
+        int64_t num = 0;
+        char *numStr = str.data + 2;
+
+        while(*numStr != '\0')
+        {
+            num = (num * 2) + baseBinDigitToInt(*numStr);
+
+            numStr++;
+        }
+
+        return num;
+    }
+    else return atoll((i8 *)str.data);
 }

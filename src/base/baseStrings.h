@@ -4,6 +4,7 @@
 #include <stdarg.h>
 #include "baseCoreTypes.h"
 
+#define STR8(CSTRING) baseStr8((u8*)(CSTRING), strlen(CSTRING))
 #define STR8_LIT(BYTES) baseStr8((u8*)(BYTES), ((sizeof(BYTES)) - 1))
 #define STR8_LIT_COMP(BYTES) (Str8){(u8*)(BYTES), ((sizeof(BYTES)) - 1)}
 
@@ -53,6 +54,7 @@ void Str8ListPushInsert(BaseArena *arena, Str8List *l, Str8ListNode *prev, str8 
 void Str8ListPushLastFmt(BaseArena *arena, Str8List *l, const i8 *fmt, ...);
 
 str8 Str8ListJoin(BaseArena *arena, Str8List *l, Str8ListJoinParams *optionals);
+ArrayView Str8ListFlattenToArray(BaseArena *arena, Str8List *l);
 
 // strings
 str8 baseStr8(u8 *bytes, u64 size);
@@ -62,6 +64,11 @@ str32 baseStr32(u32 *bytes, u64 size);
 str8 baseStringsPushStr8Copy(BaseArena *arena, str8 str);
 str8 baseStringsPushStr8FmtV(BaseArena *arena, const i8 *fmt, va_list args);
 str8 baseStringsPushStr8Fmt(BaseArena *arena, const i8* fmt, ...);
+
+bool baseStringsStrIsNullOrEmpty(str8 a);
+i64 baseStringsStrCompare(str8 a, str8 b);
+bool baseStringsStrEquals(str8 a, str8 b);
+bool baseStringsStrContains(str8 a, u8 ch);
 
 // string builder
 BaseStringBuilder baseStringsSBCreate(BaseArena *arena, u64 cap);

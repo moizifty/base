@@ -5,5 +5,7 @@
 #include "baseThreads.c"
 #include "baseStrings.c"
 #include "baseCore.c"
+#include "baseHash.c"
+#include "baseCmdLine.c"
 
 #endif

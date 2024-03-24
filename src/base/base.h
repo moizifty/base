@@ -7,5 +7,7 @@
 #include "baseMemory.h"
 #include "baseThreads.h"
 #include "baseStrings.h"
+#include "baseHash.h"
+#include "baseCmdLine.h"
 
 #endif
