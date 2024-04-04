@@ -79,6 +79,7 @@ bool baseStringsStrEquals(str8 a, str8 b, StrMatchFlags flags);
 bool baseStringsStrContains(str8 a, u8 ch);
 str8 baseStringsStrSubStr8(str8 str, u64 start, u64 end);
 u64 baseStringsStrFindSubStr8(str8 haystack, str8 needle, u64 start_pos, StrMatchFlags flags);
+str8 baseStringsStrReplace(BaseArena *arena, str8 str, u8 old, u8 new);
 
 str8 baseStringsStrChopPastLastSlash(str8 str);
 

@@ -21,7 +21,7 @@ void printFiles(BaseArena *arena, str8 path)
 		}
 		else
 		{
-			baseColPrintf("%s\n", fileInfo.path.data);
+			baseColPrintf("%S\n", fileInfo.path);
 		}
 	}
 }
@@ -37,5 +37,10 @@ void ProgramMain(CmdLineHashMap *cmdline)
 	baseColPrintf("Hiiii {b}%d %s\n", 90, "sds");
 	baseColPrintf("%S\n", OSGetProgramPath(generalArena));
 	baseColPrintf("%S\n", OSGetProgramDirectoryPath(generalArena));
+
+	mat4f32 i = MAT4F32_IDENTITY;
+	i = mat4f32Translate(i, Vec3f32(90, 1, 29));
+	i = mat4f32Mult(i, mat4f32Inverse(mat4f32GiveTranslate(Vec3f32(90, 1, 29))));
+	
 	baseArenaFree(generalArena);
 }

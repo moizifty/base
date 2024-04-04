@@ -261,6 +261,20 @@ u64 baseStringsStrFindSubStr8(str8 haystack, str8 needle, u64 startPos, StrMatch
     }
     return foundIndex;
 }
+str8 baseStringsStrReplace(BaseArena *arena, str8 str, u8 old, u8 new)
+{
+    str8 ret = baseStringsPushStr8Fmt(arena, "%S", str);
+
+    for(u64 i = 0; i < ret.len; i++)
+    {
+        if(ret.data[i] == old)
+        {
+            ret.data[i] = new;
+        }
+    }
+
+    return ret;
+}
 
 str8 baseStringsStrChopPastLastSlash(str8 str)
 {

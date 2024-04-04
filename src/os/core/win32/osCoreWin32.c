@@ -47,6 +47,13 @@ void OSEnableVirtualTerminalSequenceProcessing(void)
 }
 
 // files
+bool OSPathExists(str8 path)
+{
+    DWORD dwAttrib = GetFileAttributesA(path.data);
+
+    return (dwAttrib != INVALID_FILE_ATTRIBUTES && 
+          !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
+}
 bool OSPathIsDirectory(str8 path)
 {
     WIN32_FILE_ATTRIBUTE_DATA data = {0};
@@ -95,6 +102,8 @@ u8 *OSReadFileAll(BaseArena *arena, str8 path, u64 *outFileSize)
         *outFileSize = fileSize;
     }
 
+    CloseHandle(fileHandle);
+
     return data;
 }
 OSFileAttributeFlags OSFileAttributesFromWin32(DWORD fileAttr)
@@ -122,11 +131,11 @@ OSFileFindIter *OSFindFileBegin(struct BaseArena *arena, str8 path, OSFileFindOp
             str8 searchPath = path;
             if (topLevel)
             {
-                searchPath = baseStringsPushStr8Fmt(arena, "%s\\*", path.data);
+                searchPath = baseStringsPushStr8Fmt(arena, "%S\\*", path);
             }
 
             findFileData->handle = FindFirstFileA((i8 *) searchPath.data, &findFileData->findData);
-            findFileData->originalPath = baseStringsPushStr8Fmt(arena, "%s", path.data);
+            findFileData->originalPath = baseStringsPushStr8Fmt(arena, "%S", path);
         }
     }
 
@@ -169,17 +178,25 @@ bool OSFindFileNext(struct BaseArena *arena, OSFileFindIter *iter, OSFileInfo *o
         bool topLevel = win32Iter->optParams.type == OS_FILEFIND_TYPE_TOP_LEVEL_DIR;
         if (topLevel)
         {
-            out->path = baseStringsPushStr8Fmt(arena, "%s\\%s", win32Iter->originalPath.data, win32Iter->findData.cFileName);
+            out->path = baseStringsPushStr8Fmt(arena, "%S\\%s", win32Iter->originalPath, win32Iter->findData.cFileName);
         }
         else
         {
-            out->path = baseStringsPushStr8Fmt(arena, "%s", win32Iter->originalPath.data);
+            out->path = baseStringsPushStr8Fmt(arena, "%S", win32Iter->originalPath);
         }
 
         out->attrs = OSFileAttributesFromWin32(win32Iter->findData.dwFileAttributes);
     }
 
     return result;
+}
+void OSFindFileEnd(OSFileFindIter *iter)
+{
+    OSFindFileIterWin32 *win32Iter = (OSFindFileIterWin32 *) iter;
+    if (win32Iter->handle != INVALID_HANDLE_VALUE && win32Iter->handle != null)
+    {
+        FindClose(win32Iter->handle);
+    }
 }
 
 //process
@@ -204,6 +221,18 @@ str8 OSGetProgramDirectoryPath(BaseArena *arena)
     str8 ret = OSGetProgramPath(arena);
     ret = baseStringsStrChopPastLastSlash(ret);
 
+    return ret;
+}
+str8 OSGetFullPath(struct BaseArena *arena, str8 path)
+{
+    i8 buf[1];
+    i64 needed = GetFullPathNameA(path.data, 1, buf, null);
+
+    str8 ret = {0};
+    ret.data = baseArenaPush(arena, needed);
+    ret.len = needed - 1;
+
+    GetFullPathNameA(path.data, needed, ret.data, null);
     return ret;
 }
 bool OSRunProcessEx(BaseArena *arena, str8 app, str8 args, void *peb, str8 *outStr, str8 *errStr)

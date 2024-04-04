@@ -50,6 +50,7 @@ void OSFreeMemory(void *ptr, u64 size);
 void OSEnableVirtualTerminalSequenceProcessing(void);
 
 // files
+bool OSPathExists(str8 path);
 bool OSPathIsDirectory(str8 path);
 u64 OSGetFileSize(str8 path);
 u64 OSGetFileSizeFromHandle(OSHandle handle);
@@ -57,9 +58,11 @@ u8 *OSReadFileAll(struct BaseArena *arena, str8 path, u64 *outFileSize);
 
 OSFileFindIter *OSFindFileBegin(struct BaseArena *arena, str8 path, OSFileFindOptionalParams *opt);
 bool OSFindFileNext(struct BaseArena *arena, OSFileFindIter *iter, OSFileInfo *out);
+void OSFindFileEnd(OSFileFindIter *iter);
 
 // process
 str8 OSGetProgramPath(BaseArena *arena);
 str8 OSGetProgramDirectoryPath(BaseArena *arena);
+str8 OSGetFullPath(struct BaseArena *arena, str8 path);
 bool OSRunProcessEx(struct BaseArena *arena, str8 app, str8 args, void *peb, str8 *outStr, str8 *errStr);
 #endif

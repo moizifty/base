@@ -6,7 +6,6 @@
 #include <string.h>
 
 #include "baseCoreTypes.h"
-#define STB_SPRINTF_IMPLEMENTATION
 #include "thirdparty\ts_stb_sprintf.h"
 
 // General
@@ -49,6 +48,9 @@
 // lists, and stuff
 #define BASE_PTR_LIST_FOREACH(NODETYPE, NAME, LIST)		for(NODETYPE *NAME = (LIST)->first; (NAME) != null; (NAME) = (NAME)->next)
 #define BASE_LIST_FOREACH(NODETYPE, NAME, LIST)			for(NODETYPE *NAME = (LIST).first; (NAME) != null; (NAME) = (NAME)->next)
+
+#define BASE_PTR_LIST_REVFOREACH(NODETYPE, NAME, LIST)		for(NODETYPE *NAME = (LIST)->last; (NAME) != null; (NAME) = (NAME)->prev)
+#define BASE_LIST_REVFOREACH(NODETYPE, NAME, LIST)			for(NODETYPE *NAME = (LIST).last; (NAME) != null; (NAME) = (NAME)->prev)
 
 #define BASE_PTR_LIST_FOREACH_INDEX(NODETYPE, NAME, LIST, INDEX)		for(NODETYPE *NAME = (LIST)->first; (NAME) != null; (NAME) = (NAME)->next, (INDEX)++)
 #define BASE_LIST_FOREACH_INDEX(NODETYPE, NAME, LIST, INDEX)			for(NODETYPE *NAME = (LIST).first; (NAME) != null; (NAME) = (NAME)->next, (INDEX)++)

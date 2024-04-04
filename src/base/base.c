@@ -7,5 +7,6 @@
 #include "baseCore.c"
 #include "baseHash.c"
 #include "baseCmdLine.c"
+#include "baseMath.c"
 
 #endif

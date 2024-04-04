@@ -9,5 +9,6 @@
 #include "baseStrings.h"
 #include "baseHash.h"
 #include "baseCmdLine.h"
+#include "baseMath.h"
 
 #endif

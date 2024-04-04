@@ -9,6 +9,9 @@
 #include "baseCmdLine.h"
 #include "..\os\core\osCore.h"
 
+#define STB_SPRINTF_IMPLEMENTATION
+#include "thirdparty\ts_stb_sprintf.h"
+
 void BaseMainThreadEntry(ProgramMainFunc programMain, i64 argc, i8 **argv)
 {
     BASE_UNUSED_PARAM(argc);
