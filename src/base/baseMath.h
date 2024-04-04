@@ -122,7 +122,8 @@ typedef struct quatf32
 {
     union
     {
-        f32 v[4];
+        f32 elems[4];
+        vec4f32 v;
         struct
         {
             f32 x;
@@ -189,6 +190,7 @@ vec3f32 vec3f32Div(vec3f32 a, vec3f32 b); // componentwise mult
 vec3f32 vec3f32MultF32(vec3f32 a, f32 s);
 vec3f32 vec3f32DivF32(vec3f32 a, f32 s);
 vec3f32 vec3f32Norm(vec3f32 a);
+vec3f32 vec3f32Cross(vec3f32 a, vec3f32 b);
 f32 vec3f32Dot(vec3f32 a, vec3f32 b);
 f32 vec3f32Mag(vec3f32 a);
 f32 vec3f32MagSqr(vec3f32 a);
@@ -232,11 +234,13 @@ mat3f32 mat3f32GiveRotateX(f32 rad);
 mat3f32 mat3f32GiveRotateY(f32 rad);
 mat3f32 mat3f32GiveRotateZ(f32 rad);
 mat3f32 mat3f32GiveRotateYXZ(f32 radX, f32 radY, f32 radZ);
+mat3f32 mat3f32GiveRotateZXY(f32 radX, f32 radY, f32 radZ);
 mat3f32 mat3f32GiveRotateAxis(vec3f32 axis, f32 rad);
 mat3f32 mat3f32RotateX(mat3f32 a, f32 rad);
 mat3f32 mat3f32RotateY(mat3f32 a, f32 rad);
 mat3f32 mat3f32RotateZ(mat3f32 a, f32 rad);
 mat3f32 mat3f32RotateYXZ(mat3f32 a, f32 radX, f32 radY, f32 radZ);
+mat3f32 mat3f32RotateZXY(mat3f32 a, f32 radX, f32 radY, f32 radZ);
 mat3f32 mat3f32RotateAxis(mat3f32 a, vec3f32 axis, f32 rad);
 
 // mat4f32
@@ -268,11 +272,13 @@ mat4f32 mat4f32GiveRotateX(f32 rad);
 mat4f32 mat4f32GiveRotateY(f32 rad);
 mat4f32 mat4f32GiveRotateZ(f32 rad);
 mat4f32 mat4f32GiveRotateYXZ(f32 radX, f32 radY, f32 radZ);
+mat4f32 mat4f32GiveRotateZXY(f32 radX, f32 radY, f32 radZ);
 mat4f32 mat4f32GiveRotateAxis(vec3f32 axis, f32 rad);
 mat4f32 mat4f32RotateX(mat4f32 a, f32 rad);
 mat4f32 mat4f32RotateY(mat4f32 a, f32 rad);
 mat4f32 mat4f32RotateZ(mat4f32 a, f32 rad);
 mat4f32 mat4f32RotateYXZ(mat4f32 a, f32 radX, f32 radY, f32 radZ);
+mat4f32 mat4f32RotateZXY(mat4f32 a, f32 radX, f32 radY, f32 radZ);
 mat4f32 mat4f32RotateAxis(mat4f32 a, vec3f32 axis, f32 rad);
 
 mat4f32 mat4f32GiveTranslate(vec3f32 t);

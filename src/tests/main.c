@@ -40,7 +40,7 @@ void ProgramMain(CmdLineHashMap *cmdline)
 
 	mat4f32 i = MAT4F32_IDENTITY;
 	i = mat4f32Translate(i, Vec3f32(90, 1, 29));
-	i = mat4f32Mult(i, mat4f32Inverse(mat4f32GiveTranslate(Vec3f32(90, 1, 29))));
-	
+
+	vec4f32 v = mat4f32MultVec4f32(i, Vec4f32(6, 8, 4, 1));
 	baseArenaFree(generalArena);
 }

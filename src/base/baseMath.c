@@ -72,6 +72,10 @@ vec3f32 vec3f32Norm(vec3f32 a)
     f32 mag = vec3f32Mag(a);
     return Vec3f32(a.x / mag, a.y / mag, a.z / mag);
 }
+vec3f32 vec3f32Cross(vec3f32 a, vec3f32 b)
+{
+    return Vec3f32(a.y * b.z - a.z * b.y, a.z * b.x - a.x * b.z, a.x * b.y - a.y * b.x);
+}
 f32 vec3f32Dot(vec3f32 a, vec3f32 b)
 {
     return a.x * b.x + a.y * b.y + a.z * b.z;
@@ -479,6 +483,13 @@ mat3f32 mat3f32GiveRotateYXZ(f32 radX, f32 radY, f32 radZ)
     //hence ZXYv
     return mat3f32Mult(mat3f32GiveRotateZ(radZ), mat3f32Mult(mat3f32GiveRotateX(radX), mat3f32GiveRotateY(radY)));
 }
+mat3f32 mat3f32GiveRotateZXY(f32 radX, f32 radY, f32 radZ)
+{
+    // column vectors, which means we right multiplay with vectors
+    //hence ZXYv
+    return mat3f32Mult(mat3f32GiveRotateY(radY), mat3f32Mult(mat3f32GiveRotateX(radX), mat3f32GiveRotateZ(radZ)));
+}
+
 mat3f32 mat3f32GiveRotateAxis(vec3f32 axis, f32 rad)
 {
     axis = vec3f32Norm(axis);
@@ -517,6 +528,10 @@ mat3f32 mat3f32RotateZ(mat3f32 a, f32 rad)
 mat3f32 mat3f32RotateYXZ(mat3f32 a, f32 radX, f32 radY, f32 radZ)
 {
     return mat3f32Mult(a, mat3f32GiveRotateYXZ(radX, radY, radZ));
+}
+mat3f32 mat3f32RotateZXY(mat3f32 a, f32 radX, f32 radY, f32 radZ)
+{
+    return mat3f32Mult(a, mat3f32GiveRotateZXY(radX, radY, radZ));
 }
 mat3f32 mat3f32RotateAxis(mat3f32 a, vec3f32 axis, f32 rad)
 {
@@ -759,6 +774,11 @@ mat4f32 mat4f32Mult(mat4f32 a, mat4f32 b)
         .m21 = vec4f32Dot(a.v[2], Vec4f32(b.m01, b.m11, b.m21, b.m31)),
         .m22 = vec4f32Dot(a.v[2], Vec4f32(b.m02, b.m12, b.m22, b.m32)),
         .m23 = vec4f32Dot(a.v[2], Vec4f32(b.m03, b.m13, b.m23, b.m33)),
+
+        .m30 = vec4f32Dot(a.v[3], Vec4f32(b.m00, b.m10, b.m20, b.m30)),
+        .m31 = vec4f32Dot(a.v[3], Vec4f32(b.m01, b.m11, b.m21, b.m31)),
+        .m32 = vec4f32Dot(a.v[3], Vec4f32(b.m02, b.m12, b.m22, b.m32)),
+        .m33 = vec4f32Dot(a.v[3], Vec4f32(b.m03, b.m13, b.m23, b.m33)),
     };
 
     return m;
@@ -952,8 +972,13 @@ mat4f32 mat4f32GiveRotateZ(f32 rad)
 }
 mat4f32 mat4f32GiveRotateYXZ(f32 radX, f32 radY, f32 radZ)
 {
-    return Mat4f32FromMat3(mat4f32GiveRotateYXZ(radX, radY, radZ));
+    return Mat4f32FromMat3(mat3f32GiveRotateYXZ(radX, radY, radZ));
 }
+mat4f32 mat4f32GiveRotateZXY(f32 radX, f32 radY, f32 radZ)
+{
+    return Mat4f32FromMat3(mat3f32GiveRotateZXY(radX, radY, radZ));
+}
+
 mat4f32 mat4f32GiveRotateAxis(vec3f32 axis, f32 rad)
 {
     return Mat4f32FromMat3(mat3f32GiveRotateAxis(axis, rad));
@@ -973,6 +998,10 @@ mat4f32 mat4f32RotateZ(mat4f32 a, f32 rad)
 mat4f32 mat4f32RotateYXZ(mat4f32 a, f32 radX, f32 radY, f32 radZ)
 {
     return mat4f32Mult(a, mat4f32GiveRotateYXZ(radX, radY, radZ));
+}
+mat4f32 mat4f32RotateZXY(mat4f32 a, f32 radX, f32 radY, f32 radZ)
+{
+    return mat4f32Mult(a, mat4f32GiveRotateZXY(radX, radY, radZ));
 }
 mat4f32 mat4f32RotateAxis(mat4f32 a, vec3f32 axis, f32 rad)
 {
@@ -1006,7 +1035,7 @@ mat4f32 mat4f32GiveTransformSRT(vec3f32 translate, vec3f32 rotateRads, vec4f32 s
     // you have to do: TRSv
 
     return mat4f32Mult(mat4f32GiveTranslate(translate), 
-                       mat4f32Mult(mat4f32GiveRotateYXZ(rotateRads.x, rotateRads.y, rotateRads.z),
+                       mat4f32Mult(mat4f32GiveRotateZXY(rotateRads.x, rotateRads.y, rotateRads.z),
                                    mat4f32GiveScale(scale)));
 }
 mat4f32 mat4f32TransformSRT(mat4f32 a, vec3f32 translate, vec3f32 rotateRads, vec4f32 scale)
