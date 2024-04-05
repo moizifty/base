@@ -33,8 +33,8 @@ typedef double f64;
 typedef struct ArrayView
 {
     void *data;
-    u64 len;
     u64 elemSize;
+    u64 len;
 }ArrayView;
 
 typedef struct str8

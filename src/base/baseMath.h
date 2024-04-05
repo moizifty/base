@@ -22,38 +22,39 @@
 #define baseRadToDegF32(RAD)   ((RAD) * (180.0f) / ((f32)BASE_PI))
 #define baseDegToRadF32(DEG)   ((DEG) * ((f32)(BASE_PI)) / 180.0f)
 
-#define Vec2f32(X, Y)    ((vec2f32){.x = (f32)(X), .y = (f32)(Y)})
-#define Vec2f32FromVec(V)   (Vec2f32((V).x, (V).y))
+#define Vec2f(X, Y)    ((vec2f){.x = (f32)(X), .y = (f32)(Y)})
+#define Vec2fFromVec(V)   (Vec2f((V).x, (V).y))
 
-#define Vec3f32(X, Y, Z)    ((vec3f32){.x = (f32)(X), .y = (f32)(Y), .z = (f32)(Z)})
-#define Vec3f32FromVec(V)   (Vec3f32((V).x, (V).y, (V).z))
+#define Vec3f(X, Y, Z)    ((vec3f){.x = (f32)(X), .y = (f32)(Y), .z = (f32)(Z)})
+#define Vec3fFromVec(V)   (Vec3f((V).x, (V).y, (V).z))
 
-#define Vec4f32(X, Y, Z, W)    ((vec4f32){.x = (f32)(X), .y = (f32)(Y), .z = (f32)(Z), .w = (f32)(W)})
-#define Vec4f32FromVec(V)   (Vec4f32((V).x, (V).y, (V).z, (V).w))
+#define Vec4f(X, Y, Z, W)    ((vec4f){.x = (f32)(X), .y = (f32)(Y), .z = (f32)(Z), .w = (f32)(W)})
+#define Vec4fFromVec(V)   (Vec4f((V).x, (V).y, (V).z, (V).w))
 
-#define Quatf32(X, Y, Z, W)    ((quatf32){.x = (f32)(X), .y = (f32)(Y), .z = (f32)(Z), .w = (f32)(W)})
+#define Quatf(X, Y, Z, W)    ((quatf){.x = (f32)(X), .y = (f32)(Y), .z = (f32)(Z), .w = (f32)(W)})
+#define QUATF_IDENTITY  Quatf(0, 0, 0, 1)
 
-#define Mat3f32(DIAG)   ((mat3f32){.m00 = (f32)(DIAG), .m11 = (f32)(DIAG), .m22 = (f32)(DIAG)})
-#define Mat3f32FromMat(M)   ((mat3f32){.m00 = (f32)(M).m00, .m01 = (f32)(M).m01, .m02 = (f32)(M).m02, \
+#define Mat3f(DIAG)   ((mat3f){.m00 = (f32)(DIAG), .m11 = (f32)(DIAG), .m22 = (f32)(DIAG)})
+#define Mat3fFromMat(M)   ((mat3f){.m00 = (f32)(M).m00, .m01 = (f32)(M).m01, .m02 = (f32)(M).m02, \
                                        .m10 = (f32)(M).m10, .m11 = (f32)(M).m11, .m12 = (f32)(M).m12, \
                                        .m20 = (f32)(M).m20, .m21 = (f32)(M).m21, .m22 = (f32)(M).m22, })
-#define MAT3F32_IDENTITY    (Mat3f32(1))
+#define MAT3F_IDENTITY    (Mat3f(1))
 
-#define Mat4f32(DIAG)   ((mat4f32){.m00 = (f32)(DIAG), .m11 = (f32)(DIAG), .m22 = (f32)(DIAG), .m33 = (f32)(DIAG)})
-#define Mat4f32FromMat(M)   ((mat4f32){.m00 = (f32)(M).m00, .m01 = (f32)(M).m01, .m02 = (f32)(M).m02, .m03 = (f32)(M).m03, \
+#define Mat4f(DIAG)   ((mat4f){.m00 = (f32)(DIAG), .m11 = (f32)(DIAG), .m22 = (f32)(DIAG), .m33 = (f32)(DIAG)})
+#define Mat4fFromMat(M)   ((mat4f){.m00 = (f32)(M).m00, .m01 = (f32)(M).m01, .m02 = (f32)(M).m02, .m03 = (f32)(M).m03, \
                                        .m10 = (f32)(M).m10, .m11 = (f32)(M).m11, .m12 = (f32)(M).m12, .m13 = (f32)(M).m13, \
                                        .m20 = (f32)(M).m20, .m21 = (f32)(M).m21, .m22 = (f32)(M).m22, .m23 = (f32)(M).m23, \
                                        .m30 = (f32)(M).m30, .m31 = (f32)(M).m31, .m32 = (f32)(M).m32, .m33 = (f32)(M).m33, })
 
-#define Mat4f32FromMat3(M)   ((mat4f32){.m00 = (f32)(M).m00, .m01 = (f32)(M).m01, .m02 = (f32)(M).m02, .m03 = 0, \
+#define Mat4fFromMat3(M)   ((mat4f){.m00 = (f32)(M).m00, .m01 = (f32)(M).m01, .m02 = (f32)(M).m02, .m03 = 0, \
                                        .m10 = (f32)(M).m10, .m11 = (f32)(M).m11, .m12 = (f32)(M).m12, .m13 = 0, \
                                        .m20 = (f32)(M).m20, .m21 = (f32)(M).m21, .m22 = (f32)(M).m22, .m23 = 0, \
                                        .m30 = 0, .m31 = 0, .m32 = 0, .m33 = 1, })
 
 
-#define MAT4F32_IDENTITY    (Mat4f32(1))
+#define MAT4F_IDENTITY    (Mat4f(1))
 
-typedef struct vec2f32
+typedef struct vec2f
 {
     union
     {
@@ -64,9 +65,9 @@ typedef struct vec2f32
             f32 y;
         };
     };   
-}vec2f32;
+}vec2f;
 
-typedef struct vec3f32
+typedef struct vec3f
 {
     union
     {
@@ -85,13 +86,13 @@ typedef struct vec3f32
         };
         struct
         {
-            vec2f32 xy;
+            vec2f xy;
             f32 _z;
         };
     };   
-}vec3f32;
+}vec3f;
 
-typedef struct vec4f32
+typedef struct vec4f
 {
     union
     {
@@ -112,18 +113,18 @@ typedef struct vec4f32
         };
         struct
         {
-            vec3f32 xyz;
+            vec3f xyz;
             f32 _w;
         };
     };   
-}vec4f32;
+}vec4f;
 
-typedef struct quatf32
+typedef struct quatf
 {
     union
     {
         f32 elems[4];
-        vec4f32 v;
+        vec4f v;
         struct
         {
             f32 x;
@@ -133,17 +134,17 @@ typedef struct quatf32
         };
         struct
         {
-            vec3f32 xyz;
+            vec3f xyz;
             f32 _w;
         };
     };   
-}quatf32;
+}quatf;
 
-typedef struct mat3f32
+typedef struct mat3f
 {
     union
     {
-        vec3f32 v[3];
+        vec3f v[3];
         f32 m[3 * 3];
         f32 rows[3][3];
         struct
@@ -153,13 +154,13 @@ typedef struct mat3f32
             f32 m20, m21, m22;
         };
     };
-}mat3f32;
+}mat3f;
 
-typedef struct mat4f32
+typedef struct mat4f
 {
     union
     {
-        vec4f32 v[4];
+        vec4f v[4];
         f32 m[4 * 4];
         f32 rows[4][4];
         struct
@@ -170,122 +171,159 @@ typedef struct mat4f32
             f32 m30, m31, m32, m33;
         };
     };
-}mat4f32;
+}mat4f;
 
-vec2f32 vec2f32Add(vec2f32 a, vec2f32 b);
-vec2f32 vec2f32Sub(vec2f32 a, vec2f32 b);
-vec2f32 vec2f32Mult(vec2f32 a, vec2f32 b); // componentwise mult
-vec2f32 vec2f32Div(vec2f32 a, vec2f32 b); // componentwise mult
-vec2f32 vec2f32MultF32(vec2f32 a, f32 s);
-vec2f32 vec2f32DivF32(vec2f32 a, f32 s);
-vec2f32 vec2f32Norm(vec2f32 a);
-f32 vec2f32Dot(vec2f32 a, vec2f32 b);
-f32 vec2f32Mag(vec2f32 a);
-f32 vec2f32MagSqr(vec2f32 a);
+vec2f vec2fAdd(vec2f a, vec2f b);
+vec2f vec2fSub(vec2f a, vec2f b);
+vec2f vec2fMult(vec2f a, vec2f b); // componentwise mult
+vec2f vec2fDiv(vec2f a, vec2f b); // componentwise mult
+vec2f vec2fMultF32(vec2f a, f32 s);
+vec2f vec2fDivF32(vec2f a, f32 s);
+vec2f vec2fNorm(vec2f a);
+f32 vec2fDot(vec2f a, vec2f b);
+f32 vec2fMag(vec2f a);
+f32 vec2fMagSqr(vec2f a);
 
-vec3f32 vec3f32Add(vec3f32 a, vec3f32 b);
-vec3f32 vec3f32Sub(vec3f32 a, vec3f32 b);
-vec3f32 vec3f32Mult(vec3f32 a, vec3f32 b); // componentwise mult
-vec3f32 vec3f32Div(vec3f32 a, vec3f32 b); // componentwise mult
-vec3f32 vec3f32MultF32(vec3f32 a, f32 s);
-vec3f32 vec3f32DivF32(vec3f32 a, f32 s);
-vec3f32 vec3f32Norm(vec3f32 a);
-vec3f32 vec3f32Cross(vec3f32 a, vec3f32 b);
-f32 vec3f32Dot(vec3f32 a, vec3f32 b);
-f32 vec3f32Mag(vec3f32 a);
-f32 vec3f32MagSqr(vec3f32 a);
+vec3f vec3fAdd(vec3f a, vec3f b);
+vec3f vec3fSub(vec3f a, vec3f b);
+vec3f vec3fMult(vec3f a, vec3f b); // componentwise mult
+vec3f vec3fDiv(vec3f a, vec3f b); // componentwise mult
+vec3f vec3fMultF32(vec3f a, f32 s);
+vec3f vec3fDivF32(vec3f a, f32 s);
+vec3f vec3fNorm(vec3f a);
+vec3f vec3fCross(vec3f a, vec3f b);
+f32 vec3fDot(vec3f a, vec3f b);
+f32 vec3fMag(vec3f a);
+f32 vec3fMagSqr(vec3f a);
 
-vec4f32 vec4f32Add(vec4f32 a, vec4f32 b);
-vec4f32 vec4f32Sub(vec4f32 a, vec4f32 b);
-vec4f32 vec4f32Mult(vec4f32 a, vec4f32 b); // componentwise mult
-vec4f32 vec4f32Div(vec4f32 a, vec4f32 b); // componentwise mult
-vec4f32 vec4f32MultF32(vec4f32 a, f32 s);
-vec4f32 vec4f32DivF32(vec4f32 a, f32 s);
-vec4f32 vec4f32Norm(vec4f32 a);
-f32 vec4f32Dot(vec4f32 a, vec4f32 b);
-f32 vec4f32Mag(vec4f32 a);
-f32 vec4f32MagSqr(vec4f32 a);
+vec4f vec4fAdd(vec4f a, vec4f b);
+vec4f vec4fSub(vec4f a, vec4f b);
+vec4f vec4fMult(vec4f a, vec4f b); // componentwise mult
+vec4f vec4fDiv(vec4f a, vec4f b); // componentwise mult
+vec4f vec4fMultF32(vec4f a, f32 s);
+vec4f vec4fDivF32(vec4f a, f32 s);
+vec4f vec4fNorm(vec4f a);
+f32 vec4fDot(vec4f a, vec4f b);
+f32 vec4fMag(vec4f a);
+f32 vec4fMagSqr(vec4f a);
 
-mat3f32 mat3f32FromColVec3f32(vec3f32 cols[3]);
-mat3f32 mat3f32FromRowVec3f32(vec3f32 rows[3]);
-mat3f32 mat3f32Transpose(mat3f32 a);
-f32 mat3f32Det(mat3f32 a);
-mat3f32 mat3f32Inverse(mat3f32 a);
-mat3f32 mat3f32Add(mat3f32 a, mat3f32 b);
-mat3f32 mat3f32Sub(mat3f32 a, mat3f32 b);
-mat3f32 mat3f32Mult(mat3f32 a, mat3f32 b);
-mat3f32 mat3f32MultComponentWise(mat3f32 a, mat3f32 b);
-mat3f32 mat3f32MultF32(mat3f32 a, f32 s);
-vec3f32 mat3f32MultVec3f32(mat3f32 a, vec3f32 v);
-mat3f32 mat3f32Div(mat3f32 a, mat3f32 b);
-mat3f32 mat3f32DivComponentWise(mat3f32 a, mat3f32 b);
-mat3f32 mat3f32DivF32(mat3f32 a, f32 s);
-mat3f32 mat3f32NormCols(mat3f32 a);
-mat3f32 mat3f32NormRows(mat3f32 a);
+//mat3f
+mat3f mat3fFromColVec3f(vec3f cols[3]);
+mat3f mat3fFromRowVec3f(vec3f rows[3]);
+mat3f mat3fTranspose(mat3f a);
+f32 mat3fDet(mat3f a);
+mat3f mat3fInverse(mat3f a);
+mat3f mat3fAdd(mat3f a, mat3f b);
+mat3f mat3fSub(mat3f a, mat3f b);
+mat3f mat3fMult(mat3f a, mat3f b);
+mat3f mat3fMultComponentWise(mat3f a, mat3f b);
+mat3f mat3fMultF32(mat3f a, f32 s);
+vec3f mat3fMultVec3f(mat3f a, vec3f v);
+mat3f mat3fDiv(mat3f a, mat3f b);
+mat3f mat3fDivComponentWise(mat3f a, mat3f b);
+mat3f mat3fDivF32(mat3f a, f32 s);
+mat3f mat3fNormCols(mat3f a);
+mat3f mat3fNormRows(mat3f a);
 
-mat3f32 mat3f32GiveScale(vec3f32 scale);
-mat3f32 mat3f32GiveScaleUniform(f32 scale);
-mat3f32 mat3f32GiveScaleAxis(vec3f32 axis, f32 scale);
-mat3f32 mat3f32Scale(mat3f32 a, vec3f32 scale);
-mat3f32 mat3f32ScaleUniform(mat3f32 a, f32 scale);
-mat3f32 mat3f32ScaleAxis(mat3f32 a, vec3f32 axis, f32 scale);
+mat3f mat3fGiveScale(vec3f scale);
+mat3f mat3fGiveScaleUniform(f32 scale);
+mat3f mat3fGiveScaleAxis(vec3f axis, f32 scale);
+mat3f mat3fScale(mat3f a, vec3f scale);
+mat3f mat3fScaleUniform(mat3f a, f32 scale);
+mat3f mat3fScaleAxis(mat3f a, vec3f axis, f32 scale);
 
-mat3f32 mat3f32GiveRotateX(f32 rad);
-mat3f32 mat3f32GiveRotateY(f32 rad);
-mat3f32 mat3f32GiveRotateZ(f32 rad);
-mat3f32 mat3f32GiveRotateYXZ(f32 radX, f32 radY, f32 radZ);
-mat3f32 mat3f32GiveRotateZXY(f32 radX, f32 radY, f32 radZ);
-mat3f32 mat3f32GiveRotateAxis(vec3f32 axis, f32 rad);
-mat3f32 mat3f32RotateX(mat3f32 a, f32 rad);
-mat3f32 mat3f32RotateY(mat3f32 a, f32 rad);
-mat3f32 mat3f32RotateZ(mat3f32 a, f32 rad);
-mat3f32 mat3f32RotateYXZ(mat3f32 a, f32 radX, f32 radY, f32 radZ);
-mat3f32 mat3f32RotateZXY(mat3f32 a, f32 radX, f32 radY, f32 radZ);
-mat3f32 mat3f32RotateAxis(mat3f32 a, vec3f32 axis, f32 rad);
+mat3f mat3fGiveRotateX(f32 rad);
+mat3f mat3fGiveRotateY(f32 rad);
+mat3f mat3fGiveRotateZ(f32 rad);
+mat3f mat3fGiveRotateYXZ(f32 radX, f32 radY, f32 radZ);
+mat3f mat3fGiveRotateZXY(f32 radX, f32 radY, f32 radZ);
+mat3f mat3fGiveRotateAxis(vec3f axis, f32 rad);
+mat3f mat3fRotateX(mat3f a, f32 rad);
+mat3f mat3fRotateY(mat3f a, f32 rad);
+mat3f mat3fRotateZ(mat3f a, f32 rad);
+mat3f mat3fRotateYXZ(mat3f a, f32 radX, f32 radY, f32 radZ);
+mat3f mat3fRotateZXY(mat3f a, f32 radX, f32 radY, f32 radZ);
+mat3f mat3fRotateAxis(mat3f a, vec3f axis, f32 rad);
 
-// mat4f32
-mat4f32 mat4f32FromColVec4f32(vec4f32 cols[4]);
-mat4f32 mat4f32FromRowVec4f32(vec4f32 rows[4]);
-mat4f32 mat4f32Transpose(mat4f32 a);
-f32 mat4f32Det(mat4f32 a);
-mat4f32 mat4f32Inverse(mat4f32 a);
-mat4f32 mat4f32Add(mat4f32 a, mat4f32 b);
-mat4f32 mat4f32Sub(mat4f32 a, mat4f32 b);
-mat4f32 mat4f32Mult(mat4f32 a, mat4f32 b);
-mat4f32 mat4f32MultComponentWise(mat4f32 a, mat4f32 b);
-mat4f32 mat4f32MultF32(mat4f32 a, f32 s);
-vec4f32 mat4f32MultVec4f32(mat4f32 a, vec4f32 v);
-mat4f32 mat4f32Div(mat4f32 a, mat4f32 b);
-mat4f32 mat4f32DivComponentWise(mat4f32 a, mat4f32 b);
-mat4f32 mat4f32DivF32(mat4f32 a, f32 s);
-mat4f32 mat4f32NormCols(mat4f32 a);
-mat4f32 mat4f32NormRows(mat4f32 a);
+// mat4f
+mat4f mat4fFromColVec4f(vec4f cols[4]);
+mat4f mat4fFromRowVec4f(vec4f rows[4]);
+mat4f mat4fTranspose(mat4f a);
+f32 mat4fDet(mat4f a);
+mat4f mat4fInverse(mat4f a);
+mat4f mat4fAdd(mat4f a, mat4f b);
+mat4f mat4fSub(mat4f a, mat4f b);
+mat4f mat4fMult(mat4f a, mat4f b);
+mat4f mat4fMultComponentWise(mat4f a, mat4f b);
+mat4f mat4fMultF32(mat4f a, f32 s);
+vec4f mat4fMultVec4f(mat4f a, vec4f v);
+mat4f mat4fDiv(mat4f a, mat4f b);
+mat4f mat4fDivComponentWise(mat4f a, mat4f b);
+mat4f mat4fDivF32(mat4f a, f32 s);
+mat4f mat4fNormCols(mat4f a);
+mat4f mat4fNormRows(mat4f a);
 
-mat4f32 mat4f32GiveScale(vec4f32 scale);
-mat4f32 mat4f32GiveScaleUniform(f32 scale);
-mat4f32 mat4f32GiveScaleAxis(vec3f32 axis, f32 scale);
-mat4f32 mat4f32Scale(mat4f32 a, vec4f32 scale);
-mat4f32 mat4f32ScaleUniform(mat4f32 a, f32 scale);
-mat4f32 mat4f32ScaleAxis(mat4f32 a, vec3f32 axis, f32 scale);
+mat4f mat4fGiveScale(vec4f scale);
+mat4f mat4fGiveScaleUniform(f32 scale);
+mat4f mat4fGiveScaleAxis(vec3f axis, f32 scale);
+mat4f mat4fScale(mat4f a, vec4f scale);
+mat4f mat4fScaleUniform(mat4f a, f32 scale);
+mat4f mat4fScaleAxis(mat4f a, vec3f axis, f32 scale);
 
-mat4f32 mat4f32GiveRotateX(f32 rad);
-mat4f32 mat4f32GiveRotateY(f32 rad);
-mat4f32 mat4f32GiveRotateZ(f32 rad);
-mat4f32 mat4f32GiveRotateYXZ(f32 radX, f32 radY, f32 radZ);
-mat4f32 mat4f32GiveRotateZXY(f32 radX, f32 radY, f32 radZ);
-mat4f32 mat4f32GiveRotateAxis(vec3f32 axis, f32 rad);
-mat4f32 mat4f32RotateX(mat4f32 a, f32 rad);
-mat4f32 mat4f32RotateY(mat4f32 a, f32 rad);
-mat4f32 mat4f32RotateZ(mat4f32 a, f32 rad);
-mat4f32 mat4f32RotateYXZ(mat4f32 a, f32 radX, f32 radY, f32 radZ);
-mat4f32 mat4f32RotateZXY(mat4f32 a, f32 radX, f32 radY, f32 radZ);
-mat4f32 mat4f32RotateAxis(mat4f32 a, vec3f32 axis, f32 rad);
+mat4f mat4fGiveRotateX(f32 rad);
+mat4f mat4fGiveRotateY(f32 rad);
+mat4f mat4fGiveRotateZ(f32 rad);
+mat4f mat4fGiveRotateYXZ(f32 radX, f32 radY, f32 radZ);
+mat4f mat4fGiveRotateZXY(f32 radX, f32 radY, f32 radZ);
+mat4f mat4fGiveRotateAxis(vec3f axis, f32 rad);
+mat4f mat4fRotateX(mat4f a, f32 rad);
+mat4f mat4fRotateY(mat4f a, f32 rad);
+mat4f mat4fRotateZ(mat4f a, f32 rad);
+mat4f mat4fRotateYXZ(mat4f a, f32 radX, f32 radY, f32 radZ);
+mat4f mat4fRotateZXY(mat4f a, f32 radX, f32 radY, f32 radZ);
+mat4f mat4fRotateAxis(mat4f a, vec3f axis, f32 rad);
 
-mat4f32 mat4f32GiveTranslate(vec3f32 t);
-mat4f32 mat4f32Translate(mat4f32 a, vec3f32 t);
+mat4f mat4fGiveTranslate(vec3f t);
+mat4f mat4fTranslate(mat4f a, vec3f t);
 
 // scale -> rotate -> translate
-mat4f32 mat4f32GiveTransformSRT(vec3f32 translate, vec3f32 rotateRads, vec4f32 scale);
+mat4f mat4fGiveTransformSRT(vec3f translate, vec3f rotateRads, vec4f scale);
 // scale -> rotate -> translate
-mat4f32 mat4f32TransformSRT(mat4f32 a, vec3f32 translate, vec3f32 rotateRads, vec4f32 scale);
+mat4f mat4fTransformSRT(mat4f a, vec3f translate, vec3f rotateRads, vec4f scale);
+
+//quatf
+quatf quatfNegate(quatf q);
+quatf quatfConjugate(quatf q);
+quatf quatfInverse(quatf q);
+quatf quatfNorm(quatf q);
+quatf quatfAdd(quatf a, quatf b);
+quatf quatfSub(quatf a, quatf b);
+//returns a quaternion that gives a rotation from 'a' to 'b' essentionlly b - a in vector terms
+quatf quatfDifference(quatf a, quatf b);
+quatf quatfMult(quatf a, quatf b);
+quatf quatfMultF32(quatf a, f32 s);
+vec3f quatfMultVec3f(quatf a, vec3f v);
+quatf quatfMultComponentWise(quatf a, quatf b);
+quatf quatfDiv(quatf a, quatf b);
+quatf quatfDivF32(quatf a, f32 s);
+quatf quatfDivComponentWise(quatf a, quatf b);
+f32 quatfDot(quatf a, quatf b);
+f32 quatfMag(quatf q);
+f32 quatfMagSqr(quatf q);
+
+quatf quatfFromEulerYXZ(vec3f angleRads);
+vec3f quatfToEulerYXZ(quatf q);
+vec3f quatfToEulerZXY(quatf q);
+mat3f quatfToMat3f(quatf q);
+mat4f quatfToMat4f(quatf q);
+
+quatf quatfGiveRotateAxis(vec3f axis, f32 rad);
+quatf quatfGiveRotateYXZ(f32 radX, f32 radY, f32 radZ);
+quatf quatfGiveRotateZXY(f32 radX, f32 radY, f32 radZ);
+quatf quatfRotateAxis(quatf q, vec3f axis, f32 rad);
+quatf quatfRotateYXZ(quatf q, f32 radX, f32 radY, f32 radZ);
+quatf quatfRotateZXY(quatf q, f32 radX, f32 radY, f32 radZ);
+vec3f quatfRotateAxisVec3f(vec3f v, vec3f axis, f32 rad);
+vec3f quatfRotateYXZVec3f(vec3f v, f32 radX, f32 radY, f32 radZ);
+vec3f quatfRotateZXYVec3f(vec3f v, f32 radX, f32 radY, f32 radZ);
 #endif

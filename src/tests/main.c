@@ -38,9 +38,11 @@ void ProgramMain(CmdLineHashMap *cmdline)
 	baseColPrintf("%S\n", OSGetProgramPath(generalArena));
 	baseColPrintf("%S\n", OSGetProgramDirectoryPath(generalArena));
 
-	mat4f32 i = MAT4F32_IDENTITY;
-	i = mat4f32Translate(i, Vec3f32(90, 1, 29));
+	mat4f i = MAT4F_IDENTITY;
+	i = quatfToMat4f(quatfGiveRotateAxis(Vec3f(1, 0, 0), baseDegToRadF32(90.0f))); //mat4fGiveRotateX(baseDegToRadF32(45));
 
-	vec4f32 v = mat4f32MultVec4f32(i, Vec4f32(6, 8, 4, 1));
+	quatf v = quatfFromEulerYXZ(Vec3f(1, 5, 2)); //quatfRotateYXZVec3f(Vec3f(0, 1, 0), baseDegToRadF32(45), 0, 0);
+
+	printf("(%f %f %f %f)\n", v.x, v.y, v.z, v.w);
 	baseArenaFree(generalArena);
 }
