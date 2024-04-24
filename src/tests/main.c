@@ -2,9 +2,11 @@
 
 #include "..\base\base.h"
 #include "..\os\os.h"
+#include "..\renderer\renderer.h"
 
 #include "..\base\base.c"
-#include "..\os\core\win32\osCoreWin32.c"
+#include "..\os\os.c"
+#include "..\renderer\renderer.c"
 #include "..\os\core\osEntryPoint.c"
 
 BASE_CREATE_LL_DECLS_DEFS(IntList, int);
@@ -29,6 +31,26 @@ void printFiles(BaseArena *arena, str8 path)
 void ProgramMain(CmdLineHashMap *cmdline)
 {
 	BaseArena *generalArena = baseArenaAlloc(BASE_GIGABYTES(2));
+	
+	OSGfxState *state = OSGfxInit(generalArena);
+	OSGfxOpenWindow(STR8_LIT("Test"), -1, -1, -1, -1);
+	
+	RendererInit(generalArena, state);
+
+	bool quit = false;
+	while(!quit)
+	{
+		OSGfxProcessEvents(generalArena);
+
+		BASE_LIST_FOREACH(OSEvent, event, gOSWin32TLEvents)
+		{
+			if(event->kind == OS_EVENT_WINDOW_CLOSE)
+			{
+				quit = true;
+				break;
+			}
+		}
+	}
 
 	baseColPrintf("Hiiii {b}%d %s\n", 90, "sds");
 

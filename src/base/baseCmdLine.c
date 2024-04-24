@@ -21,12 +21,25 @@ CmdLineHashMap cmdlineParseCmdLineFromStringList(BaseArena *arena, Str8List list
         CmdLineOptNode *optionNode = baseArenaPush(arena, sizeof(CmdLineOptNode));
         optionNode->option = str->val;
         
-        CmdLineOptSlot slot = ret.slots.data[slotIndex];
-        BaseDllNodePushLast(slot.first, slot.last, optionNode);
+        BaseDllNodePushLast(ret.slots.data[slotIndex].first, ret.slots.data[slotIndex].last, optionNode);
     }
 
     return ret;
 }
 str8 cmdlineGetStr8(CmdLineHashMap *map, str8 option);
-bool cmdlineGetFlag(CmdLineHashMap *map, str8 option);
+bool cmdlineGetFlag(CmdLineHashMap *map, str8 option)
+{
+    u64 hash = cmdlineGetHashOfOption(option) % map->slots.len;
+    CmdLineOptSlot slot = map->slots.data[hash];
+
+    BASE_LIST_FOREACH(CmdLineOptNode, optNode, slot)
+    {
+        if (baseStringsStrEquals(optNode->option, option, 0))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
 i64 cmdlineGetI64(CmdLineHashMap *map, str8 option);

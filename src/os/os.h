@@ -15,5 +15,6 @@
 #endif
 
 #include "core\osCore.h"
+#include "gfx\osGfx.h"
 
 #endif

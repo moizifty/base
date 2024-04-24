@@ -17,4 +17,8 @@ typedef struct OSFindFileIterWin32
     struct OSFileFindOptionalParams optParams;
 }OSFindFileIterWin32;
 
+#define HRFAILURE(HR)   ((HR) != S_OK)
+EXTERN_C IMAGE_DOS_HEADER __ImageBase;
+#define HINST_THIS ((HINSTANCE)&__ImageBase)
+
 #endif

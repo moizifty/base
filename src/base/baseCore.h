@@ -68,7 +68,7 @@
 #define BaseDllNodePushFirst(f, l, n)   BaseDllNodeInsertEx(l, f, f, n, next, prev)
 
 #define BASE_ANY_PTR(pL)     (((pL) != NULL) && (pL)->len != 0)
-#define BASE_ANY(L)     ((pL)->len != 0)
+#define BASE_ANY(L)     ((L).len != 0)
 
 #define BASE_PTR_LL_FIRST(pLL, DEFVAL)     (BASE_ANY_PTR(pLL) ? (pLL)->first->val : DEFVAL)
 #define BASE_LL_FIRST(LL, DEFVAL)          (BASE_ANY(pLB) ? (pLB).first->val : DEFVAL)

@@ -206,4 +206,14 @@
 # endif
 #endif
 
+#define RENDERER_D3D11 1
+
+#if !defined(RENDERER_BACKEND)
+# if OS_WINDOWS
+#  define RENDERER_BACKEND RENDERER_D3D11
+# else
+#  error No renderer backend exists
+# endif
+#endif
+
 #endif // BASE_CTX_CRACK_H
