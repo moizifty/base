@@ -36,13 +36,12 @@ IDXGIAdapter *rendererD3D11FindBestAdapter(void)
     return adapter;
 }
 
-RendererState *RendererInit(BaseArena *arena, OSGfxState *gfxState)
+RendererState *rendererInit(BaseArena *arena, OSGfxState *gfxState)
 {
     if(gfxState == null)
     {
         return null;
     }
-
     
     RendererStateD3D11 *state = baseArenaPush(arena, sizeof(RendererStateD3D11));
     state->gfxState = gfxState;
@@ -76,19 +75,75 @@ RendererState *RendererInit(BaseArena *arena, OSGfxState *gfxState)
         return null;
     }
 
-    ID3D11InfoQueue *infoQueue = null;
-    state->device->lpVtbl->QueryInterface(state->device, &IID_ID3D11InfoQueue, &infoQueue);
+    // set up debug break pointing on certain messages
+    {
+        ID3D11InfoQueue *infoQueue = null;
+        state->device->lpVtbl->QueryInterface(state->device, &IID_ID3D11InfoQueue, &infoQueue);
 
-    if (infoQueue != null)
-    {
-        infoQueue->lpVtbl->SetBreakOnSeverity(infoQueue, D3D11_MESSAGE_SEVERITY_CORRUPTION, true);
-        infoQueue->lpVtbl->SetBreakOnSeverity(infoQueue, D3D11_MESSAGE_SEVERITY_ERROR, true);
+        if (infoQueue != null)
+        {
+            infoQueue->lpVtbl->SetBreakOnSeverity(infoQueue, D3D11_MESSAGE_SEVERITY_CORRUPTION, true);
+            infoQueue->lpVtbl->SetBreakOnSeverity(infoQueue, D3D11_MESSAGE_SEVERITY_ERROR, true);
+        }
+        else
+        {
+            baseColPrintf("{b}Failed to get info queue interface from device, hr: %ld\n", hr);
+            return null;
+        }
+
+        infoQueue->lpVtbl->Release(infoQueue);
     }
-    else
+
+    //get factory
     {
-        baseColPrintf("{b}Failed to get info queue interface from device, hr: %ld\n", hr);
+        adapter->lpVtbl->GetParent(adapter, &IID_IDXGIFactory2, &state->factory2);
+    }
+
+    adapter->lpVtbl->Release(adapter);
+
+    return (RendererState *) state;
+}
+
+RendererWindowState *rendererAttachToWindow(RendererState *rs, BaseArena *arena, OSHandle window)
+{
+    RendererWindowStateD3D11 *wndState = baseArenaPush(arena, sizeof(RendererWindowStateD3D11));
+    HWND wndHandle = (HWND) window._u64;
+
+    RendererStateD3D11 *rsD3D = (RendererStateD3D11 *)rs;
+
+    DXGI_SWAP_CHAIN_DESC1 desc = 
+    {
+        .Width = 0,
+        .Height = 0,
+        .Format = DXGI_FORMAT_R8G8B8A8_UNORM,
+        .Stereo = false,
+        .SampleDesc = {.Count = 1, .Quality = 0},
+        .BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT,
+        .BufferCount = 2,
+        .Scaling = DXGI_SCALING_STRETCH,
+        .SwapEffect = DXGI_SWAP_EFFECT_DISCARD,
+        .AlphaMode = DXGI_ALPHA_MODE_UNSPECIFIED,
+        .Flags = 0,
+    };
+
+    IUnknown *deviceBase = null;
+    rsD3D->device->lpVtbl->QueryInterface(rsD3D->device, &IID_IUnknown, &deviceBase);
+
+    HRESULT hr = rsD3D->factory2->lpVtbl->CreateSwapChainForHwnd(rsD3D->factory2, deviceBase, wndHandle, &desc, null, null, &wndState->swapChain);
+
+    if(HRFAILURE(hr))
+    {
+        baseColPrintf("Failed to create swap chain, error %ld. \n", hr);
         return null;
     }
 
-    return (RendererState *) state;
+    hr = wndState->swapChain->lpVtbl->GetBuffer(wndState->swapChain, 0, &IID_ID3D11Texture2D, &wndState->framebuffer);
+    if(HRFAILURE(hr))
+    {
+        baseColPrintf("Failed to get swap chain frame buffer. \n");
+        return null;
+    }
+
+    deviceBase->lpVtbl->Release(deviceBase);
+    return (RendererWindowState *)wndState;
 }

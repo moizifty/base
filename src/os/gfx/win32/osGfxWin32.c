@@ -7,9 +7,11 @@ threadlocal OSEventList gOSWin32TLEvents = {0};
 
 OSGfxState *OSGfxInitEx(BaseArena *arena, void *extra)
 {
+    UNREFERENCED_PARAMETER(extra);
+
     OSGfxStateWin32 *gfxState = baseArenaPush(arena, sizeof(OSGfxStateWin32));
     gOSWin32TLEventsArena = arena;
-    
+
     return (OSGfxState *) gfxState;
 }
 OSGfxState *OSGfxInit(BaseArena *arena)
@@ -35,7 +37,7 @@ OSHandle OSGfxOpenWindow(str8 title, i64 sizeX, i64 sizeY, i64 posX, i64 posY)
     i64 sy = (sizeY < 0) ? CW_USEDEFAULT : sizeY;
 
     HWND wnd = CreateWindowA(OS_GFX_WIN32_DEFAULT_CLASS_NAMEA, title.data, WS_OVERLAPPEDWINDOW, x, y, sx, sy, null, null, HINST_THIS, null);
-    OSHandle h = (OSHandle){wnd};
+    OSHandle h = (OSHandle){(u64)wnd};
     OSGfxFirstPaint(h);
 
     return h;
@@ -50,11 +52,15 @@ void OSGfxFirstPaint(OSHandle wnd)
 
 OSEventList OSGfxProcessEvents(BaseArena *arena)
 {
+    UNREFERENCED_PARAMETER(arena);
+
     for(MSG msg; PeekMessage(&msg, null, 0, 0, PM_REMOVE);)
     {
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
+
+    return gOSWin32TLEvents;
 }
 
 LRESULT OSGfxWin32WindowProc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)

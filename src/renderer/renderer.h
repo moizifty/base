@@ -4,7 +4,7 @@
 #include "base\baseCore.h"
 #include "base\baseMemory.h"
 
-#ifdef RENDERER_BACKEND == RENDERER_D3D11
+#if RENDERER_BACKEND == RENDERER_D3D11
 #include "d3d11\rendererD3D11.h"
 #else
 #error Platform not defined
@@ -23,5 +23,6 @@ typedef struct RendererWindowState
     u8 _opaque;
 }RendererWindowState;
 
-RendererState *RendererInit(BaseArena *arena, OSGfxState *gfxState);
+RendererState *rendererInit(BaseArena *arena, OSGfxState *gfxState);
+RendererWindowState *rendererAttachToWindow(RendererState *rs, BaseArena *arena, OSHandle window);
 #endif

@@ -144,7 +144,7 @@ str8 baseStringsPushStr8FmtV(BaseArena *arena, const i8 *fmt, va_list args)
     s.data = baseArenaPushNoZero(arena, numWritten + 1);
     s.len = numWritten;
 
-    stbsp_vsnprintf((i8 *)s.data, s.len + 1, (i8 *)fmt, list);
+    stbsp_vsnprintf((i8 *)s.data, (int)s.len + 1, (i8 *)fmt, list);
     return s;
 }
 str8 baseStringsPushStr8Fmt(BaseArena *arena, const i8* fmt, ...)
@@ -339,7 +339,7 @@ void baseStringsSBAppendFmt(BaseStringBuilder *sb, const i8 *fmt, ...)
     {
         BaseStringBuilder tempSb = baseStringsCreateSB(temp.arena, numWritten + 1);
         {
-            tempSb.len = stbsp_vsnprintf((i8 *)tempSb.data, tempSb.cap, (i8 *)fmt, list);
+            tempSb.len = stbsp_vsnprintf((i8 *)tempSb.data, (int)tempSb.cap, (i8 *)fmt, list);
         }
 
         baseStringsSBAppendCStr(sb, (i8*) tempSb.data, tempSb.len);

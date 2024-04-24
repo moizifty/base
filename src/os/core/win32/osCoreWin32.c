@@ -49,7 +49,7 @@ void OSEnableVirtualTerminalSequenceProcessing(void)
 // files
 bool OSPathExists(str8 path)
 {
-    DWORD dwAttrib = GetFileAttributesA(path.data);
+    DWORD dwAttrib = GetFileAttributesA((LPCSTR) path.data);
 
     return (dwAttrib != INVALID_FILE_ATTRIBUTES && 
           !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
@@ -207,7 +207,7 @@ str8 OSGetProgramPath(BaseArena *arena)
     {
         u64 bufSize = BASE_KILOBYTES(4);
         u8 *buf = baseArenaPush(temp.arena, bufSize);
-        GetModuleFileNameA(NULL, (i8 *) buf, bufSize);
+        GetModuleFileNameA(NULL, (i8 *) buf, (DWORD) bufSize);
 
         ret = baseStringsPushStr8Fmt(arena, "%s", buf);
     }
@@ -226,13 +226,13 @@ str8 OSGetProgramDirectoryPath(BaseArena *arena)
 str8 OSGetFullPath(struct BaseArena *arena, str8 path)
 {
     i8 buf[1];
-    i64 needed = GetFullPathNameA(path.data, 1, buf, null);
+    i64 needed = GetFullPathNameA((LPCSTR) path.data, 1, buf, null);
 
     str8 ret = {0};
     ret.data = baseArenaPush(arena, needed);
     ret.len = needed - 1;
 
-    GetFullPathNameA(path.data, needed, ret.data, null);
+    GetFullPathNameA((LPCSTR) path.data, (DWORD) needed, (LPCSTR) ret.data, null);
     return ret;
 }
 bool OSRunProcessEx(BaseArena *arena, str8 app, str8 args, void *peb, str8 *outStr, str8 *errStr)

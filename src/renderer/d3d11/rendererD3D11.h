@@ -10,11 +10,15 @@
 #include "os\gfx\osGfx.h"
 
 #include <d3d11.h>
+#include <d3d11_1.h>
+#include <dxgi.h>
+#include <dxgi1_2.h>
 
 typedef struct RendererStateD3D11
 {
     ID3D11Device *device;
     ID3D11DeviceContext *deviceContext;
+    IDXGIFactory2 *factory2;
 
     OSGfxState *gfxState;
 }RendererStateD3D11;
@@ -24,7 +28,7 @@ typedef struct RendererStateD3D11
 // eg a backbuffer and swapchain and stuff
 typedef struct RendererWindowStateD3D11
 {
-    IDXGISwapChain *swapChain;
+    IDXGISwapChain1 *swapChain;
     ID3D11Texture2D *framebuffer;
 }RendererWindowStateD3D11;
 
