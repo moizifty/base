@@ -6,6 +6,25 @@
 #include "..\..\..\base\baseMemory.h"
 #include "..\..\..\base\baseThreads.h"
 
+OSState *OSInit(BaseArena *arena)
+{
+    if (gOSState == null)
+    {
+        gOSState = baseArenaPush(arena, sizeof(OSState));
+        // todo: set properly if need be
+        gOSState->platformSpecific = null;
+        gOSState->thisProcState = (OSProcessState)
+        {
+            // todo: maybe in future create a more generic
+            // OSGetProcessPath, where it finds the path of any process
+            // and if passed null it does this process.
+            .binaryPath = OSGetProgramPath(arena),
+        };
+    }
+    
+    return gOSState;
+}
+
 void* OSReserveMemory(u64 size)
 {
     return VirtualAlloc(NULL, size, MEM_RESERVE, PAGE_NOACCESS);
@@ -47,9 +66,64 @@ void OSEnableVirtualTerminalSequenceProcessing(void)
 }
 
 // files
+OSHandle OSOpenFile(str8 path, bool createLeadingDir, OSFileAccessFlags accessFlags, OSFileCreationKind creationKind)
+{
+    if (createLeadingDir)
+    {
+        str8 dirName = baseStringsStrChopPastLastSlash(path);
+
+        if(!OSPathExists(dirName))
+        {
+            OSCreateDirectory(dirName, true);
+        }
+    }
+
+    DWORD access = 0;
+    DWORD share = 0;
+    if(accessFlags & OS_FILEACCESS_READ)
+    {
+        access |= FILE_GENERIC_READ;
+        share |= FILE_SHARE_READ;
+    }
+
+    if(accessFlags & OS_FILEACCESS_WRITE)
+    {
+        access |= FILE_GENERIC_WRITE;
+        share |= FILE_SHARE_WRITE;
+    }
+
+    DWORD creation = 0;
+    switch(creationKind)
+    {
+        case OS_FILECREATION_CREATE_NEW: creation = CREATE_NEW; break;
+        case OOS_FILECREATION_CREATE_OVERRITE: creation = CREATE_ALWAYS; break;
+        case OS_FILECREATION_OPEN_ALWAYS: creation = OPEN_ALWAYS; break;
+        case OS_FILECREATION_OPEN_EXISTING: creation = OPEN_EXISTING; break;
+    }
+
+    HANDLE fileHandle = CreateFileA((char *)path.data, 
+                                    access, 
+                                    share, 
+                                    NULL, 
+                                    creation, 
+                                    FILE_ATTRIBUTE_NORMAL,
+                                    NULL);
+
+    return (OSHandle){._u64 = (u64)fileHandle};
+}
+void OSCloseFile(OSHandle handle)
+{
+    CloseHandle((HANDLE)handle._u64);
+}
 bool OSPathExists(str8 path)
 {
-    DWORD dwAttrib = GetFileAttributesA((LPCSTR) path.data);
+    DWORD dwAttrib = 0;
+    BaseArenaTemp temp = baseTempBegin(null, 0);
+    {
+        str16 widePath = baseStr16FromFromStr8(temp.arena, path);
+        dwAttrib = GetFileAttributes(widePath.data);
+    }
+    baseTempEnd(temp);
 
     return (dwAttrib != INVALID_FILE_ATTRIBUTES && 
           !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
@@ -106,6 +180,43 @@ u8 *OSReadFileAll(BaseArena *arena, str8 path, u64 *outFileSize)
 
     return data;
 }
+str8 OSGetFullPath(struct BaseArena *arena, str8 path)
+{
+    i8 buf[1];
+    i64 needed = GetFullPathNameA((LPCSTR) path.data, 1, buf, null);
+
+    str8 ret = {0};
+    ret.data = baseArenaPush(arena, needed);
+    ret.len = needed - 1;
+
+    GetFullPathNameA((LPSTR) path.data, (DWORD) needed, (LPSTR) ret.data, null);
+    return ret;
+}
+
+bool OSCreateDirectory(str8 path, bool createIntermediateDirs)
+{
+    bool result = true;
+    BaseArenaTemp temp = baseTempBegin(null, 0);
+    {
+        str16 widePath = baseStr16FromFromStr8(temp.arena, path);
+
+        if(createIntermediateDirs)
+        {
+            if (SHCreateDirectoryEx(null, widePath.data, null) != ERROR_SUCCESS)
+            {
+                result = false;
+            }
+        }
+        else
+        {
+            return CreateDirectory(widePath.data, null);
+        }
+    }
+    baseTempEnd(temp);
+
+    return result;
+}
+
 OSFileAttributeFlags OSFileAttributesFromWin32(DWORD fileAttr)
 {
     OSFileAttributeFlags flags = 0;
@@ -221,18 +332,6 @@ str8 OSGetProgramDirectoryPath(BaseArena *arena)
     str8 ret = OSGetProgramPath(arena);
     ret = baseStringsStrChopPastLastSlash(ret);
 
-    return ret;
-}
-str8 OSGetFullPath(struct BaseArena *arena, str8 path)
-{
-    i8 buf[1];
-    i64 needed = GetFullPathNameA((LPCSTR) path.data, 1, buf, null);
-
-    str8 ret = {0};
-    ret.data = baseArenaPush(arena, needed);
-    ret.len = needed - 1;
-
-    GetFullPathNameA((LPCSTR) path.data, (DWORD) needed, (LPCSTR) ret.data, null);
     return ret;
 }
 bool OSRunProcessEx(BaseArena *arena, str8 app, str8 args, void *peb, str8 *outStr, str8 *errStr)

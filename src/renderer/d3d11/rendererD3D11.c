@@ -13,7 +13,7 @@ IDXGIAdapter *rendererD3D11FindBestAdapter(void)
     }
 
     IDXGIAdapter *adapter = null;
-    for(int i = 0; factory->lpVtbl->EnumAdapters(factory, i, &adapter) != DXGI_ERROR_NOT_FOUND;)
+    for(int i = 0; factory->lpVtbl->EnumAdapters(factory, i, &adapter) != DXGI_ERROR_NOT_FOUND; i++)
     {
         DXGI_ADAPTER_DESC desc = {0};
         hr = adapter->lpVtbl->GetDesc(adapter, &desc);

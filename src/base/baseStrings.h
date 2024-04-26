@@ -4,9 +4,11 @@
 #include <stdarg.h>
 #include "baseCoreTypes.h"
 
-#define STR8(CSTRING) baseStr8((u8*)(CSTRING), strlen(CSTRING))
-#define STR8_LIT(BYTES) baseStr8((u8*)(BYTES), ((sizeof(BYTES)) - 1))
-#define STR8_LIT_COMP(BYTES) (Str8){(u8*)(BYTES), ((sizeof(BYTES)) - 1)}
+#define STR8(CSTRING) (baseStr8((u8*)(CSTRING), strlen(CSTRING)))
+#define STR8_LIT(BYTES) (baseStr8((u8*)(BYTES), ((sizeof(BYTES)) - 1)))
+#define STR8_LIT_COMP(BYTES) ((Str8){(u8*)(BYTES), ((sizeof(BYTES)) - 1)})
+#define STR16(WCSTRING) (baseStr16((u16*)(WCSTRING), baseStr16DataLen(WCSTRING)))
+#define STR16_LIT(STR) (baseStr16((u16*)(STR), BASE_ARRAY_SIZE(STR)))
 
 typedef struct BaseStringBuilder
 {
@@ -69,6 +71,8 @@ str8 baseStr8(u8 *bytes, u64 size);
 str16 baseStr16(u16 *bytes, u64 size);
 str32 baseStr32(u32 *bytes, u64 size);
 
+u64 baseStr16DataLen(u16 *str);
+
 str8 baseStringsPushStr8Copy(BaseArena *arena, str8 str);
 str8 baseStringsPushStr8FmtV(BaseArena *arena, const i8 *fmt, va_list args);
 str8 baseStringsPushStr8Fmt(BaseArena *arena, const i8* fmt, ...);
@@ -89,5 +93,26 @@ void baseStringsSBAppendBytes(BaseStringBuilder *sb, const u8 *bytes, u64 count)
 void baseStringsSBAppendCStr(BaseStringBuilder *sb, const i8 *str, i64 strSize);
 void baseStringsSBAppendStr8(BaseStringBuilder *sb, str8 str);
 void baseStringsSBAppendFmt(BaseStringBuilder *sb, const i8 *fmt, ...);
+
+// conversions
+BASE_CREATE_LL_DECLS_DEFS(U16List, u16);
+BASE_CREATE_LL_DECLS_DEFS(U8List, u8);
+
+typedef struct DecodeCodePointInfo
+{
+    u32 codepoint;
+    u64 advance;
+}DecodeCodePointInfo;
+
+DecodeCodePointInfo baseDecodeCodepointFromUtf8(u8 *bytes, u64 remainingLen);
+DecodeCodePointInfo baseDecodeCodepointFromUtf16(u16 *doubles, u64 remainingLen);
+
+// outbuf should be an array of 2 u16s
+u32 Utf16FromCodepoint(u32 codepoint, u16 outBuf[2]);
+// outbuf should be an array of 4 u8s
+u32 Utf8FromCodepoint(u32 codepoint, u8 outBuf[4]);
+
+str8 baseStr8FromFromStr16(BaseArena *arena, str16 str);
+str16 baseStr16FromFromStr8(BaseArena *arena, str8 str);
 
 #endif

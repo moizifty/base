@@ -5,3 +5,10 @@
 #else
 #error Platform not defined
 #endif
+
+global OSState *gOSState = null;
+
+OSState *OSGetState(void)
+{
+    return gOSState;
+}

@@ -1,5 +1,7 @@
 #include "..\osGfx.h"
 
+#include "base\baseStrings.h"
+#include "base\baseThreads.h"
 #include "osGfxWin32.h"
 
 threadlocal BaseArena *gOSWin32TLEventsArena = null;
@@ -26,18 +28,23 @@ OSGfxState *OSGfxInit(BaseArena *arena)
     return OSGfxInitEx(arena, null);
 }
 
-OSHandle OSGfxOpenWindow(str8 title, i64 sizeX, i64 sizeY, i64 posX, i64 posY)
+OSHandle OSGfxOpenWindow(str8 title, vec2f size, vec2f pos)
 {
-    // todo convert str8 into str16 for the window stuff
-    // for now im using A version of function to get around this.
-    i64 x = (posX < 0) ? CW_USEDEFAULT : posX;
-    i64 y = (posY < 0) ? CW_USEDEFAULT : posY;
+    i64 x = (i64) ((pos.x < 0) ? CW_USEDEFAULT : pos.x);
+    i64 y = (i64) ((pos.y < 0) ? CW_USEDEFAULT : pos.y);
 
-    i64 sx = (sizeX < 0) ? CW_USEDEFAULT : sizeX;
-    i64 sy = (sizeY < 0) ? CW_USEDEFAULT : sizeY;
+    i64 sx = (i64) ((size.x < 0) ? CW_USEDEFAULT : size.x);
+    i64 sy = (i64) ((size.y < 0) ? CW_USEDEFAULT : size.y);
 
-    HWND wnd = CreateWindowA(OS_GFX_WIN32_DEFAULT_CLASS_NAMEA, title.data, WS_OVERLAPPEDWINDOW, x, y, sx, sy, null, null, HINST_THIS, null);
-    OSHandle h = (OSHandle){(u64)wnd};
+    OSHandle h = {0};
+    BaseArenaTemp temp = baseTempBegin(null, 0);
+    {
+        str16 str16 = baseStr16FromFromStr8(temp.arena, title);
+        HWND wnd = CreateWindow(OS_GFX_WIN32_DEFAULT_CLASS_NAME, str16.data, WS_OVERLAPPEDWINDOW, x, y, sx, sy, null, null, HINST_THIS, null);
+        h = (OSHandle){(u64)wnd};
+    }
+
+    baseTempEnd(temp);
     OSGfxFirstPaint(h);
 
     return h;

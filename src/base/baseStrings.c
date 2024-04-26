@@ -122,6 +122,13 @@ str32 baseStr32(u32 *bytes, u64 size)
     return (str32) {.data = bytes, .len = size};
 }
 
+u64 baseStr16DataLen(u16 *str)
+{
+    u64 i = 0;
+    for(; str[i] != '\0'; i++);
+    return i;
+}
+
 str8 baseStringsPushStr8Copy(BaseArena *arena, str8 str)
 {
     str8 s = {0};
@@ -348,3 +355,208 @@ void baseStringsSBAppendFmt(BaseStringBuilder *sb, const i8 *fmt, ...)
     baseTempEnd(temp);
     va_end(list);
 }
+
+// conversions
+DecodeCodePointInfo baseDecodeCodepointFromUtf8(u8 *bytes, u64 remainingLen)
+{
+    DecodeCodePointInfo dp = {0};
+    if (bytes[0] < 0b1000'0000)
+    {
+        dp.advance = 1;
+        dp.codepoint = bytes[0];
+    }
+    else if(bytes[0] < 0b1110'0000)
+    {
+        u8 b1 = (bytes[0] & 0b000'11111);
+        u8 b2 = (bytes[1] & 0b00'111111);
+
+        u32 codepoint = (b1 << 6) | b2;
+
+        dp.advance = 2;
+        dp.codepoint = codepoint;
+    }
+    else if(bytes[0] < 0b11110'000)
+    {
+        u8 b1 = (bytes[0] & 0b0000'1111);
+        u8 b2 = (bytes[1] & 0b00'111111);
+        u8 b3 = (bytes[2] & 0b00'111111);
+
+        u32 codepoint = (b1 << 12) | (b2 << 6) | b3;
+
+        dp.advance = 3;
+        dp.codepoint = codepoint;
+    }
+    else if(bytes[0] < 0b111110'00)
+    {
+        u8 b1 = (bytes[0] & 0b00000'111);
+        u8 b2 = (bytes[1] & 0b00'111111);
+        u8 b3 = (bytes[2] & 0b00'111111);
+        u8 b4 = (bytes[3] & 0b00'111111);
+
+        u32 codepoint = (b1 << 18) | (b2 << 12) | (b3 << 6) | b4;
+
+        dp.advance = 4;
+        dp.codepoint = codepoint;
+    }
+
+    return dp;
+}
+DecodeCodePointInfo baseDecodeCodepointFromUtf16(u16 *doubles, u64 remainingLen)
+{
+    DecodeCodePointInfo dp = {0};
+    dp.advance = 1;
+    dp.codepoint = (u32)doubles[0];
+    if((doubles[0] >= 0xd800) && (doubles[0] < 0xdc00) && (doubles[1] >= 0xdc00) && (doubles[1] < 0xe000))
+    {
+        u16 b1 = (doubles[0] - 0xD800) << 10;
+        u16 b2 = (doubles[1] - 0xDC00);
+
+        dp.codepoint = (b1 | b2) + 0x10000;
+        dp.advance = 2;
+    }
+
+    return dp;
+}
+
+// outbuf should be an array of 2 u16s
+u32 Utf16FromCodepoint(u32 codepoint, u16 outBuf[2])
+{
+    u32 encodingLength = 0;
+
+    if (codepoint < 0x10000)
+    {
+        outBuf[0] = (u16)codepoint;
+        encodingLength = 1;
+    }
+    else
+    {
+        u32 a = codepoint - 0x10000;
+        outBuf[0] = (u16) (0xD800 + (a >> 10));
+        outBuf[1] = (u16) (0xDC00 + (a & (0b00000'00000'11111'11111)));
+        encodingLength = 2;
+    }
+
+    return encodingLength;
+}
+
+// outbuf should be an array of 4 u8s
+u32 Utf8FromCodepoint(u32 codepoint, u8 outBuf[4])
+{
+    u32 encodingLength = 0;
+
+    if (codepoint < 0b1000'0000)
+    {
+        outBuf[0] = (u8)codepoint;
+        encodingLength = 1;
+    }
+    else if(codepoint <= 0b11111'111111)
+    {
+        outBuf[0] = (u8) (0b110'00000 | (codepoint >> 6));
+        outBuf[1] = (u8) (0b10'000000 | ((codepoint & 0b00000'111111)));
+        encodingLength = 2;
+    }
+    else if(codepoint <= 0xffff)
+    {
+        outBuf[0] = (u8) (0b1110'0000 | (codepoint >> 12));
+        outBuf[1] = (u8) (0b10'000000 | ((codepoint >> 6) & 0b111'111));
+        outBuf[2] = (u8) (0b10'000000 | ((codepoint & 0b111'111)));
+        encodingLength = 3;
+    }
+    else if(codepoint <= 0x10FFFF)
+    {
+        outBuf[0] = (u8) (0b11110'000 | (codepoint >> 18));
+        outBuf[1] = (u8) (0b10'000000 | ((codepoint >> 12) & 0b111'111));
+        outBuf[2] = (u8) (0b10'000000 | ((codepoint >> 6) & 0b111'111));
+        outBuf[3] = (u8) (0b10'000000 | ((codepoint & 0b111'1111)));
+        encodingLength = 4;
+    }
+
+    return encodingLength;
+}
+
+str8 baseStr8FromFromStr16(BaseArena *arena, str16 str)
+{
+    str8 outStr = {0};
+    U8List utf8bytes = {0}; 
+    u16 *doubles = str.data;
+
+    BaseArenaTemp temp = baseTempBegin(&arena, 1);
+    {
+        u64 strByteLength = 0;
+        for(u64 i = 0; i < str.len;)
+        {
+            DecodeCodePointInfo dp = baseDecodeCodepointFromUtf16(doubles + i, str.len - i);
+            i += dp.advance;
+
+            u8 utf8Buf[4] = {0};
+            u32 encodingLength = Utf8FromCodepoint(dp.codepoint, utf8Buf);
+            strByteLength += encodingLength;
+
+            switch(encodingLength)
+            {
+                case 1:
+                {
+                    U8ListPushLast(temp.arena, &utf8bytes, utf8Buf[0]);
+                }break;
+                case 2:
+                {
+                    U8ListPushLast(temp.arena, &utf8bytes, utf8Buf[0]);
+                    U8ListPushLast(temp.arena, &utf8bytes, utf8Buf[1]);
+                }break;
+                case 3:
+                {
+                    U8ListPushLast(temp.arena, &utf8bytes, utf8Buf[0]);
+                    U8ListPushLast(temp.arena, &utf8bytes, utf8Buf[1]);
+                    U8ListPushLast(temp.arena, &utf8bytes, utf8Buf[2]);
+                }break;
+                case 4:
+                {
+                    U8ListPushLast(temp.arena, &utf8bytes, utf8Buf[0]);
+                    U8ListPushLast(temp.arena, &utf8bytes, utf8Buf[1]);
+                    U8ListPushLast(temp.arena, &utf8bytes, utf8Buf[2]);
+                    U8ListPushLast(temp.arena, &utf8bytes, utf8Buf[3]);
+                }break;
+            }
+        }
+
+        U8ListPushLast(temp.arena, &utf8bytes, 0);
+
+        outStr.data = U8ListFlattenToArray(arena, &utf8bytes).data;
+        outStr.len = strByteLength;
+    }
+    baseTempEnd(temp);
+
+    return outStr;
+}
+str16 baseStr16FromFromStr8(BaseArena *arena, str8 str)
+{
+    str16 outStr = {0};
+    U16List utf16bytes = {0}; 
+    u8 *bytes = str.data;
+
+    BaseArenaTemp temp = baseTempBegin(&arena, 1);
+    {
+        u64 strByteLength = 0;
+        for(u64 i = 0; i < str.len;)
+        {
+            DecodeCodePointInfo dp = baseDecodeCodepointFromUtf8(bytes + i, str.len - i);
+            i += dp.advance;
+
+            u16 utf16Buf[2] = {0};
+            u32 encodingLength = Utf16FromCodepoint(dp.codepoint, utf16Buf);
+            strByteLength += encodingLength;
+
+            U16ListPushLast(temp.arena, &utf16bytes, utf16Buf[0]);
+            if(encodingLength > 1) U16ListPushLast(temp.arena, &utf16bytes, utf16Buf[1]);
+        }
+
+        U16ListPushLast(temp.arena, &utf16bytes, 0);
+
+        outStr.data = U16ListFlattenToArray(arena, &utf16bytes).data;
+        outStr.len = strByteLength;
+    }
+    baseTempEnd(temp);
+
+    return outStr;
+}
+

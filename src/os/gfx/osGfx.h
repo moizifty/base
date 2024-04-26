@@ -2,6 +2,7 @@
 #define OS_GFX_H
 
 #include "base\baseCore.h"
+#include "base\baseMath.h"
 #include "base\baseMemory.h"
 #include "os\core\osCore.h"
 
@@ -39,7 +40,7 @@ typedef struct OSEventList
 
 OSGfxState *OSGfxInitEx(BaseArena *arena, void *extra);
 OSGfxState *OSGfxInit(BaseArena *arena);
-OSHandle OSGfxOpenWindow(str8 title, i64 sizeX, i64 sizeY, i64 posX, i64 posY);
+OSHandle OSGfxOpenWindow(str8 title, vec2f size, vec2f pos);
 void OSGfxFirstPaint(OSHandle wnd);
 
 OSEventList OSGfxProcessEvents(BaseArena *arena);

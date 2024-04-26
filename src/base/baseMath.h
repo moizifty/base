@@ -54,6 +54,10 @@
 
 #define MAT4F_IDENTITY    (Mat4f(1))
 
+#define Rangef(X, Y)    ((rangef){(X), (Y)})
+#define Range2f(X, Y)    ((rangef){(X), (Y)})
+#define Range3f(X, Y)    ((rangef){(X), (Y)})
+
 typedef struct vec2f
 {
     union
@@ -172,6 +176,93 @@ typedef struct mat4f
         };
     };
 }mat4f;
+
+// 1-dimension range
+typedef struct rangef
+{
+    union
+    {
+        struct
+        {
+            f32 start;
+            f32 end;
+        };
+
+        struct
+        {
+            f32 min;
+            f32 max;
+        };
+
+        struct
+        {
+            f32 width;
+            f32 height;
+        };
+    };
+}rangef;
+
+// 2-dimension range
+typedef struct range2f
+{
+    union
+    {
+        struct
+        {
+            vec2f start;
+            vec2f end;
+        };
+
+        struct
+        {
+            vec2f min;
+            vec2f max;
+        };
+
+        struct
+        {
+            vec2f topleft;
+            vec2f bottomright;
+        };
+
+        struct
+        {
+            f32 x0;
+            f32 y0;
+            f32 x1;
+            f32 y1;
+        };
+    };
+}range2f;
+
+// 3-dimension range
+typedef struct range3f
+{
+    union
+    {
+        struct
+        {
+            vec3f start;
+            vec3f end;
+        };
+
+        struct
+        {
+            vec3f min;
+            vec3f max;
+        };
+
+        struct
+        {
+            f32 x0;
+            f32 y0;
+            f32 z0;
+            f32 x1;
+            f32 y1;
+            f32 z1;
+        };
+    };
+}range3f;
 
 vec2f vec2fAdd(vec2f a, vec2f b);
 vec2f vec2fSub(vec2f a, vec2f b);

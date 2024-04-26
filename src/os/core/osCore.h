@@ -3,10 +3,41 @@
 
 #include "base\baseCoreTypes.h"
 
+typedef struct OSProcessState
+{
+    str8 binaryPath;
+}OSProcessState;
+
+typedef struct OSStatePlatform
+{
+    u64 _opaque;
+}OSStatePlatform;
+
+typedef struct OSState
+{
+    OSProcessState thisProcState;
+
+    OSStatePlatform *platformSpecific;
+}OSState;
+
 typedef struct OSHandle
 {
     u64 _u64;
 }OSHandle;
+
+typedef enum OSFileAccessFlags
+{
+    OS_FILEACCESS_READ = 1 << 0,
+    OS_FILEACCESS_WRITE = 1 << 1,
+}OSFileAccessFlags;
+
+typedef enum OSFileCreationKind
+{
+    OS_FILECREATION_CREATE_NEW,
+    OOS_FILECREATION_CREATE_OVERRITE,
+    OS_FILECREATION_OPEN_EXISTING,
+    OS_FILECREATION_OPEN_ALWAYS,
+}OSFileCreationKind;
 
 typedef enum OSFileFindType
 {
@@ -42,6 +73,9 @@ typedef struct OSFileInfo
 #error Platform not defined
 #endif
 
+OSState *OSInit(BaseArena *arena);
+OSState *OSGetState(void);
+
 void* OSReserveMemory(u64 size);
 void OSCommitMemory(void *ptr, u64 size);
 void OSDecommitMemory(void *ptr, u64 size);
@@ -50,11 +84,17 @@ void OSFreeMemory(void *ptr, u64 size);
 void OSEnableVirtualTerminalSequenceProcessing(void);
 
 // files
+OSHandle OSOpenFile(str8 path, bool createLeadingDir, OSFileAccessFlags accessFlags, OSFileCreationKind creationKind);
+void OSCloseFile(OSHandle handle);
+
 bool OSPathExists(str8 path);
 bool OSPathIsDirectory(str8 path);
 u64 OSGetFileSize(str8 path);
 u64 OSGetFileSizeFromHandle(OSHandle handle);
 u8 *OSReadFileAll(struct BaseArena *arena, str8 path, u64 *outFileSize);
+str8 OSGetFullPath(struct BaseArena *arena, str8 path);
+
+bool OSCreateDirectory(str8 path, bool createIntermediateDirs);
 
 OSFileFindIter *OSFindFileBegin(struct BaseArena *arena, str8 path, OSFileFindOptionalParams *opt);
 bool OSFindFileNext(struct BaseArena *arena, OSFileFindIter *iter, OSFileInfo *out);
@@ -63,6 +103,7 @@ void OSFindFileEnd(OSFileFindIter *iter);
 // process
 str8 OSGetProgramPath(BaseArena *arena);
 str8 OSGetProgramDirectoryPath(BaseArena *arena);
-str8 OSGetFullPath(struct BaseArena *arena, str8 path);
 bool OSRunProcessEx(struct BaseArena *arena, str8 app, str8 args, void *peb, str8 *outStr, str8 *errStr);
+
+global OSState *gOSState;
 #endif

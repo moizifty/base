@@ -33,8 +33,8 @@ void ProgramMain(CmdLineHashMap *cmdline)
 	BaseArena *generalArena = baseArenaAlloc(BASE_GIGABYTES(2));
 	
 	OSGfxState *state = OSGfxInit(generalArena);
-	OSHandle window = OSGfxOpenWindow(STR8_LIT("Test"), -1, -1, -1, -1);
-	
+	OSHandle window = OSGfxOpenWindow(STR8_LIT("Test"), Vec2f(-1, -1), Vec2f(-1, -1));
+
 	rendererAttachToWindow(rendererInit(generalArena, state), generalArena, window);
 	bool quit = false;
 	while(!quit)
