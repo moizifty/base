@@ -66,7 +66,7 @@ void OSEnableVirtualTerminalSequenceProcessing(void)
 }
 
 // files
-OSHandle OSOpenFile(str8 path, bool createLeadingDir, OSFileAccessFlags accessFlags, OSFileCreationKind creationKind)
+OSHandle OSFileOpen(str8 path, bool createLeadingDir, OSFileAccessFlags accessFlags, OSFileCreationKind creationKind)
 {
     if (createLeadingDir)
     {
@@ -111,7 +111,7 @@ OSHandle OSOpenFile(str8 path, bool createLeadingDir, OSFileAccessFlags accessFl
 
     return (OSHandle){._u64 = (u64)fileHandle};
 }
-void OSCloseFile(OSHandle handle)
+void OSFileClose(OSHandle handle)
 {
     CloseHandle((HANDLE)handle._u64);
 }

@@ -84,8 +84,11 @@ void OSFreeMemory(void *ptr, u64 size);
 void OSEnableVirtualTerminalSequenceProcessing(void);
 
 // files
-OSHandle OSOpenFile(str8 path, bool createLeadingDir, OSFileAccessFlags accessFlags, OSFileCreationKind creationKind);
-void OSCloseFile(OSHandle handle);
+OSHandle OSFileOpen(str8 path, bool createLeadingDir, OSFileAccessFlags accessFlags, OSFileCreationKind creationKind);
+void OSFileWrite(OSHandle fileHandle, u8 bytes, u64 numBytes);
+void OSFileWriteStr8(OSHandle fileHandle, str8 str);
+void OSFileWriteFmt(OSHandle fileHandle, char *fmt, ...);
+void OSFileClose(OSHandle handle);
 
 bool OSPathExists(str8 path);
 bool OSPathIsDirectory(str8 path);
