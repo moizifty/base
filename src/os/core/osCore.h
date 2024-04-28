@@ -73,6 +73,12 @@ typedef struct OSFileInfo
     OSFileAttributeFlags attrs;
 }OSFileInfo;
 
+typedef struct OSExceptionInfo
+{
+    //todo put meaningfull platform independent info heres
+    u32 _placeholder;
+}OSExceptionInfo;
+
 #ifdef OS_WINDOWS
 #include "win32\osCoreWin32.h"
 #else

@@ -34,7 +34,10 @@ void BaseMainThreadEntry(ProgramMainFunc programMain, i64 argc, i8 **argv)
     cmdLineMap = cmdlineParseCmdLineFromStringList(ctx.scratchArenas[0], argsList);
 
     OSInit(ctx.scratchArenas[0]);
+
     programMain(&cmdLineMap);
+
+    logClose(OSGetState()->thisProcState.processLog);
 }
 
 i64 baseColFprintf(FILE *fp, const char *fmt, ...)

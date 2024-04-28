@@ -1,4 +1,5 @@
 #include "osCoreWin32.h"
+#include "log\log.h"
 
 typedef struct CmdLineHashMap CmdLineHashMap;
 void ProgramMain(CmdLineHashMap *);
@@ -11,7 +12,7 @@ void ProgramMain(CmdLineHashMap *);
 #pragma comment(linker,"\"/manifestdependency:type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='*' publicKeyToken='6595b64144ccf1df' language='*'\"")
 
 #include <DbgHelp.h>
-inline LONG WINAPI BaseMainThreadExceptionHandler(struct _EXCEPTION_POINTERS *exceptionInfo)
+inline LONG WINAPI BaseMainThreadExceptionHandler(EXCEPTION_POINTERS *exceptionInfo)
 {
     logProgErrorFmt("Program encountered an exception(0x%x).", exceptionInfo->ExceptionRecord->ExceptionCode);
 
@@ -91,20 +92,33 @@ inline LONG WINAPI BaseMainThreadExceptionHandler(struct _EXCEPTION_POINTERS *ex
                     break;
                 }
             }
-
-            TASKDIALOGCONFIG dialog = {0};
-            dialog.cbSize = sizeof(dialog);
-            dialog.dwFlags = TDF_SIZE_TO_CONTENT | TDF_ENABLE_HYPERLINKS | TDF_ALLOW_DIALOG_CANCELLATION;
-            dialog.pszMainIcon = TD_ERROR_ICON;
-            dialog.dwCommonButtons = TDCBF_CLOSE_BUTTON;
-            dialog.pszWindowTitle = L"Fatal Exception";
-            dialog.pszContent = L"Check log in application folder";
-            TaskDialogIndirect(&dialog, 0, 0, 0);
         }
 
 #ifdef BASE_USE_USER_DEFINED_EXCEPTION_HANDLER
-        void BaseUserDefinedExceptionHandler(void *);
-        BaseUserDefinedExceptionHandler(exceptionInfo);
+
+        //todo
+        //right now its just null but i should
+        //have a method called
+        //OSTranslatePlatformExceptionInfo or something that returns this
+        OSExceptionInfo *ex = null;
+        void BaseUserDefinedExceptionHandler(OSExceptionInfo *);
+        BaseUserDefinedExceptionHandler(ex);
+
+        str8 logContent8 = logFlush(OSGetState()->thisProcState.processLog);
+        str16 logContent = baseStr16FromFromStr8(temp.arena, logContent8);
+        
+        TASKDIALOGCONFIG dialog = {0};
+        dialog.cbSize = sizeof(dialog);
+        dialog.dwFlags = TDF_SIZE_TO_CONTENT | TDF_ENABLE_HYPERLINKS | TDF_ALLOW_DIALOG_CANCELLATION;
+        dialog.pszMainIcon = TD_ERROR_ICON;
+        dialog.dwCommonButtons = TDCBF_CLOSE_BUTTON;
+        dialog.pszWindowTitle = L"Fatal Exception";
+        dialog.pszContent = L"The program encountered a fatal exception, see the program log in the programs directory for more info.\n"
+                            L"You can also expand the footer below to see a summary of the log.";
+        dialog.pszCollapsedControlText = L"Expand for log details";
+        dialog.pszExpandedControlText = L"Collapse log";
+        dialog.pszExpandedInformation = logContent.data;
+        TaskDialogIndirect(&dialog, 0, 0, 0);
 #endif
     }
     baseTempEnd(temp);

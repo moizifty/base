@@ -10,7 +10,8 @@ BaseThreadCtx baseThreadsCreateCtx(void)
     {
         ctx.scratchArenas[i] = baseArenaAlloc(BASE_THREADS_DEFAULT_ARENA_ALLOC_SIZE);
     }
-
+    ctx.logArena = baseArenaAlloc(BASE_GIGABYTES(2));
+    
     return ctx;
 }
 BaseThreadCtx *baseThreadsGetCtx(void)
