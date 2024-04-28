@@ -2,10 +2,16 @@
 #define OS_CORE_H
 
 #include "base\baseCoreTypes.h"
+#include "base\baseMath.h"
+
+#define LOG_FOLDER_NAME STR8_LIT("logs")
 
 typedef struct OSProcessState
 {
     str8 binaryPath;
+    str8 logDirPath;
+
+    struct Log *processLog;
 }OSProcessState;
 
 typedef struct OSStatePlatform
@@ -85,7 +91,7 @@ void OSEnableVirtualTerminalSequenceProcessing(void);
 
 // files
 OSHandle OSFileOpen(str8 path, bool createLeadingDir, OSFileAccessFlags accessFlags, OSFileCreationKind creationKind);
-void OSFileWrite(OSHandle fileHandle, u8 bytes, u64 numBytes);
+void OSFileWrite(OSHandle fileHandle, u8 *bytes, u64 numBytes);
 void OSFileWriteStr8(OSHandle fileHandle, str8 str);
 void OSFileWriteFmt(OSHandle fileHandle, char *fmt, ...);
 void OSFileClose(OSHandle handle);
@@ -105,8 +111,16 @@ void OSFindFileEnd(OSFileFindIter *iter);
 
 // process
 str8 OSGetProgramPath(BaseArena *arena);
-str8 OSGetProgramDirectoryPath(BaseArena *arena);
+str8 OSGetProgramDirectory(BaseArena *arena);
+str8 OSGetProgramLogsDirectory(BaseArena *arena);
 bool OSRunProcessEx(struct BaseArena *arena, str8 app, str8 args, void *peb, str8 *outStr, str8 *errStr);
+
+// Date and time
+DateTime OSGetSytemTime(void);
+DateTime OSGetLocalTime(void);
+
+// other
+range2i OSClientRectFromWindow(OSHandle handle);
 
 global OSState *gOSState;
 #endif

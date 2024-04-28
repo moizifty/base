@@ -15,14 +15,25 @@ typedef struct RendererState
     u8 _opaque;
 }RendererState;
 
+typedef struct RendererWindowStatePlatform
+{
+    u64 _opaque;
+}RendererWindowStatePlatform;
 // each window that is being rendered to will have
 // a differemt state,
 // eg a backbuffer and swapchain and stuff
 typedef struct RendererWindowState
 {
-    u8 _opaque;
+    RendererWindowStatePlatform *platformSpecific;
+    vec2i lastResolution;
+    bool preformedFirstPaint;
 }RendererWindowState;
 
 RendererState *rendererInit(BaseArena *arena, OSGfxState *gfxState);
 RendererWindowState *rendererAttachToWindow(RendererState *rs, BaseArena *arena, OSHandle window);
+
+void rendererWindowResizeBuffers(RendererState *rs, RendererWindowState *wndState, vec2i newResolution);
+void rendererWindowBegin(RendererState *rs, RendererWindowState *wndState, vec2i resolution);
+void rendererWindowEnd(RendererState *rs, RendererWindowState *wndState);
+void rendererOutputFinalDebugReport(BaseArena *arena, RendererState *rs);
 #endif

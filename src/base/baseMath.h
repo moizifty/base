@@ -25,6 +25,9 @@
 #define Vec2f(X, Y)    ((vec2f){.x = (f32)(X), .y = (f32)(Y)})
 #define Vec2fFromVec(V)   (Vec2f((V).x, (V).y))
 
+#define Vec2i(X, Y)    ((vec2i){.x = (i64)(X), .y = (i64)(Y)})
+#define Vec2iFromVec(V)   (Vec2i((V).x, (V).y))
+
 #define Vec3f(X, Y, Z)    ((vec3f){.x = (f32)(X), .y = (f32)(Y), .z = (f32)(Z)})
 #define Vec3fFromVec(V)   (Vec3f((V).x, (V).y, (V).z))
 
@@ -55,7 +58,13 @@
 #define MAT4F_IDENTITY    (Mat4f(1))
 
 #define Rangef(X, Y)    ((rangef){(X), (Y)})
-#define Range2f(X, Y)    ((rangef){(X), (Y)})
+
+
+#define Range2f(X, Y)    ((rangef){(f32)(X), (f32)(Y)})
+#define Range2i(X, Y)    ((rangei){(i64)(X), (i64)(Y)})
+#define Range2iDim(R)    ((vec2i){.x = (R).x1 - (R).x0, .y = (R).y1 - (R).y0})
+
+
 #define Range3f(X, Y)    ((rangef){(X), (Y)})
 
 typedef struct vec2f
@@ -68,8 +77,41 @@ typedef struct vec2f
             f32 x;
             f32 y;
         };
+        struct
+        {
+            f32 width;
+            f32 height;
+        };
+        struct
+        {
+            f32 w;
+            f32 h;
+        };
     };   
 }vec2f;
+
+typedef struct vec2i
+{
+    union
+    {
+        i64 v[2];
+        struct
+        {
+            i64 x;
+            i64 y;
+        };
+        struct
+        {
+            i64 width;
+            i64 height;
+        };
+        struct
+        {
+            i64 w;
+            i64 h;
+        };
+    };   
+}vec2i;
 
 typedef struct vec3f
 {
@@ -234,6 +276,38 @@ typedef struct range2f
         };
     };
 }range2f;
+
+typedef struct range2i
+{
+    union
+    {
+        struct
+        {
+            vec2i start;
+            vec2i end;
+        };
+
+        struct
+        {
+            vec2i min;
+            vec2i max;
+        };
+
+        struct
+        {
+            vec2i topleft;
+            vec2i bottomright;
+        };
+
+        struct
+        {
+            i64 x0;
+            i64 y0;
+            i64 x1;
+            i64 y1;
+        };
+    };
+}range2i;
 
 // 3-dimension range
 typedef struct range3f

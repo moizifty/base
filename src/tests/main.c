@@ -33,7 +33,7 @@ void ProgramMain(CmdLineHashMap *cmdline)
 	BaseArena *generalArena = baseArenaAlloc(BASE_GIGABYTES(2));
 	
 	OSGfxState *state = OSGfxInit(generalArena);
-	OSHandle window = OSGfxOpenWindow(STR8_LIT("Test"), Vec2f(-1, -1), Vec2f(-1, -1));
+	OSHandle window = OSGfxWindowOpen(STR8_LIT("Test"), Vec2i(-1, -1), Vec2i(-1, -1));
 
 	rendererAttachToWindow(rendererInit(generalArena, state), generalArena, window);
 	bool quit = false;
@@ -57,7 +57,7 @@ void ProgramMain(CmdLineHashMap *cmdline)
 	
 	baseColPrintf("Hiiii {b}%d %s\n", 90, "sds");
 	baseColPrintf("%S\n", OSGetProgramPath(generalArena));
-	baseColPrintf("%S\n", OSGetProgramDirectoryPath(generalArena));
+	baseColPrintf("%S\n", OSGetProgramDirectory(generalArena));
 
 	mat4f i = MAT4F_IDENTITY;
 	i = quatfToMat4f(quatfGiveRotateAxis(Vec3f(1, 0, 0), baseDegToRadF32(90.0f))); //mat4fGiveRotateX(baseDegToRadF32(45));

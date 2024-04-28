@@ -40,8 +40,8 @@ typedef struct OSEventList
 
 OSGfxState *OSGfxInitEx(BaseArena *arena, void *extra);
 OSGfxState *OSGfxInit(BaseArena *arena);
-OSHandle OSGfxOpenWindow(str8 title, vec2f size, vec2f pos);
-void OSGfxFirstPaint(OSHandle wnd);
+OSHandle OSGfxWindowOpen(str8 title, vec2i size, vec2i pos);
+void OSGfxWindowFirstPaint(OSHandle wnd);
 
 OSEventList OSGfxProcessEvents(BaseArena *arena);
 #endif

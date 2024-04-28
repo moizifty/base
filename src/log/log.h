@@ -6,7 +6,6 @@
 #include "base\baseThreads.h"
 #include "os\core\osCore.h"
 
-#define LOG_FOLDER_NAME STR8_LIT("logs")
 typedef struct Log
 {
     OSHandle logHandle;
@@ -20,7 +19,6 @@ typedef enum LogSeverityKind
     LOG_SEVERITY_DEBUG,
 }LogSeverityKind;
 
-str8 logGetLogsDirectory(BaseArena *arena);
 Log *logCreate(BaseArena *arena);
 void logClose(Log *log);
 
@@ -32,4 +30,12 @@ void logErrorFmt(Log *log, char *fmt, ...);
 void logWarningFmt(Log *log, char *fmt, ...);
 void logInfoFmt(Log *log, char *fmt, ...);
 void logDebugFmt(Log *log, char *fmt, ...);
+
+void logProgPrintFmtV(LogSeverityKind severity, char *fmt, va_list va);
+void logProgPrintFmt(LogSeverityKind severity, char *fmt, ...);
+void logProgErrorFmt(char *fmt, ...);
+void logProgWarningFmt(char *fmt, ...);
+void logProgInfoFmt(char *fmt, ...);
+void logProgDebugFmt(char *fmt, ...);
+
 #endif

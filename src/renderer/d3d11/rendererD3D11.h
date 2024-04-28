@@ -20,17 +20,24 @@ typedef struct RendererStateD3D11
     ID3D11DeviceContext *deviceContext;
     IDXGIFactory2 *factory2;
 
+    ID3D11Debug *debug;
+    ID3D11InfoQueue *infoQueue;
     OSGfxState *gfxState;
 }RendererStateD3D11;
 
 // each window that is being rendered to will have
 // a differemt state,
 // eg a backbuffer and swapchain and stuff
-typedef struct RendererWindowStateD3D11
+typedef struct RendererWindowStatePlatformD3D11
 {
     IDXGISwapChain1 *swapChain;
+
     ID3D11Texture2D *framebuffer;
-}RendererWindowStateD3D11;
+    ID3D11RenderTargetView *framebufferRTV;
+
+    ID3D11Texture2D *depthBuffer;
+    ID3D11DepthStencilView *depthBufferDSV;
+}RendererWindowStatePlatformD3D11;
 
 // get the best adapter to use, eg nvidia, amd etc, instead of it possibly using dedicated gpu 
 IDXGIAdapter *rendererD3D11FindBestAdapter(void);

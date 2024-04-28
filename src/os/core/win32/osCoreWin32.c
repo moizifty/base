@@ -5,6 +5,7 @@
 #include "..\..\..\base\baseStrings.h"
 #include "..\..\..\base\baseMemory.h"
 #include "..\..\..\base\baseThreads.h"
+#include "log\log.h"
 
 OSState *OSInit(BaseArena *arena)
 {
@@ -19,7 +20,10 @@ OSState *OSInit(BaseArena *arena)
             // OSGetProcessPath, where it finds the path of any process
             // and if passed null it does this process.
             .binaryPath = OSGetProgramPath(arena),
+            .logDirPath = OSGetProgramLogsDirectory(arena),
         };
+
+        gOSState->thisProcState.processLog = logCreate(arena);
     }
     
     return gOSState;
@@ -110,6 +114,34 @@ OSHandle OSFileOpen(str8 path, bool createLeadingDir, OSFileAccessFlags accessFl
                                     NULL);
 
     return (OSHandle){._u64 = (u64)fileHandle};
+}
+void OSFileWrite(OSHandle fileHandle, u8 *bytes, u64 numBytes)
+{
+    HANDLE h = (HANDLE) fileHandle._u64;
+    WriteFile(h, 
+              bytes,
+              (int)numBytes,
+              null,
+              null);
+}
+void OSFileWriteStr8(OSHandle fileHandle, str8 str)
+{
+    OSFileWrite(fileHandle, str.data, str.len);
+}
+void OSFileWriteFmt(OSHandle fileHandle, char *fmt, ...)
+{
+    va_list va;
+    va_start(va, fmt);
+
+    BaseArenaTemp temp = baseTempBegin(null, 0);
+    {
+        str8 s = baseStringsPushStr8FmtV(temp.arena, fmt, va);
+
+        OSFileWriteStr8(fileHandle, s);
+    }
+    baseTempEnd(temp);
+
+    va_end(va);
 }
 void OSFileClose(OSHandle handle)
 {
@@ -327,12 +359,21 @@ str8 OSGetProgramPath(BaseArena *arena)
 
     return ret;
 }
-str8 OSGetProgramDirectoryPath(BaseArena *arena)
+str8 OSGetProgramDirectory(BaseArena *arena)
 {
     str8 ret = OSGetProgramPath(arena);
     ret = baseStringsStrChopPastLastSlash(ret);
 
     return ret;
+}
+str8 OSGetProgramLogsDirectory(BaseArena *arena)
+{
+    str8 dir = OSGetProgramDirectory(arena);
+
+    Str8List strs = {0};
+    Str8ListPushLastFmt(arena, &strs, "%S\\%S\\",dir, LOG_FOLDER_NAME);
+
+    return Str8ListJoin(arena, &strs, null);
 }
 bool OSRunProcessEx(BaseArena *arena, str8 app, str8 args, void *peb, str8 *outStr, str8 *errStr)
 {
@@ -478,4 +519,54 @@ bool OSRunProcessEx(BaseArena *arena, str8 app, str8 args, void *peb, str8 *outS
     CloseHandle(pi.hThread);
 
     return true;
+}
+
+// Date and time
+DateTime OSGetSytemTime(void)
+{
+    SYSTEMTIME sysTimeWin32;
+    GetSystemTime(&sysTimeWin32);
+
+    return (DateTime)
+    {
+        .year = (u16)sysTimeWin32.wYear,
+        .month = (u8)sysTimeWin32.wMonth,
+        .dayOfWeek = (u8)sysTimeWin32.wDayOfWeek + 1,
+        .day = (u8)sysTimeWin32.wDay,
+        .hour = (u8)sysTimeWin32.wHour,
+        .min = (u8)sysTimeWin32.wMinute,
+        .sec = (u8)sysTimeWin32.wSecond,
+        .milli = (u16)sysTimeWin32.wMilliseconds,
+    };
+}
+DateTime OSGetLocalTime(void)
+{
+    SYSTEMTIME sysTimeWin32;
+    GetLocalTime(&sysTimeWin32);
+
+    return (DateTime)
+    {
+        .year = (u16)sysTimeWin32.wYear,
+        .month = (u8)sysTimeWin32.wMonth,
+        .dayOfWeek = (u8)sysTimeWin32.wDayOfWeek + 1,
+        .day = (u8)sysTimeWin32.wDay,
+        .hour = (u8)sysTimeWin32.wHour,
+        .min = (u8)sysTimeWin32.wMinute,
+        .sec = (u8)sysTimeWin32.wSecond,
+        .milli = (u16)sysTimeWin32.wMilliseconds,
+    };
+}
+
+//other
+range2i OSClientRectFromWindow(OSHandle handle)
+{
+    HWND wnd = (HWND)handle._u64;
+    RECT r;
+    GetClientRect(wnd, &r);
+
+    return (range2i)
+    {
+        .topleft = Vec2i(r.left, r.top),
+        .bottomright = Vec2i(r.right, r.bottom),
+    };
 }

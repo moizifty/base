@@ -28,7 +28,7 @@ OSGfxState *OSGfxInit(BaseArena *arena)
     return OSGfxInitEx(arena, null);
 }
 
-OSHandle OSGfxOpenWindow(str8 title, vec2f size, vec2f pos)
+OSHandle OSGfxWindowOpen(str8 title, vec2i size, vec2i pos)
 {
     i64 x = (i64) ((pos.x < 0) ? CW_USEDEFAULT : pos.x);
     i64 y = (i64) ((pos.y < 0) ? CW_USEDEFAULT : pos.y);
@@ -45,12 +45,11 @@ OSHandle OSGfxOpenWindow(str8 title, vec2f size, vec2f pos)
     }
 
     baseTempEnd(temp);
-    OSGfxFirstPaint(h);
 
     return h;
 }
 
-void OSGfxFirstPaint(OSHandle wnd)
+void OSGfxWindowFirstPaint(OSHandle wnd)
 {
     HWND wndHandle = (HWND)wnd._u64;
     ShowWindow(wndHandle, SW_SHOW);

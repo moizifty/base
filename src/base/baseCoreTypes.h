@@ -57,4 +57,16 @@ typedef struct str32
     u64 len;
 }str32;
 
+typedef struct DateTime
+{
+    u16 year;
+    u8 month; // 1 - 12
+    u8 dayOfWeek; // 1 - 7
+    u8 day; // 1 - 31
+    u8 hour; // 0 - 23
+    u8 min; // 0 - 59
+    u8 sec; // 0 - 59
+    u16 milli; // 0 - 999;
+}DateTime;
+
 #endif

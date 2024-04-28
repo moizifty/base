@@ -6,7 +6,7 @@
 
 #define STR8(CSTRING) (baseStr8((u8*)(CSTRING), strlen(CSTRING)))
 #define STR8_LIT(BYTES) (baseStr8((u8*)(BYTES), ((sizeof(BYTES)) - 1)))
-#define STR8_LIT_COMP(BYTES) ((Str8){(u8*)(BYTES), ((sizeof(BYTES)) - 1)})
+#define STR8_LIT_COMP(BYTES) ((str8){(u8*)(BYTES), ((sizeof(BYTES)) - 1)})
 #define STR16(WCSTRING) (baseStr16((u16*)(WCSTRING), baseStr16DataLen(WCSTRING)))
 #define STR16_LIT(STR) (baseStr16((u16*)(STR), BASE_ARRAY_SIZE(STR)))
 
