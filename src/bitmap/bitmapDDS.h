@@ -128,10 +128,10 @@ typedef struct DDSDXT5Block
     u8 r3;
 }DDSDXT5Block;
 
-vec3i8 bitmapDDSCalculateColorFromU16(u16 col);
-void bitmapDDSCalculateColorsFromDXT1Block(DDSDXT1Block block, vec3i8 colTable[4]);
-void bitmapDDSCalculateColorsFromDXT3Block(DDSDXT3Block block, vec3i8 colTable[4]);
-void bitmapDDSCalculateColorsFromDXT5Block(DDSDXT5Block block, vec3i8 colTable[4]);
+vec3u8 bitmapDDSCalculateColorFromU16(u16 col);
+void bitmapDDSCalculateColorsFromDXT1Block(DDSDXT1Block block, vec3u8 colTable[4]);
+void bitmapDDSCalculateColorsFromDXT3Block(DDSDXT3Block block, vec3u8 colTable[4]);
+void bitmapDDSCalculateColorsFromDXT5Block(DDSDXT5Block block, vec3u8 colTable[4]);
 DDSUncompressedData bitmapDDSUncompress(BaseArena *arena, DDSCompressedData input);
 
 Bitmap bitmapFromDDSRaw(BaseArena *arena, u8 *rawBytes, u64 byteLen);

@@ -39,6 +39,9 @@
 #define Vec3i8(X, Y, Z)    ((vec3i8){.x = (i8)(X), .y = (i8)(Y), .z = (i8)(Z)})
 #define Vec3i8FromVec(V)   (Vec3i8((V).x, (V).y, (V).z))
 
+#define Vec3u8(X, Y, Z)    ((vec3u8){.x = (u8)(X), .y = (u8)(Y), .z = (u8)(Z)})
+#define Vec3u8FromVec(V)   (Vec3u8((V).x, (V).y, (V).z))
+
 #define Vec4f(X, Y, Z, W)    ((vec4f){.x = (f32)(X), .y = (f32)(Y), .z = (f32)(Z), .w = (f32)(W)})
 #define Vec4fFromVec(V)   (Vec4f((V).x, (V).y, (V).z, (V).w))
 
@@ -196,6 +199,26 @@ typedef struct vec3i8
         };
     };   
 }vec3i8;
+
+typedef struct vec3u8
+{
+    union
+    {
+        u8 v[3];
+        struct
+        {
+            u8 x;
+            u8 y;
+            u8 z;
+        };
+        struct
+        {
+            u8 r;
+            u8 g;
+            u8 b;
+        };
+    };   
+}vec3u8;
 
 typedef struct vec4f
 {

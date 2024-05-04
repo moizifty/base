@@ -45,7 +45,6 @@ void ProgramMain(CmdLineHashMap *cmdline)
 
 	Bitmap bm =  bitmapFromPath(generalArena,STR8_LIT("C:\\Users\\Moizi\\OneDrive\\Documents\\Programming\\C\\base\\builds\\test3.dds"));
 	
-
 	bool quit = false;
 	while(!quit)
 	{

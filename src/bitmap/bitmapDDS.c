@@ -1,40 +1,40 @@
 #include "bitmap\bitmap.h"
 
 // uncompress the raw byte data,
-vec3i8 bitmapDDSCalculateColorFromU16(u16 col)
+vec3u8 bitmapDDSCalculateColorFromU16(u16 col)
 {
-    vec3i8 col0;
+    vec3u8 col0;
 
-    col0.r = (u8) (col >> 11);
-    col0.r = (u8) (col0.r << 3) | (col0.r >> 2);
+    col0.r = (col >> 11);
+    col0.r = (col0.r << 3) | (col0.r >> 2);
 
-    col0.g = (u8) (col & 0b00000'111111'00000) >> 5;
-    col0.g = (u8) (col0.g << 2) | (col0.g >> 4);
+    col0.g = (col & 0b00000'111111'00000) >> 5;
+    col0.g = (col0.g << 2) | (col0.g >> 4);
 
-    col0.b = (u8) (col &  0b00000'000000'11111);
-    col0.b = (u8) (col0.b << 3) | (col0.b >> 2);
+    col0.b = (col &  0b00000'000000'11111);
+    col0.b = (col0.b << 3) | (col0.b >> 2);
 
     return col0;
 }
-void bitmapDDSCalculateColorsFromDXT1Block(DDSDXT1Block block, vec3i8 colTable[4])
+void bitmapDDSCalculateColorsFromDXT1Block(DDSDXT1Block block, vec3u8 colTable[4])
 {
-    vec3i8 col0 = {0};
-    vec3i8 col1 = {0};
-    vec3i8 col2 = {0};
-    vec3i8 col3 = {0};
+    vec3u8 col0 = {0};
+    vec3u8 col1 = {0};
+    vec3u8 col2 = {0};
+    vec3u8 col3 = {0};
 
     col0 = bitmapDDSCalculateColorFromU16(block.c0);
     col1 = bitmapDDSCalculateColorFromU16(block.c1);
 
-    col2 = (block.c0 > block.c1) ? Vec3i8(((2 * (u16)col0.r) + (u16)col1.r) / 3,
+    col2 = (block.c0 > block.c1) ? Vec3u8(((2 * (u16)col0.r) + (u16)col1.r) / 3,
                                             ((2 * (u16)col0.g) + (u16)col1.g) / 3,
                                             ((2 * (u16)col0.b) + (u16)col1.b) / 3) :
 
-                                    Vec3i8(((u16)col0.r + (u16)col1.r) / 2,
+                                    Vec3u8(((u16)col0.r + (u16)col1.r) / 2,
                                             ((u16)col0.g + (u16)col1.g) / 2,
                                             ((u16)col0.b + (u16)col1.b) / 2);
 
-    col3 = (block.c0 > block.c1) ? Vec3i8(((u16)col0.r + (2 * (u16)col1.r)) / 3,
+    col3 = (block.c0 > block.c1) ? Vec3u8(((u16)col0.r + (2 * (u16)col1.r)) / 3,
                                             ((u16)col0.g + (2 * (u16)col1.g)) / 3,
                                             ((u16)col0.b + (2 * (u16)col1.b)) / 3) : col3;
 
@@ -43,21 +43,21 @@ void bitmapDDSCalculateColorsFromDXT1Block(DDSDXT1Block block, vec3i8 colTable[4
     colTable[2] = col2;
     colTable[3] = col3;
 }
-void bitmapDDSCalculateColorsFromDXT3Block(DDSDXT3Block block, vec3i8 colTable[4])
+void bitmapDDSCalculateColorsFromDXT3Block(DDSDXT3Block block, vec3u8 colTable[4])
 {
-    vec3i8 col0 = {0};
-    vec3i8 col1 = {0};
-    vec3i8 col2 = {0};
-    vec3i8 col3 = {0};
+    vec3u8 col0 = {0};
+    vec3u8 col1 = {0};
+    vec3u8 col2 = {0};
+    vec3u8 col3 = {0};
 
     col0 = bitmapDDSCalculateColorFromU16(block.c0);
     col1 = bitmapDDSCalculateColorFromU16(block.c1);
 
-    col2 = Vec3i8(((2 * (u16)col0.r) + (u16)col1.r) / 3,
+    col2 = Vec3u8(((2 * (u16)col0.r) + (u16)col1.r) / 3,
                 ((2 * (u16)col0.g) + (u16)col1.g) / 3,
                 ((2 * (u16)col0.b) + (u16)col1.b) / 3);
 
-    col3 = Vec3i8(((u16)col0.r + (2 * (u16)col1.r)) / 3,
+    col3 = Vec3u8(((u16)col0.r + (2 * (u16)col1.r)) / 3,
                 ((u16)col0.g + (2 * (u16)col1.g)) / 3,
                 ((u16)col0.b + (2 * (u16)col1.b)) / 3);
 
@@ -66,21 +66,21 @@ void bitmapDDSCalculateColorsFromDXT3Block(DDSDXT3Block block, vec3i8 colTable[4
     colTable[2] = col2;
     colTable[3] = col3;
 }
-void bitmapDDSCalculateColorsFromDXT5Block(DDSDXT5Block block, vec3i8 colTable[4])
+void bitmapDDSCalculateColorsFromDXT5Block(DDSDXT5Block block, vec3u8 colTable[4])
 {
-    vec3i8 col0 = {0};
-    vec3i8 col1 = {0};
-    vec3i8 col2 = {0};
-    vec3i8 col3 = {0};
+    vec3u8 col0 = {0};
+    vec3u8 col1 = {0};
+    vec3u8 col2 = {0};
+    vec3u8 col3 = {0};
 
     col0 = bitmapDDSCalculateColorFromU16(block.c0);
     col1 = bitmapDDSCalculateColorFromU16(block.c1);
 
-    col2 = Vec3i8(((2 * (u16)col0.r) + (u16)col1.r) / 3,
+    col2 = Vec3u8(((2 * (u16)col0.r) + (u16)col1.r) / 3,
                 ((2 * (u16)col0.g) + (u16)col1.g) / 3,
                 ((2 * (u16)col0.b) + (u16)col1.b) / 3);
 
-    col3 = Vec3i8(((u16)col0.r + (2 * (u16)col1.r)) / 3,
+    col3 = Vec3u8(((u16)col0.r + (2 * (u16)col1.r)) / 3,
                 ((u16)col0.g + (2 * (u16)col1.g)) / 3,
                 ((u16)col0.b + (2 * (u16)col1.b)) / 3);
 
@@ -122,7 +122,7 @@ DDSUncompressedData bitmapDDSUncompress(BaseArena *arena, DDSCompressedData inpu
             u32 indices = 0;
             u64 alphas = 0;
 
-            vec3i8 colTable[4] = {0};
+            vec3u8 colTable[4] = {0};
             u8 alphaTable[16] = {0};
 
             switch(input.compressionType)
@@ -208,7 +208,7 @@ DDSUncompressedData bitmapDDSUncompress(BaseArena *arena, DDSCompressedData inpu
                     u64 x = (bX + pX) * uncompressed.bytesPerPixel;
 
                     u8 index = (indices >> (2 * (pY * 4 + pX))) & 0x03;
-                    vec3i8 col = colTable[index];
+                    vec3u8 col = colTable[index];
 
                     u8 alphaIndex = 0;
                     u8 alpha = 0;
