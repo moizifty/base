@@ -16,6 +16,79 @@ vec3i8 bitmapDDSCalculateColorFromU16(u16 col)
 
     return col0;
 }
+void bitmapDDSCalculateColorsFromDXT1Block(DDSDXT1Block block, vec3i8 *outCol0, vec3i8 *outCol1, vec3i8 *outCol2, vec3i8 *outCol3)
+{
+    vec3i8 col0 = {0};
+    vec3i8 col1 = {0};
+    vec3i8 col2 = {0};
+    vec3i8 col3 = {0};
+
+    col0 = bitmapDDSCalculateColorFromU16(block.c0);
+    col1 = bitmapDDSCalculateColorFromU16(block.c1);
+
+    col2 = (block.c0 > block.c1) ? Vec3i8(((2 * (u16)col0.r) + (u16)col1.r) / 3,
+                                            ((2 * (u16)col0.g) + (u16)col1.g) / 3,
+                                            ((2 * (u16)col0.b) + (u16)col1.b) / 3) :
+
+                                    Vec3i8(((u16)col0.r + (u16)col1.r) / 2,
+                                            ((u16)col0.g + (u16)col1.g) / 2,
+                                            ((u16)col0.b + (u16)col1.b) / 2);
+
+    col3 = (block.c0 > block.c1) ? Vec3i8(((u16)col0.r + (2 * (u16)col1.r)) / 3,
+                                            ((u16)col0.g + (2 * (u16)col1.g)) / 3,
+                                            ((u16)col0.b + (2 * (u16)col1.b)) / 3) : col3;
+
+    *outCol0 = col0;
+    *outCol1 = col1;
+    *outCol2 = col2;
+    *outCol3 = col3;
+}
+void bitmapDDSCalculateColorsFromDXT3Block(DDSDXT3Block block, vec3i8 *outCol0, vec3i8 *outCol1, vec3i8 *outCol2, vec3i8 *outCol3)
+{
+    vec3i8 col0 = {0};
+    vec3i8 col1 = {0};
+    vec3i8 col2 = {0};
+    vec3i8 col3 = {0};
+
+    col0 = bitmapDDSCalculateColorFromU16(block.c0);
+    col1 = bitmapDDSCalculateColorFromU16(block.c1);
+
+    col2 = Vec3i8(((2 * (u16)col0.r) + (u16)col1.r) / 3,
+                ((2 * (u16)col0.g) + (u16)col1.g) / 3,
+                ((2 * (u16)col0.b) + (u16)col1.b) / 3);
+
+    col3 = Vec3i8(((u16)col0.r + (2 * (u16)col1.r)) / 3,
+                ((u16)col0.g + (2 * (u16)col1.g)) / 3,
+                ((u16)col0.b + (2 * (u16)col1.b)) / 3);
+
+    *outCol0 = col0;
+    *outCol1 = col1;
+    *outCol2 = col2;
+    *outCol3 = col3;
+}
+void bitmapDDSCalculateColorsFromDXT5Block(DDSDXT5Block block, vec3i8 *outCol0, vec3i8 *outCol1, vec3i8 *outCol2, vec3i8 *outCol3)
+{
+    vec3i8 col0 = {0};
+    vec3i8 col1 = {0};
+    vec3i8 col2 = {0};
+    vec3i8 col3 = {0};
+
+    col0 = bitmapDDSCalculateColorFromU16(block.c0);
+    col1 = bitmapDDSCalculateColorFromU16(block.c1);
+
+    col2 = Vec3i8(((2 * (u16)col0.r) + (u16)col1.r) / 3,
+                ((2 * (u16)col0.g) + (u16)col1.g) / 3,
+                ((2 * (u16)col0.b) + (u16)col1.b) / 3);
+
+    col3 = Vec3i8(((u16)col0.r + (2 * (u16)col1.r)) / 3,
+                ((u16)col0.g + (2 * (u16)col1.g)) / 3,
+                ((u16)col0.b + (2 * (u16)col1.b)) / 3);
+
+    *outCol0 = col0;
+    *outCol1 = col1;
+    *outCol2 = col2;
+    *outCol3 = col3;
+}
 
 DDSUncompressedData bitmapDDSUncompress(BaseArena *arena, DDSCompressedData input)
 {
@@ -24,23 +97,15 @@ DDSUncompressedData bitmapDDSUncompress(BaseArena *arena, DDSCompressedData inpu
     u8 *data = input.bytes;
     switch(input.compressionType)
     {
-        case DX10: logProgErrorFmt("The dds uses a dds_header_dxt10 which is not supported."); break;
-
         case DXT1:
         {
             uncompressed.fmt = BITMAP_FORMAT_RGBA_8;
             uncompressed.bytesPerPixel = 4; //rgba
             uncompressed.pixels = baseArenaPush(arena, input.w * input.h * uncompressed.bytesPerPixel);
             
-            u64 numXBlocks = baseGreater(input.w / 4, 1);
-            numXBlocks += (input.w > 4 && input.w % 4 != 0) ? 1 : 0;
-
-            u64 numYBlocks = baseGreater(input.h / 4, 1);
-            numYBlocks += (input.h > 4 && input.h % 4 != 0) ? 1 : 0;
-
-            for(u64 yBlock = 0; yBlock < numYBlocks; yBlock++)
+            for(u64 bY = 0; bY < input.h; bY += 4)
             {
-                for(u64 xBlock = 0; xBlock < numXBlocks; xBlock++)
+                for(u64 bX = 0; bX < input.w; bX += 4)
                 {
                     DDSDXT1Block block = {0};
                     BASE_MEMCPY(&block, data, sizeof(block));
@@ -53,40 +118,14 @@ DDSUncompressedData bitmapDDSUncompress(BaseArena *arena, DDSCompressedData inpu
                     vec3i8 col2 = {0};
                     vec3i8 col3 = {0};
 
-                    col0 = bitmapDDSCalculateColorFromU16(block.c0);
-                    col1 = bitmapDDSCalculateColorFromU16(block.c1);
+                    bitmapDDSCalculateColorsFromDXT1Block(block, &col0, &col1, &col2, &col3);
 
-                    col2 = (block.c0 > block.c1) ? Vec3i8(((2 * (u16)col0.r) + (u16)col1.r) / 3,
-                                                          ((2 * (u16)col0.g) + (u16)col1.g) / 3,
-                                                          ((2 * (u16)col0.b) + (u16)col1.b) / 3) :
-
-                                                   Vec3i8(((u16)col0.r + (u16)col1.r) / 2,
-                                                          ((u16)col0.g + (u16)col1.g) / 2,
-                                                          ((u16)col0.b + (u16)col1.b) / 2);
-
-                    col3 = (block.c0 > block.c1) ? Vec3i8(((u16)col0.r + (2 * (u16)col1.r)) / 3,
-                                                          ((u16)col0.g + (2 * (u16)col1.g)) / 3,
-                                                          ((u16)col0.b + (2 * (u16)col1.b)) / 3) : col3;
-
-                    u64 yOffset = 4 * yBlock;
-                    u64 xOffset = 4 * xBlock;
-
-                    for(u64 pY = 0; pY < 4; pY++)
+                    for(u64 pY = 0; pY < 4 && ((pY + bY) < input.h); pY++)
                     {
-                        if((pY + yOffset) >= input.h)
+                        for(u64 pX = 0; pX < 4 && ((pX + bX) < input.w); pX++)
                         {
-                            break;
-                        }
-
-                        for(u64 pX = 0; pX < 4; pX++)
-                        {
-                            if ((pX + xOffset) >= input.w)
-                            {
-                                break;
-                            }
-
-                            u64 y = (yOffset + pY) * input.w * uncompressed.bytesPerPixel;
-                            u64 x = (xOffset + pX) * uncompressed.bytesPerPixel;
+                            u64 y = (bY + pY) * input.w * uncompressed.bytesPerPixel;
+                            u64 x = (bX + pX) * uncompressed.bytesPerPixel;
 
                             u8 index = (indices >> (2 * (pY * 4 + pX))) & 0x03;
                             vec3i8 t = (index == 0) ? col0 : ((index == 1) ? col1 : ((index == 2) ? col2 : col3));
@@ -107,15 +146,9 @@ DDSUncompressedData bitmapDDSUncompress(BaseArena *arena, DDSCompressedData inpu
             uncompressed.bytesPerPixel = 4; //rgba
             uncompressed.pixels = baseArenaPush(arena, input.w * input.h * uncompressed.bytesPerPixel);
             
-            u64 numXBlocks = baseGreater(input.w / 4, 1);
-            numXBlocks += (input.w > 4 && input.w % 4 != 0) ? 1 : 0;
-
-            u64 numYBlocks = baseGreater(input.h / 4, 1);
-            numYBlocks += (input.h > 4 && input.h % 4 != 0) ? 1 : 0;
-
-            for(u64 yBlock = 0; yBlock < numYBlocks; yBlock++)
+            for(u64 bY = 0; bY < input.h; bY += 4)
             {
-                for(u64 xBlock = 0; xBlock < numXBlocks; xBlock++)
+                for(u64 bX = 0; bX < input.w; bX += 4)
                 {
                     DDSDXT3Block block = {0};
                     BASE_MEMCPY(&block, data, sizeof(block));
@@ -130,55 +163,28 @@ DDSUncompressedData bitmapDDSUncompress(BaseArena *arena, DDSCompressedData inpu
                                  ((u64) block.alphaP1011 << 40) |
                                  ((u64) block.alphaP1213 << 48) |
                                  ((u64) block.alphaP1415 << 56);
-                    
 
                     vec3i8 col0 = {0};
                     vec3i8 col1 = {0};
                     vec3i8 col2 = {0};
                     vec3i8 col3 = {0};
 
-                    col0 = bitmapDDSCalculateColorFromU16(block.c0);
-                    col1 = bitmapDDSCalculateColorFromU16(block.c1);
+                    bitmapDDSCalculateColorsFromDXT3Block(block, &col0, &col1, &col2, &col3);
 
-                    col2 = (block.c0 > block.c1) ? Vec3i8(((2 * (u16)col0.r) + (u16)col1.r) / 3,
-                                                          ((2 * (u16)col0.g) + (u16)col1.g) / 3,
-                                                          ((2 * (u16)col0.b) + (u16)col1.b) / 3) :
-
-                                                   Vec3i8(((u16)col0.r + (u16)col1.r) / 2,
-                                                          ((u16)col0.g + (u16)col1.g) / 2,
-                                                          ((u16)col0.b + (u16)col1.b) / 2);
-
-                    col3 = (block.c0 > block.c1) ? Vec3i8(((u16)col0.r + (2 * (u16)col1.r)) / 3,
-                                                          ((u16)col0.g + (2 * (u16)col1.g)) / 3,
-                                                          ((u16)col0.b + (2 * (u16)col1.b)) / 3) : col3;
-
-                    u64 yOffset = 4 * yBlock;
-                    u64 xOffset = 4 * xBlock;
-
-                    for(u64 pY = 0; pY < 4; pY++)
+                    for(u64 pY = 0; pY < 4 && ((pY + bY) < input.h); pY++)
                     {
-                        if((pY + yOffset) >= input.h)
+                        for(u64 pX = 0; pX < 4 && ((pX + bX) < input.w); pX++)
                         {
-                            break;
-                        }
+                            u64 y = (bY + pY) * input.w * uncompressed.bytesPerPixel;
+                            u64 x = (bX + pX) * uncompressed.bytesPerPixel;
 
-                        for(u64 pX = 0; pX < 4; pX++)
-                        {
-                            if ((pX + xOffset) >= input.w)
-                            {
-                                break;
-                            }
+                            u8 index = (indices >> (2 * (pY * 4 + pX))) & 0x03;
+                            vec3i8 t = (index == 0) ? col0 : ((index == 1) ? col1 : ((index == 2) ? col2 : col3));
 
-                            u64 y = (yOffset + pY) * input.w * uncompressed.bytesPerPixel;
-                            u64 x = (xOffset + pX) * uncompressed.bytesPerPixel;
-
-                            u8 index = (indices >> (2 * (pY * 4 + pX))) & 0b11;
                             u8 alpha = (alphas >> (4 * (pY * 4 + pX))) & 0b1111;
 
                             // extend the alpha
                             alpha = (alpha << 4) | alpha;
-
-                            vec3i8 t = (index == 0) ? col0 : ((index == 1) ? col1 : ((index == 2) ? col2 : col3));
 
                             uncompressed.pixels[y + x] = t.r;
                             uncompressed.pixels[y + x + 1] = t.g;
@@ -196,15 +202,9 @@ DDSUncompressedData bitmapDDSUncompress(BaseArena *arena, DDSCompressedData inpu
             uncompressed.bytesPerPixel = 4; //rgba
             uncompressed.pixels = baseArenaPush(arena, input.w * input.h * uncompressed.bytesPerPixel);
             
-            u64 numXBlocks = baseGreater(input.w / 4, 1);
-            numXBlocks += (input.w > 4 && input.w % 4 != 0) ? 1 : 0;
-
-            u64 numYBlocks = baseGreater(input.h / 4, 1);
-            numYBlocks += (input.h > 4 && input.h % 4 != 0) ? 1 : 0;
-
-            for(u64 yBlock = 0; yBlock < numYBlocks; yBlock++)
+            for(u64 bY = 0; bY < input.h; bY += 4)
             {
-                for(u64 xBlock = 0; xBlock < numXBlocks; xBlock++)
+                for(u64 bX = 0; bX < input.w; bX += 4)
                 {
                     DDSDXT5Block block = {0};
                     BASE_MEMCPY(&block, data, sizeof(block));
@@ -251,42 +251,18 @@ DDSUncompressedData bitmapDDSUncompress(BaseArena *arena, DDSCompressedData inpu
                     vec3i8 col2 = {0};
                     vec3i8 col3 = {0};
 
-                    col0 = bitmapDDSCalculateColorFromU16(block.c0);
-                    col1 = bitmapDDSCalculateColorFromU16(block.c1);
+                    bitmapDDSCalculateColorsFromDXT5Block(block, &col0, &col1, &col2, &col3);
 
-                    col2 = (block.c0 > block.c1) ? Vec3i8(((2 * (u16)col0.r) + (u16)col1.r) / 3,
-                                                          ((2 * (u16)col0.g) + (u16)col1.g) / 3,
-                                                          ((2 * (u16)col0.b) + (u16)col1.b) / 3) :
-
-                                                   Vec3i8(((u16)col0.r + (u16)col1.r) / 2,
-                                                          ((u16)col0.g + (u16)col1.g) / 2,
-                                                          ((u16)col0.b + (u16)col1.b) / 2);
-
-                    col3 = (block.c0 > block.c1) ? Vec3i8(((u16)col0.r + (2 * (u16)col1.r)) / 3,
-                                                          ((u16)col0.g + (2 * (u16)col1.g)) / 3,
-                                                          ((u16)col0.b + (2 * (u16)col1.b)) / 3) : col3;
-
-                    u64 yOffset = 4 * yBlock;
-                    u64 xOffset = 4 * xBlock;
-
-                    for(u64 pY = 0; pY < 4; pY++)
+                    for(u64 pY = 0; pY < 4 && ((pY + bY) < input.h); pY++)
                     {
-                        if((pY + yOffset) >= input.h)
+                        for(u64 pX = 0; pX < 4 && ((pX + bX) < input.w); pX++)
                         {
-                            break;
-                        }
+                            u64 y = (bY + pY) * input.w * uncompressed.bytesPerPixel;
+                            u64 x = (bX + pX) * uncompressed.bytesPerPixel;
 
-                        for(u64 pX = 0; pX < 4; pX++)
-                        {
-                            if ((pX + xOffset) >= input.w)
-                            {
-                                break;
-                            }
+                            u8 index = (indices >> (2 * (pY * 4 + pX))) & 0x03;
+                            vec3i8 t = (index == 0) ? col0 : ((index == 1) ? col1 : ((index == 2) ? col2 : col3));
 
-                            u64 y = (yOffset + pY) * input.w * uncompressed.bytesPerPixel;
-                            u64 x = (xOffset + pX) * uncompressed.bytesPerPixel;
-
-                            u8 index = (indices >> (2 * (pY * 4 + pX))) & 0b11;
                             u8 alphaIndex = (alphas >> (3 * (pY * 4 + pX))) & 0b111;
                             u8 alpha = 0;
 
@@ -302,8 +278,6 @@ DDSUncompressedData bitmapDDSUncompress(BaseArena *arena, DDSCompressedData inpu
                                 case 7: alpha = alpha7; break;
                             }
 
-                            vec3i8 t = (index == 0) ? col0 : ((index == 1) ? col1 : ((index == 2) ? col2 : col3));
-
                             uncompressed.pixels[y + x] = t.r;
                             uncompressed.pixels[y + x + 1] = t.g;
                             uncompressed.pixels[y + x + 2] = t.b;
@@ -316,7 +290,7 @@ DDSUncompressedData bitmapDDSUncompress(BaseArena *arena, DDSCompressedData inpu
 
         default:
         {
-            logProgErrorFmt("The dds file contains an unregognised compression method.");
+            logProgErrorFmt("The dds file contains an unsupported compression method.");
         }break;
     }
     
