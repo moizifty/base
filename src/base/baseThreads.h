@@ -9,7 +9,6 @@
 typedef struct BaseThreadCtx
 {
     BaseArena *scratchArenas[BASE_THREADS_NUM_ARENAS];
-    BaseArena *logArena;
 }BaseThreadCtx;
 
 BaseThreadCtx baseThreadsCreateCtx(void);

@@ -21,6 +21,8 @@
 
 #define baseRadToDegF32(RAD)   ((RAD) * (180.0f) / ((f32)BASE_PI))
 #define baseDegToRadF32(DEG)   ((DEG) * ((f32)(BASE_PI)) / 180.0f)
+#define baseClamp(V, MN, MX)   (((V) < (MN)) ? (MN) : (((V) > (MX)) ? (MX) : (V)))
+#define baseGreater(V, MN)   (((V) < (MN)) ? (MN) : (V))
 
 #define Vec2f(X, Y)    ((vec2f){.x = (f32)(X), .y = (f32)(Y)})
 #define Vec2fFromVec(V)   (Vec2f((V).x, (V).y))
@@ -28,11 +30,20 @@
 #define Vec2i(X, Y)    ((vec2i){.x = (i64)(X), .y = (i64)(Y)})
 #define Vec2iFromVec(V)   (Vec2i((V).x, (V).y))
 
+#define Vec2i8(X, Y)    ((vec2i8){.x = (i8)(X), .y = (i8)(Y)})
+#define Vec2i8FromVec(V)   (Vec2i8((V).x, (V).y))
+
 #define Vec3f(X, Y, Z)    ((vec3f){.x = (f32)(X), .y = (f32)(Y), .z = (f32)(Z)})
 #define Vec3fFromVec(V)   (Vec3f((V).x, (V).y, (V).z))
 
+#define Vec3i8(X, Y, Z)    ((vec3i8){.x = (i8)(X), .y = (i8)(Y), .z = (i8)(Z)})
+#define Vec3i8FromVec(V)   (Vec3i8((V).x, (V).y, (V).z))
+
 #define Vec4f(X, Y, Z, W)    ((vec4f){.x = (f32)(X), .y = (f32)(Y), .z = (f32)(Z), .w = (f32)(W)})
 #define Vec4fFromVec(V)   (Vec4f((V).x, (V).y, (V).z, (V).w))
+
+#define Vec4i8(X, Y, Z, W)    ((vec4i8){.x = (i8)(X), .y = (i8)(Y), .z = (i8)(Z), .w = (i8)(W)})
+#define Vec4i8FromVec(V)   (Vec4i8((V).x, (V).y, (V).z, (V).w))
 
 #define Quatf(X, Y, Z, W)    ((quatf){.x = (f32)(X), .y = (f32)(Y), .z = (f32)(Z), .w = (f32)(W)})
 #define QUATF_IDENTITY  Quatf(0, 0, 0, 1)
@@ -113,6 +124,29 @@ typedef struct vec2i
     };   
 }vec2i;
 
+typedef struct vec2i8
+{
+    union
+    {
+        i8 v[2];
+        struct
+        {
+            i8 x;
+            i8 y;
+        };
+        struct
+        {
+            i8 width;
+            i8 height;
+        };
+        struct
+        {
+            i8 w;
+            i8 h;
+        };
+    };   
+}vec2i8;
+
 typedef struct vec3f
 {
     union
@@ -137,6 +171,31 @@ typedef struct vec3f
         };
     };   
 }vec3f;
+
+typedef struct vec3i8
+{
+    union
+    {
+        i8 v[3];
+        struct
+        {
+            i8 x;
+            i8 y;
+            i8 z;
+        };
+        struct
+        {
+            i8 r;
+            i8 g;
+            i8 b;
+        };
+        struct
+        {
+            vec2i8 xy;
+            i8 _z;
+        };
+    };   
+}vec3i8;
 
 typedef struct vec4f
 {
@@ -164,6 +223,33 @@ typedef struct vec4f
         };
     };   
 }vec4f;
+
+typedef struct vec4i8
+{
+    union
+    {
+        i8 v[4];
+        struct
+        {
+            i8 x;
+            i8 y;
+            i8 z;
+            i8 w;
+        };
+        struct
+        {
+            i8 r;
+            i8 g;
+            i8 b;
+            i8 a;
+        };
+        struct
+        {
+            vec3i8 xyz;
+            i8 _w;
+        };
+    };   
+}vec4i8;
 
 typedef struct quatf
 {

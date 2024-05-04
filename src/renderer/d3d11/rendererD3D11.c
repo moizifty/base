@@ -170,6 +170,11 @@ RendererWindowState *rendererAttachToWindow(RendererState *rs, BaseArena *arena,
 
 void rendererWindowResizeBuffers(RendererState *rs, RendererWindowState *wndState, vec2i newResolution)
 {
+    if(newResolution.width <= 0 || newResolution.height <= 0)
+    {
+        return;
+    }
+    
     RendererWindowStatePlatformD3D11 *d3dWndState = (RendererWindowStatePlatformD3D11 *) wndState->platformSpecific;
     RendererStateD3D11 *d3dRS = (RendererStateD3D11 *) rs;
     d3dRS->deviceContext->lpVtbl->OMSetRenderTargets(d3dRS->deviceContext, 0, null, null);
@@ -193,7 +198,7 @@ void rendererWindowResizeBuffers(RendererState *rs, RendererWindowState *wndStat
     }
 
     hr = d3dWndState->swapChain->lpVtbl->GetBuffer(d3dWndState->swapChain, 0, &IID_ID3D11Texture2D, &d3dWndState->framebuffer);
-    d3dWndState->framebuffer->lpVtbl->SetPrivateData(d3dWndState->framebuffer, &WKPDID_D3DDebugObjectName, frameBufferDebugName.len, frameBufferDebugName.data);
+    d3dWndState->framebuffer->lpVtbl->SetPrivateData(d3dWndState->framebuffer, &WKPDID_D3DDebugObjectName, (UINT) frameBufferDebugName.len, frameBufferDebugName.data);
 
     if(HRFAILURE(hr))
     {
@@ -209,8 +214,8 @@ void rendererWindowResizeBuffers(RendererState *rs, RendererWindowState *wndStat
 
     D3D11_TEXTURE2D_DESC depthBufferDesc = 
     {
-        .Width = newResolution.width,
-        .Height = newResolution.height,
+        .Width = (UINT)newResolution.width,
+        .Height = (UINT)newResolution.height,
         .MipLevels = 1,
         .ArraySize = 1,
         .Format = DXGI_FORMAT_D32_FLOAT,
@@ -223,7 +228,7 @@ void rendererWindowResizeBuffers(RendererState *rs, RendererWindowState *wndStat
     };
 
     hr = d3dRS->device->lpVtbl->CreateTexture2D(d3dRS->device, &depthBufferDesc, null, &d3dWndState->depthBuffer);
-    d3dWndState->depthBuffer->lpVtbl->SetPrivateData(d3dWndState->depthBuffer, &WKPDID_D3DDebugObjectName, depthBufferDebugName.len, depthBufferDebugName.data);
+    d3dWndState->depthBuffer->lpVtbl->SetPrivateData(d3dWndState->depthBuffer, &WKPDID_D3DDebugObjectName, (UINT)depthBufferDebugName.len, depthBufferDebugName.data);
 
     if(HRFAILURE(hr))
     {
@@ -247,7 +252,7 @@ void rendererWindowResizeBuffers(RendererState *rs, RendererWindowState *wndStat
 
     d3dRS->deviceContext->lpVtbl->OMSetRenderTargets(d3dRS->deviceContext, 1, &d3dWndState->framebufferRTV, d3dWndState->depthBufferDSV);
 
-    logProgErrorFmt("Successfully resized swapchain buffers to (%lld x %lld).", newResolution.w, newResolution.h);
+    logProgInfoFmt("Successfully resized swapchain buffers to (%lld x %lld).", newResolution.w, newResolution.h);
 }
 void rendererWindowBegin(RendererState *rs, RendererWindowState *wndState, vec2i resolution)
 {
@@ -309,7 +314,7 @@ void rendererOutputFinalDebugReport(BaseArena *arena, RendererState *rs)
             return;
         }
 
-        str8 msg = baseStr8(message->pDescription, message->DescriptionByteLength - 1);
+        str8 msg = baseStr8((u8*)message->pDescription, message->DescriptionByteLength - 1);
 
         switch(message->Severity)
         {

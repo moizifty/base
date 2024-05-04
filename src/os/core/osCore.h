@@ -11,6 +11,7 @@ typedef struct OSProcessState
     str8 binaryPath;
     str8 logDirPath;
 
+    BaseArena *logArena;
     struct Log *processLog;
 }OSProcessState;
 

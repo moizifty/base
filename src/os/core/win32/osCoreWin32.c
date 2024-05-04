@@ -20,6 +20,7 @@ OSState *OSInit(BaseArena *arena)
             // OSGetProcessPath, where it finds the path of any process
             // and if passed null it does this process.
             .binaryPath = OSGetProgramPath(arena),
+            .logArena = baseArenaAlloc(BASE_GIGABYTES(2)),
             .logDirPath = OSGetProgramLogsDirectory(arena),
         };
 

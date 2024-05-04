@@ -6,7 +6,8 @@
 
 #define STR8(CSTRING) (baseStr8((u8*)(CSTRING), strlen(CSTRING)))
 #define STR8_LIT(BYTES) (baseStr8((u8*)(BYTES), ((sizeof(BYTES)) - 1)))
-#define STR8_LIT_COMP(BYTES) ((str8){(u8*)(BYTES), ((sizeof(BYTES)) - 1)})
+#define STR8_LIT_COMP(BYTES) (str8){(u8*)(BYTES), ((sizeof(BYTES)) - 1)}
+#define STR8_LIT_COMP_CONST(BYTES) {(u8*)(BYTES), ((sizeof(BYTES)) - 1)}
 #define STR16(WCSTRING) (baseStr16((u16*)(WCSTRING), baseStr16DataLen(WCSTRING)))
 #define STR16_LIT(STR) (baseStr16((u16*)(STR), BASE_ARRAY_SIZE(STR)))
 
@@ -84,6 +85,7 @@ bool baseStringsStrContains(str8 a, u8 ch);
 str8 baseStringsStrSubStr8(str8 str, u64 start, u64 end);
 u64 baseStringsStrFindSubStr8(str8 haystack, str8 needle, u64 start_pos, StrMatchFlags flags);
 str8 baseStringsStrReplace(BaseArena *arena, str8 str, u8 old, u8 new);
+bool baseStringsStrEndsWith(str8 str, str8 endsWith, StrMatchFlags flags);
 
 str8 baseStringsStrChopPastLastSlash(str8 str);
 

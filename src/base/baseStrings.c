@@ -282,6 +282,17 @@ str8 baseStringsStrReplace(BaseArena *arena, str8 str, u8 old, u8 new)
 
     return ret;
 }
+bool baseStringsStrEndsWith(str8 str, str8 endsWith, StrMatchFlags flags)
+{
+    if(str.len < endsWith.len)
+    {
+        return false;
+    }
+
+    str8 a = {.data = (str.data + str.len) - endsWith.len, .len = endsWith.len};
+
+    return baseStringsStrEquals(a, endsWith, flags);
+}
 
 str8 baseStringsStrChopPastLastSlash(str8 str)
 {
@@ -359,6 +370,8 @@ void baseStringsSBAppendFmt(BaseStringBuilder *sb, const i8 *fmt, ...)
 // conversions
 DecodeCodePointInfo baseDecodeCodepointFromUtf8(u8 *bytes, u64 remainingLen)
 {
+    BASE_UNUSED_PARAM(remainingLen);
+
     DecodeCodePointInfo dp = {0};
     if (bytes[0] < 0b1000'0000)
     {
@@ -403,6 +416,8 @@ DecodeCodePointInfo baseDecodeCodepointFromUtf8(u8 *bytes, u64 remainingLen)
 }
 DecodeCodePointInfo baseDecodeCodepointFromUtf16(u16 *doubles, u64 remainingLen)
 {
+    BASE_UNUSED_PARAM(remainingLen);
+    
     DecodeCodePointInfo dp = {0};
     dp.advance = 1;
     dp.codepoint = (u32)doubles[0];

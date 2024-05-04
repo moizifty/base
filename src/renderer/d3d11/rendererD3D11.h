@@ -6,6 +6,7 @@
 #define RENDERER_D3D11_H
 
 #include "base\baseCore.h"
+#include "base\baseStrings.h"
 #include "os\core\win32\osCoreWin32.h"
 #include "os\gfx\osGfx.h"
 

@@ -1,12 +1,17 @@
 #include <stdio.h>
 
+#define BASE_USE_EXCEPTION_HANDLER
 #include "..\base\base.h"
 #include "..\os\os.h"
 #include "..\renderer\renderer.h"
+#include "..\bitmap\bitmap.h"
 
 #include "..\base\base.c"
 #include "..\os\os.c"
 #include "..\renderer\renderer.c"
+#include "..\log\log.c"
+#include "..\bitmap\bitmap.c"
+
 #include "..\os\core\osEntryPoint.c"
 
 BASE_CREATE_LL_DECLS_DEFS(IntList, int);
@@ -35,11 +40,21 @@ void ProgramMain(CmdLineHashMap *cmdline)
 	OSGfxState *state = OSGfxInit(generalArena);
 	OSHandle window = OSGfxWindowOpen(STR8_LIT("Test"), Vec2i(-1, -1), Vec2i(-1, -1));
 
-	rendererAttachToWindow(rendererInit(generalArena, state), generalArena, window);
+	RendererState *rend = rendererInit(generalArena, state);
+	RendererWindowState *wndState = rendererAttachToWindow(rend, generalArena, window);
+
+	Bitmap bm =  bitmapFromPath(generalArena,STR8_LIT("C:\\Users\\Moizi\\OneDrive\\Documents\\Programming\\C\\base\\builds\\test3.dds"));
+	
+
 	bool quit = false;
 	while(!quit)
 	{
 		OSGfxProcessEvents(generalArena);
+		
+		range2i r = OSClientRectFromWindow(window);
+		vec2i d = Range2iDim(r);
+		rendererWindowBegin(rend, wndState, d);
+		rendererWindowEnd(rend, wndState);
 
 		BASE_LIST_FOREACH(OSEvent, event, gOSWin32TLEvents)
 		{
@@ -49,21 +64,12 @@ void ProgramMain(CmdLineHashMap *cmdline)
 				break;
 			}
 		}
+
+		if(!wndState->preformedFirstPaint)
+		{
+			OSGfxWindowFirstPaint(window);
+		}
 	}
 
-	baseColPrintf("Hiiii {b}%d %s\n", 90, "sds");
-
-	printFiles(generalArena, STR8_LIT("..\\builds"));
-	
-	baseColPrintf("Hiiii {b}%d %s\n", 90, "sds");
-	baseColPrintf("%S\n", OSGetProgramPath(generalArena));
-	baseColPrintf("%S\n", OSGetProgramDirectory(generalArena));
-
-	mat4f i = MAT4F_IDENTITY;
-	i = quatfToMat4f(quatfGiveRotateAxis(Vec3f(1, 0, 0), baseDegToRadF32(90.0f))); //mat4fGiveRotateX(baseDegToRadF32(45));
-
-	quatf v = quatfFromEulerYXZ(Vec3f(1, 5, 2)); //quatfRotateYXZVec3f(Vec3f(0, 1, 0), baseDegToRadF32(45), 0, 0);
-
-	printf("(%f %f %f %f)\n", v.x, v.y, v.z, v.w);
 	baseArenaFree(generalArena);
 }

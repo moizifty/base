@@ -59,12 +59,12 @@ void LogEntryChunkListPush(BaseArena *arena, LogEntryChunkList *l, LogEntry msg)
 str8 LogEntryChunkListJoin(BaseArena *arena, LogEntryChunkList *l);
 LogEntryArray LogEntryChunkListFlattenToArray(BaseArena *arena, LogEntryChunkList *l);
 
-
 Log *logCreate(BaseArena *arena);
 str8 logFlush(Log *log);
 void logClose(Log *log);
-
 void logClear(Log *log);
+
+void logOutputToConsole(Log *log);
 
 void logPrintFmtV(Log *log, LogSeverityKind severity, char *fmt, va_list va);
 void logPrintFmt(Log *log, LogSeverityKind severity, char *fmt, ...);

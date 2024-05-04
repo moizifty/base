@@ -92,6 +92,10 @@ i64 baseColFprintf(FILE *fp, const char *fmt, ...)
                                         {
                                             Str8ListPushLastFmt(temp.arena, &strList, BASE_TERMINAL_FG_BLUE_CODE, -1);
                                         }break;
+                                        case 'o':
+                                        {
+                                            Str8ListPushLastFmt(temp.arena, &strList, BASE_TERMINAL_FG_ORANGE_1_CODE, -1);
+                                        }break;
                                         case 'u':
                                         {
                                             Str8ListPushLastFmt(temp.arena, &strList, BASE_TERMINAL_UNDERLINE_CODE, -1);

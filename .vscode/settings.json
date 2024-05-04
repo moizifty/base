@@ -19,6 +19,8 @@
         "format": "c",
         "initializer_list": "c",
         "list": "c",
-        "xtree": "c"
+        "xtree": "c",
+        "xiosbase": "c",
+        "bitmapddsc": "c"
     }
 }

@@ -180,9 +180,9 @@
 # define BUILD_DEBUG 1
 #endif
 
-#if !defined(BUILD_CONSOLE_APP)
-# define BUILD_CONSOLE_APP 0
-#endif
+// #if !defined(BUILD_NOCONSOLE_APP)
+// # define BUILD_CONSOLE_APP 0
+// #endif
 
 #if !defined(BUILD_TELEMETRY)
 # define BUILD_TELEMETRY 0

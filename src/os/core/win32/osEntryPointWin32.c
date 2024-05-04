@@ -39,7 +39,6 @@ inline LONG WINAPI BaseMainThreadExceptionHandler(EXCEPTION_POINTERS *exceptionI
                 if(i >= maxStackFrames)
                 {
                     logProgInfoFmt("...");
-                    logProgInfoFmt("END OF STACK");
                     break;
                 }
 
@@ -58,7 +57,7 @@ inline LONG WINAPI BaseMainThreadExceptionHandler(EXCEPTION_POINTERS *exceptionI
                     symbol->SizeOfStruct = sizeof(SYMBOL_INFOW);
                     symbol->MaxNameLen = MAX_SYM_NAME;
 
-                    i64 displacement = 0;
+                    DWORD64 displacement = 0;
                     if(SymFromAddrW(process, frame.AddrPC.Offset, &displacement, symbol))
                     {
                         str16 name = baseStr16(symbol->Name, wcslen(symbol->Name));
@@ -92,6 +91,8 @@ inline LONG WINAPI BaseMainThreadExceptionHandler(EXCEPTION_POINTERS *exceptionI
                     break;
                 }
             }
+
+            logProgInfoFmt("END OF STACK");
         }
 
 #ifdef BASE_USE_USER_DEFINED_EXCEPTION_HANDLER
@@ -103,6 +104,7 @@ inline LONG WINAPI BaseMainThreadExceptionHandler(EXCEPTION_POINTERS *exceptionI
         OSExceptionInfo *ex = null;
         void BaseUserDefinedExceptionHandler(OSExceptionInfo *);
         BaseUserDefinedExceptionHandler(ex);
+#endif
 
         str8 logContent8 = logFlush(OSGetState()->thisProcState.processLog);
         str16 logContent = baseStr16FromFromStr8(temp.arena, logContent8);
@@ -119,7 +121,6 @@ inline LONG WINAPI BaseMainThreadExceptionHandler(EXCEPTION_POINTERS *exceptionI
         dialog.pszExpandedControlText = L"Collapse log";
         dialog.pszExpandedInformation = logContent.data;
         TaskDialogIndirect(&dialog, 0, 0, 0);
-#endif
     }
     baseTempEnd(temp);
 
@@ -127,7 +128,7 @@ inline LONG WINAPI BaseMainThreadExceptionHandler(EXCEPTION_POINTERS *exceptionI
 }
 #endif
 
-#if BUILD_CONSOLE_APP
+#if !defined(BUILD_NOCONSOLE_APP)
 int main(int argc, char **argv)
 {
 #ifdef BASE_USE_EXCEPTION_HANDLER

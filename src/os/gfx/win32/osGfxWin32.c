@@ -40,7 +40,7 @@ OSHandle OSGfxWindowOpen(str8 title, vec2i size, vec2i pos)
     BaseArenaTemp temp = baseTempBegin(null, 0);
     {
         str16 str16 = baseStr16FromFromStr8(temp.arena, title);
-        HWND wnd = CreateWindow(OS_GFX_WIN32_DEFAULT_CLASS_NAME, str16.data, WS_OVERLAPPEDWINDOW, x, y, sx, sy, null, null, HINST_THIS, null);
+        HWND wnd = CreateWindow(OS_GFX_WIN32_DEFAULT_CLASS_NAME, str16.data, WS_OVERLAPPEDWINDOW, (int)x, (int)y, (int)sx, (int)sy, null, null, HINST_THIS, null);
         h = (OSHandle){(u64)wnd};
     }
 

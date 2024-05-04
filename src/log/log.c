@@ -2,10 +2,10 @@
 
 u8 *gLogSeverityTable[] =
 {
-    [LOG_SEVERITY_ERROR] = "SeverityError",
-    [LOG_SEVERITY_WARNING] = "SeverityWarning",
-    [LOG_SEVERITY_INFO] = "SeverityInfo",
-    [LOG_SEVERITY_DEBUG] = "SeverityDebug",
+    [LOG_SEVERITY_ERROR] = (u8 *)"SeverityError",
+    [LOG_SEVERITY_WARNING] = (u8 *)"SeverityWarning",
+    [LOG_SEVERITY_INFO] = (u8 *)"SeverityInfo",
+    [LOG_SEVERITY_DEBUG] = (u8 *)"SeverityDebug",
 };
 
 str8 logFormatLogEntryMsg(BaseArena *arena, LogEntry msg)
@@ -107,11 +107,12 @@ LogEntryArray LogEntryChunkListFlattenToArray(BaseArena *arena, LogEntryChunkLis
     return flattened;
 }
 
+CRITICAL_SECTION sec;
 Log *logCreate(BaseArena *arena)
 {
     Log *l = baseArenaPush(arena, sizeof(Log));
 
-    BaseArena *logArena = baseThreadsGetCtx()->logArena;
+    BaseArena *logArena = OSGetState()->thisProcState.logArena;
     str8 logDir = OSGetState()->thisProcState.logDirPath;
     str8 logPath = STR8_LIT("");
     Str8List logPathList = {0};
@@ -130,7 +131,7 @@ Log *logCreate(BaseArena *arena)
 }
 str8 logFlush(Log *log)
 {
-    BaseArena *logArena = baseThreadsGetCtx()->logArena;
+    BaseArena *logArena = OSGetState()->thisProcState.logArena;
     str8 logMsgAll = LogEntryChunkListJoin(logArena, &log->entries);
     OSFileWrite(log->logHandle, logMsgAll.data, logMsgAll.len);
 
@@ -141,15 +142,49 @@ void logClose(Log *log)
     logFlush(log);
     OSFileClose(log->logHandle);
 }
-
 void logClear(Log *log)
 {
+    BASE_UNUSED_PARAM(log);
+}
 
+void logOutputToConsole(Log *log)
+{
+    BaseArena *logArena = OSGetState()->thisProcState.logArena;
+    BASE_LIST_FOREACH(LogEntryChunkNode, chunk, log->entries)
+    {
+        for(u64 i = 0; i < chunk->chunk.len; i++)
+        {
+            LogEntry entry = chunk->chunk.data[i];
+            str8 msgFmt = logFormatLogEntryMsg(logArena, entry);
+            switch(entry.severity)
+            {
+                case LOG_SEVERITY_WARNING:
+                {
+                    baseColPrintf("{o}%S\n", msgFmt);
+                }break;
+
+                case LOG_SEVERITY_DEBUG:
+                {
+                    baseColPrintf("{g}%S\n", msgFmt);
+                }break;
+
+                case LOG_SEVERITY_INFO:
+                {
+                    baseColPrintf("{b}%S\n", msgFmt);
+                }break;
+
+                case LOG_SEVERITY_ERROR:
+                {
+                    baseColPrintf("{r}%S\n", msgFmt);
+                }break;
+            }
+        }
+    }
 }
 
 void logPrintFmtV(Log *log, LogSeverityKind severity, char *fmt, va_list va)
 {
-    BaseArena *logArena = baseThreadsGetCtx()->logArena;
+    BaseArena *logArena = OSGetState()->thisProcState.logArena;
 
     str8 s = baseStringsPushStr8FmtV(logArena, fmt, va);
     LogEntry entry = {.msg = s, .severity = severity, .time = OSGetLocalTime()};
