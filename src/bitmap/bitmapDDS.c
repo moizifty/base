@@ -5,18 +5,18 @@ vec3i8 bitmapDDSCalculateColorFromU16(u16 col)
 {
     vec3i8 col0;
 
-    col0.r = (col >> 11);
-    col0.r = (col0.r << 3) | (col0.r >> 2);
+    col0.r = (u8) (col >> 11);
+    col0.r = (u8) (col0.r << 3) | (col0.r >> 2);
 
-    col0.g = (col & 0b00000'111111'00000) >> 5;
-    col0.g = (col0.g << 2) | (col0.g >> 4);
+    col0.g = (u8) (col & 0b00000'111111'00000) >> 5;
+    col0.g = (u8) (col0.g << 2) | (col0.g >> 4);
 
-    col0.b = (col &  0b00000'000000'11111);
-    col0.b = (col0.b << 3) | (col0.b >> 2);
+    col0.b = (u8) (col &  0b00000'000000'11111);
+    col0.b = (u8) (col0.b << 3) | (col0.b >> 2);
 
     return col0;
 }
-void bitmapDDSCalculateColorsFromDXT1Block(DDSDXT1Block block, vec3i8 *outCol0, vec3i8 *outCol1, vec3i8 *outCol2, vec3i8 *outCol3)
+void bitmapDDSCalculateColorsFromDXT1Block(DDSDXT1Block block, vec3i8 colTable[4])
 {
     vec3i8 col0 = {0};
     vec3i8 col1 = {0};
@@ -38,12 +38,12 @@ void bitmapDDSCalculateColorsFromDXT1Block(DDSDXT1Block block, vec3i8 *outCol0, 
                                             ((u16)col0.g + (2 * (u16)col1.g)) / 3,
                                             ((u16)col0.b + (2 * (u16)col1.b)) / 3) : col3;
 
-    *outCol0 = col0;
-    *outCol1 = col1;
-    *outCol2 = col2;
-    *outCol3 = col3;
+    colTable[0] = col0;
+    colTable[1] = col1;
+    colTable[2] = col2;
+    colTable[3] = col3;
 }
-void bitmapDDSCalculateColorsFromDXT3Block(DDSDXT3Block block, vec3i8 *outCol0, vec3i8 *outCol1, vec3i8 *outCol2, vec3i8 *outCol3)
+void bitmapDDSCalculateColorsFromDXT3Block(DDSDXT3Block block, vec3i8 colTable[4])
 {
     vec3i8 col0 = {0};
     vec3i8 col1 = {0};
@@ -61,12 +61,12 @@ void bitmapDDSCalculateColorsFromDXT3Block(DDSDXT3Block block, vec3i8 *outCol0, 
                 ((u16)col0.g + (2 * (u16)col1.g)) / 3,
                 ((u16)col0.b + (2 * (u16)col1.b)) / 3);
 
-    *outCol0 = col0;
-    *outCol1 = col1;
-    *outCol2 = col2;
-    *outCol3 = col3;
+    colTable[0] = col0;
+    colTable[1] = col1;
+    colTable[2] = col2;
+    colTable[3] = col3;
 }
-void bitmapDDSCalculateColorsFromDXT5Block(DDSDXT5Block block, vec3i8 *outCol0, vec3i8 *outCol1, vec3i8 *outCol2, vec3i8 *outCol3)
+void bitmapDDSCalculateColorsFromDXT5Block(DDSDXT5Block block, vec3i8 colTable[4])
 {
     vec3i8 col0 = {0};
     vec3i8 col1 = {0};
@@ -84,10 +84,10 @@ void bitmapDDSCalculateColorsFromDXT5Block(DDSDXT5Block block, vec3i8 *outCol0, 
                 ((u16)col0.g + (2 * (u16)col1.g)) / 3,
                 ((u16)col0.b + (2 * (u16)col1.b)) / 3);
 
-    *outCol0 = col0;
-    *outCol1 = col1;
-    *outCol2 = col2;
-    *outCol3 = col3;
+    colTable[0] = col0;
+    colTable[1] = col1;
+    colTable[2] = col2;
+    colTable[3] = col3;
 }
 
 DDSUncompressedData bitmapDDSUncompress(BaseArena *arena, DDSCompressedData input)
@@ -97,203 +97,146 @@ DDSUncompressedData bitmapDDSUncompress(BaseArena *arena, DDSCompressedData inpu
     u8 *data = input.bytes;
     switch(input.compressionType)
     {
-        case DXT1:
+        default:
         {
-            uncompressed.fmt = BITMAP_FORMAT_RGBA_8;
-            uncompressed.bytesPerPixel = 4; //rgba
-            uncompressed.pixels = baseArenaPush(arena, input.w * input.h * uncompressed.bytesPerPixel);
-            
-            for(u64 bY = 0; bY < input.h; bY += 4)
+            logProgErrorFmt("The dds file contains an unsupported compression method.");
+            return uncompressed;
+        }break;
+
+        case DXT1:
+        case DXT3:
+        case DXT5:
+        {
+            // intentionally empty
+        }break;
+    }
+
+    uncompressed.fmt = BITMAP_FORMAT_RGBA_8;
+    uncompressed.bytesPerPixel = 4; //rgba
+    uncompressed.pixels = baseArenaPush(arena, input.w * input.h * uncompressed.bytesPerPixel);
+    
+    for(u64 bY = 0; bY < input.h; bY += 4)
+    {
+        for(u64 bX = 0; bX < input.w; bX += 4)
+        {
+            u32 indices = 0;
+            u64 alphas = 0;
+
+            vec3i8 colTable[4] = {0};
+            u8 alphaTable[16] = {0};
+
+            switch(input.compressionType)
             {
-                for(u64 bX = 0; bX < input.w; bX += 4)
+                case DXT1:
                 {
                     DDSDXT1Block block = {0};
                     BASE_MEMCPY(&block, data, sizeof(block));
                     data += sizeof(block);
 
-                    u32 indices = block.r0 | (block.r1 << 8) | (block.r2 << 16) | (block.r3 << 24);
-
-                    vec3i8 col0 = {0};
-                    vec3i8 col1 = {0};
-                    vec3i8 col2 = {0};
-                    vec3i8 col3 = {0};
-
-                    bitmapDDSCalculateColorsFromDXT1Block(block, &col0, &col1, &col2, &col3);
-
-                    for(u64 pY = 0; pY < 4 && ((pY + bY) < input.h); pY++)
-                    {
-                        for(u64 pX = 0; pX < 4 && ((pX + bX) < input.w); pX++)
-                        {
-                            u64 y = (bY + pY) * input.w * uncompressed.bytesPerPixel;
-                            u64 x = (bX + pX) * uncompressed.bytesPerPixel;
-
-                            u8 index = (indices >> (2 * (pY * 4 + pX))) & 0x03;
-                            vec3i8 t = (index == 0) ? col0 : ((index == 1) ? col1 : ((index == 2) ? col2 : col3));
-
-                            uncompressed.pixels[y + x] = t.r;
-                            uncompressed.pixels[y + x + 1] = t.g;
-                            uncompressed.pixels[y + x + 2] = t.b;
-                            uncompressed.pixels[y + x + 3] = 255;
-                        }
-                    }
-                }
-            }
-        }break;
-
-        case DXT3:
-        {
-            uncompressed.fmt = BITMAP_FORMAT_RGBA_8;
-            uncompressed.bytesPerPixel = 4; //rgba
-            uncompressed.pixels = baseArenaPush(arena, input.w * input.h * uncompressed.bytesPerPixel);
-            
-            for(u64 bY = 0; bY < input.h; bY += 4)
-            {
-                for(u64 bX = 0; bX < input.w; bX += 4)
+                    indices = block.r0 | (block.r1 << 8) | (block.r2 << 16) | (block.r3 << 24);
+                    bitmapDDSCalculateColorsFromDXT1Block(block, colTable);
+                }break;
+                case DXT3:
                 {
                     DDSDXT3Block block = {0};
                     BASE_MEMCPY(&block, data, sizeof(block));
                     data += sizeof(block);
 
-                    u32 indices = block.r0 | (block.r1 << 8) | (block.r2 << 16) | (block.r3 << 24);
-                    u64 alphas =  (u64) block.alphaP01 | 
-                                 ((u64) block.alphaP23 << 8) | 
-                                 ((u64) block.alphaP45 << 16) | 
-                                 ((u64) block.alphaP67 << 24) |
-                                 ((u64) block.alphaP89 << 32) |
-                                 ((u64) block.alphaP1011 << 40) |
-                                 ((u64) block.alphaP1213 << 48) |
-                                 ((u64) block.alphaP1415 << 56);
+                    indices = block.r0 | (block.r1 << 8) | (block.r2 << 16) | (block.r3 << 24);
+                    alphas =  (u64) block.alphaP01 | 
+                                ((u64) block.alphaP23 << 8) | 
+                                ((u64) block.alphaP45 << 16) | 
+                                ((u64) block.alphaP67 << 24) |
+                                ((u64) block.alphaP89 << 32) |
+                                ((u64) block.alphaP1011 << 40) |
+                                ((u64) block.alphaP1213 << 48) |
+                                ((u64) block.alphaP1415 << 56);
 
-                    vec3i8 col0 = {0};
-                    vec3i8 col1 = {0};
-                    vec3i8 col2 = {0};
-                    vec3i8 col3 = {0};
-
-                    bitmapDDSCalculateColorsFromDXT3Block(block, &col0, &col1, &col2, &col3);
-
-                    for(u64 pY = 0; pY < 4 && ((pY + bY) < input.h); pY++)
-                    {
-                        for(u64 pX = 0; pX < 4 && ((pX + bX) < input.w); pX++)
-                        {
-                            u64 y = (bY + pY) * input.w * uncompressed.bytesPerPixel;
-                            u64 x = (bX + pX) * uncompressed.bytesPerPixel;
-
-                            u8 index = (indices >> (2 * (pY * 4 + pX))) & 0x03;
-                            vec3i8 t = (index == 0) ? col0 : ((index == 1) ? col1 : ((index == 2) ? col2 : col3));
-
-                            u8 alpha = (alphas >> (4 * (pY * 4 + pX))) & 0b1111;
-
-                            // extend the alpha
-                            alpha = (alpha << 4) | alpha;
-
-                            uncompressed.pixels[y + x] = t.r;
-                            uncompressed.pixels[y + x + 1] = t.g;
-                            uncompressed.pixels[y + x + 2] = t.b;
-                            uncompressed.pixels[y + x + 3] = alpha;
-                        }
-                    }
-                }
-            }
-        }break;
-
-        case DXT5:
-        {
-            uncompressed.fmt = BITMAP_FORMAT_RGBA_8;
-            uncompressed.bytesPerPixel = 4; //rgba
-            uncompressed.pixels = baseArenaPush(arena, input.w * input.h * uncompressed.bytesPerPixel);
-            
-            for(u64 bY = 0; bY < input.h; bY += 4)
-            {
-                for(u64 bX = 0; bX < input.w; bX += 4)
+                    bitmapDDSCalculateColorsFromDXT3Block(block, colTable);
+                }break;
+                case DXT5:
                 {
                     DDSDXT5Block block = {0};
                     BASE_MEMCPY(&block, data, sizeof(block));
                     data += sizeof(block);
 
-                    u32 indices = block.r0 | (block.r1 << 8) | (block.r2 << 16) | (block.r3 << 24);
-                    u64 alphas = (u64) block.a0 | 
-                                ((u64) block.a1 << 8) | 
-                                ((u64) block.a2 << 16) | 
-                                ((u64) block.a3 << 24) |
-                                ((u64) block.a4 << 32) |
-                                ((u64) block.a5 << 40);
+                    indices = block.r0 | (block.r1 << 8) | (block.r2 << 16) | (block.r3 << 24);
+                    alphas = (u64) block.a0 | 
+                            ((u64) block.a1 << 8) | 
+                            ((u64) block.a2 << 16) | 
+                            ((u64) block.a3 << 24) |
+                            ((u64) block.a4 << 32) |
+                            ((u64) block.a5 << 40);
 
-                    u8 alpha0 = block.alpha0;
-                    u8 alpha1 = block.alpha1;
-                    u8 alpha2 = 0;
-                    u8 alpha3 = 0;
-                    u8 alpha4 = 0;
-                    u8 alpha5 = 0;
-                    u8 alpha6 = 0;
-                    u8 alpha7 = 0;
+                    alphaTable[0] = block.alpha0;
+                    alphaTable[1] = block.alpha1;
+                    alphaTable[2] = 0;
+                    alphaTable[3] = 0;
+                    alphaTable[4] = 0;
+                    alphaTable[5] = 0;
+                    alphaTable[6] = 0;
+                    alphaTable[7] = 0;
 
-                    if (alpha0 > alpha1)
+                    if (alphaTable[0] > alphaTable[1])
                     {
-                        alpha2 = (6 * (u64)alpha0 + (u64)alpha1) / 7;
-                        alpha3 = (5 * (u64)alpha0 + 2 * (u64)alpha1) / 7;
-                        alpha4 = (4 * (u64)alpha0 + 3 * (u64)alpha1) / 7;
-                        alpha5 = (3 * (u64)alpha0 + 4 * (u64)alpha1) / 7;
-                        alpha6 = (2 * (u64)alpha0 + 5 * (u64)alpha1) / 7;
-                        alpha7 = ((u64)alpha0 + 6 * (u64)alpha1) / 7;
+                        alphaTable[2] = (6 * (u64)alphaTable[0] + (u64)alphaTable[1]) / 7;
+                        alphaTable[3] = (5 * (u64)alphaTable[0] + 2 * (u64)alphaTable[1]) / 7;
+                        alphaTable[4] = (4 * (u64)alphaTable[0] + 3 * (u64)alphaTable[1]) / 7;
+                        alphaTable[5] = (3 * (u64)alphaTable[0] + 4 * (u64)alphaTable[1]) / 7;
+                        alphaTable[6] = (2 * (u64)alphaTable[0] + 5 * (u64)alphaTable[1]) / 7;
+                        alphaTable[7] = ((u64)alphaTable[0] + 6 * (u64)alphaTable[1]) / 7;
                     }
                     else
                     {
-                        alpha2 = (4 * (u64)alpha0 + (u64)alpha1) / 5;
-                        alpha3 = (3 * (u64)alpha0 + 2 * (u64)alpha1) / 5;
-                        alpha4 = (2 * (u64)alpha0 + 3 * (u64)alpha1) / 5;
-                        alpha5 = ((u64)alpha0 + 4 * (u64)alpha1) / 5;
-                        alpha6 = 0;
-                        alpha7 = 255;
+                        alphaTable[2] = (4 * (u64)alphaTable[0] + (u64)alphaTable[1]) / 5;
+                        alphaTable[3] = (3 * (u64)alphaTable[0] + 2 * (u64)alphaTable[1]) / 5;
+                        alphaTable[4] = (2 * (u64)alphaTable[0] + 3 * (u64)alphaTable[1]) / 5;
+                        alphaTable[5] = ((u64)alphaTable[0] + 4 * (u64)alphaTable[1]) / 5;
+                        alphaTable[6] = 0;
+                        alphaTable[7] = 255;
                     }
 
-                    vec3i8 col0 = {0};
-                    vec3i8 col1 = {0};
-                    vec3i8 col2 = {0};
-                    vec3i8 col3 = {0};
+                    bitmapDDSCalculateColorsFromDXT5Block(block, colTable);
+                }break;
+            }
 
-                    bitmapDDSCalculateColorsFromDXT5Block(block, &col0, &col1, &col2, &col3);
+            for(u64 pY = 0; pY < 4 && ((pY + bY) < input.h); pY++)
+            {
+                for(u64 pX = 0; pX < 4 && ((pX + bX) < input.w); pX++)
+                {
+                    u64 y = (bY + pY) * input.w * uncompressed.bytesPerPixel;
+                    u64 x = (bX + pX) * uncompressed.bytesPerPixel;
 
-                    for(u64 pY = 0; pY < 4 && ((pY + bY) < input.h); pY++)
+                    u8 index = (indices >> (2 * (pY * 4 + pX))) & 0x03;
+                    vec3i8 col = colTable[index];
+
+                    u8 alphaIndex = 0;
+                    u8 alpha = 0;
+                    switch (input.compressionType)
                     {
-                        for(u64 pX = 0; pX < 4 && ((pX + bX) < input.w); pX++)
+                        case DXT1: alpha = 255; break;
+                        case DXT3: 
                         {
-                            u64 y = (bY + pY) * input.w * uncompressed.bytesPerPixel;
-                            u64 x = (bX + pX) * uncompressed.bytesPerPixel;
-
-                            u8 index = (indices >> (2 * (pY * 4 + pX))) & 0x03;
-                            vec3i8 t = (index == 0) ? col0 : ((index == 1) ? col1 : ((index == 2) ? col2 : col3));
-
-                            u8 alphaIndex = (alphas >> (3 * (pY * 4 + pX))) & 0b111;
-                            u8 alpha = 0;
-
-                            switch(alphaIndex)
-                            {
-                                case 0: alpha = alpha0; break;
-                                case 1: alpha = alpha1; break;
-                                case 2: alpha = alpha2; break;
-                                case 3: alpha = alpha3; break;
-                                case 4: alpha = alpha4; break;
-                                case 5: alpha = alpha5; break;
-                                case 6: alpha = alpha6; break;
-                                case 7: alpha = alpha7; break;
-                            }
-
-                            uncompressed.pixels[y + x] = t.r;
-                            uncompressed.pixels[y + x + 1] = t.g;
-                            uncompressed.pixels[y + x + 2] = t.b;
-                            uncompressed.pixels[y + x + 3] = alpha;
-                        }
+                            alpha = (alphas >> (4 * (pY * 4 + pX))) & 0b1111;
+                            // extend the alpha
+                            alpha = (alpha << 4) | alpha;
+                        }break;
+                        case DXT5:
+                        {
+                            alphaIndex = (alphas >> (3 * (pY * 4 + pX))) & 0b111;
+                            alpha = alphaTable[alphaIndex];
+                        }break;
                     }
+
+                    uncompressed.pixels[y + x] = col.r;
+                    uncompressed.pixels[y + x + 1] = col.g;
+                    uncompressed.pixels[y + x + 2] = col.b;
+                    uncompressed.pixels[y + x + 3] = alpha;
                 }
             }
-        }break;
-
-        default:
-        {
-            logProgErrorFmt("The dds file contains an unsupported compression method.");
-        }break;
+        }
     }
-    
+
     return uncompressed;
 }
 
