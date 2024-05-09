@@ -4,5 +4,6 @@
 #include "bitmap\bitmapCoreTypes.h"
 #include "bitmap\bitmapCore.h"
 #include "bitmap\bitmapDDS.h"
+#include "bitmap\bitmapPNG.h"
 
 #endif

@@ -8,5 +8,6 @@
 #include "baseHash.c"
 #include "baseCmdLine.c"
 #include "baseMath.c"
+#include "baseBitstream.c"
 
 #endif

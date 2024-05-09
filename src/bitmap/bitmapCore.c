@@ -7,6 +7,7 @@ BitmapFileKindTableEntry gBitmapFileKindsTable[BITMAP_FILE_KIND_COUNT] =
     [BITMAP_FILE_KIND_DDS]     = {.ext = STR8_LIT_COMP_CONST(".dds"), .kind = BITMAP_FILE_KIND_DDS, .magicBytes = {0x44, 0x44, 0x53, 0x20} , .numOfMagicBytes = 4},
     [BITMAP_FILE_KIND_BMP]     = {.ext = STR8_LIT_COMP_CONST(".bmp"), .kind = BITMAP_FILE_KIND_BMP, .magicBytes = {0x42, 0x4d}, .numOfMagicBytes = 2},
     [BITMAP_FILE_KIND_TGA]     = {.ext = STR8_LIT_COMP_CONST(".tga"), .kind = BITMAP_FILE_KIND_TGA, .magicBytes = {0}, .numOfMagicBytes = 0},
+    [BITMAP_FILE_KIND_PNG]     = {.ext = STR8_LIT_COMP_CONST(".png"), .kind = BITMAP_FILE_KIND_PNG, .magicBytes = {0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a}, .numOfMagicBytes = 8},
 };
 
 BitmapFileKind bitmapFileKindFromPath(str8 path)
@@ -66,6 +67,7 @@ Bitmap bitmapFromPath(BaseArena *arena, str8 file)
         switch(kind)
         {
             case BITMAP_FILE_KIND_DDS: return bitmapFromDDSPath(arena, file);
+            case BITMAP_FILE_KIND_PNG: return bitmapFromPNGPath(arena, file);
             case BITMAP_FILE_KIND_BMP: return bitmapFromDDSPath(arena, file);
             case BITMAP_FILE_KIND_TGA: return bitmapFromDDSPath(arena, file);
 

@@ -10,5 +10,6 @@
 #include "baseHash.h"
 #include "baseCmdLine.h"
 #include "baseMath.h"
+#include "baseBitstream.h"
 
 #endif

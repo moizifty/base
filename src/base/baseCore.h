@@ -42,6 +42,8 @@
 
 // memory
 #define BASE_MEMCPY memcpy
+#define BASE_MEMCPY_BE baseMemcpyBigEndian
+#define BASE_MEMCMP memcmp
 #define BASE_MEMSET memset
 #define BASE_MEMZERO(DEST, SZ) BASE_MEMSET((DEST), 0, (SZ))
 
@@ -201,6 +203,8 @@ BASE_CREATE_ARRAY_VIEW_DEFS(NAME, ELEM)
 #define ARRAY_VIEW_LIT_FROM_SIZED(ARRAY)		((ArrayView){ARRAY, .len = BASE_ARRAY_SIZE(ARRAY)})
 #define ARRAY_VIEW_LIT(ARRAY, SIZE)			((ArrayView){ARRAY, .len = SIZE})
 
+BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(U8Array, u8);
+
 // program entry related
 typedef struct CmdLineHashMap CmdLineHashMap;
 typedef void(*ProgramMainFunc)(CmdLineHashMap *);
@@ -212,4 +216,6 @@ i64 baseColFprintf(FILE *fp, const char *fmt, ...);
 i64 baseHexDigitToInt(int ch);
 i64 baseBinDigitToInt(int ch);
 i64 baseCStyleIntLiteralToInt(str8 str);
+
+u8* baseMemcpyBigEndian(void *dst, void* src, u64 size);
 #endif

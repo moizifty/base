@@ -10,6 +10,7 @@
 #include "..\os\os.c"
 #include "..\renderer\renderer.c"
 #include "..\log\log.c"
+#include "..\compression\compression.c"
 #include "..\bitmap\bitmap.c"
 
 #include "..\os\core\osEntryPoint.c"
@@ -43,7 +44,7 @@ void ProgramMain(CmdLineHashMap *cmdline)
 	RendererState *rend = rendererInit(generalArena, state);
 	RendererWindowState *wndState = rendererAttachToWindow(rend, generalArena, window);
 
-	Bitmap bm =  bitmapFromPath(generalArena,STR8_LIT("C:\\Users\\Moizi\\OneDrive\\Documents\\Programming\\C\\base\\builds\\test3.dds"));
+	Bitmap bm =  bitmapFromPath(generalArena,STR8_LIT("C:\\Users\\Moizi\\OneDrive\\Documents\\Programming\\C\\base\\builds\\test.png"));
 	
 	bool quit = false;
 	while(!quit)

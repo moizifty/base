@@ -229,3 +229,13 @@ i64 baseCStyleIntLiteralToInt(str8 str)
     }
     else return atoll((i8 *)str.data);
 }
+
+u8* baseMemcpyBigEndian(void *dst, void* src, u64 size)
+{
+    for(u64 i = 0; i < size; i++)
+    {
+        ((u8 *)dst)[(size - 1) - i] = ((u8 *)src)[i];
+    }
+
+    return dst;
+}

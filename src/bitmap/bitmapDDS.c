@@ -1,4 +1,4 @@
-#include "bitmap\bitmap.h"
+#include "bitmap\bitmapDDS.h"
 
 // uncompress the raw byte data,
 vec3u8 bitmapDDSCalculateColorFromU16(u16 col)

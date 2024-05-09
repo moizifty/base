@@ -12,6 +12,7 @@ typedef enum BitmapFileKind
     BITMAP_FILE_KIND_DDS,
     BITMAP_FILE_KIND_BMP,
     BITMAP_FILE_KIND_TGA,
+    BITMAP_FILE_KIND_PNG,
 
     BITMAP_FILE_KIND_COUNT,
 }BitmapFileKind;
