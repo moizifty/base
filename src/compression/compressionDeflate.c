@@ -13,6 +13,20 @@ u8 gDeflateLiteralSymsLengths[COMPRESSION_DEFLATE_NUM_LITERAL_CODES] =
    7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7, 7,7,7,7,7,7,7,7,8,8,8,8,8,8,8,8
 };
 
+u8 gDeflateLiteralSymsExtraBits[COMPRESSION_DEFLATE_NUM_LITERAL_CODES] =
+{
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
+    0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,  0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,
+    4,5,5,5,5,0
+};
+
 u8 gDeflateDistancesSymsLengths[COMPRESSION_DEFLATE_NUM_DISTANCE_CODES] =
 {
    5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 
@@ -68,63 +82,90 @@ CompressionDeflateUncompressedOutput compressionDeflateUncompress(BaseBitstream 
 {
     CompressionDeflateUncompressedOutput output = {0};
 
+    u64 bytesWritten = 0;
     bool finalBlock;
     u8 compressionType;
-    baseBitstreamPopBitsAsU8(inputStream, 1, &finalBlock);
-    baseBitstreamPopBitsAsU8(inputStream, 2, &compressionType);
-    
-    switch(compressionType)
+    do
     {
-        // no compression
-        case 0:
+        baseBitstreamPopBitsAsU8(inputStream, 1, &finalBlock);
+        baseBitstreamPopBitsAsU8(inputStream, 2, &compressionType);
+        
+        switch(compressionType)
         {
-            u16 blockLen;
-            baseBitstreamPopU16LE(inputStream, &blockLen);
-
-            u16 blockLenComplement;
-            baseBitstreamPopU16LE(inputStream, &blockLenComplement);
-
-        }break;
-
-        // fixed with huffman
-        case 1:
-        {
-            u32 literalCodes[COMPRESSION_DEFLATE_NUM_LITERAL_CODES];
-            u32 distCodes[COMPRESSION_DEFLATE_NUM_DISTANCE_CODES];
-
-            compressionDeflateGenerateHuffmanCodes((U8Array){.data = gDeflateLiteralSymsLengths, COMPRESSION_DEFLATE_NUM_LITERAL_CODES}, literalCodes);
-            compressionDeflateGenerateHuffmanCodes((U8Array){.data = gDeflateDistancesSymsLengths, COMPRESSION_DEFLATE_NUM_DISTANCE_CODES}, distCodes);
-
-            while(true)
+            // no compression
+            case 0:
             {
-                u64 c = compressionDeflateDecodeHuffmanCode(inputStream, (U8Array){.data = gDeflateLiteralSymsLengths, COMPRESSION_DEFLATE_NUM_LITERAL_CODES}, literalCodes);
-                if(c == 256)
+                baseBitstreamPopTillNextByte(inputStream);
+
+                u16 blockLen;
+                baseBitstreamPopU16LE(inputStream, &blockLen);
+
+                u16 blockLenComplement;
+                baseBitstreamPopU16LE(inputStream, &blockLenComplement);
+
+                u64 byteIndex = inputStream->bitIndex / 8;
+                BASE_MEMCPY((u8*)outBuffer->data + bytesWritten, ((u8 *)inputStream->bytes.data) + byteIndex, blockLen);
+                bytesWritten += blockLen;
+                
+                inputStream->bitIndex += (u64)blockLen * 8;
+
+            }break;
+
+            // fixed with huffman
+            case 1:
+            {
+                u32 literalCodes[COMPRESSION_DEFLATE_NUM_LITERAL_CODES];
+                u32 distCodes[COMPRESSION_DEFLATE_NUM_DISTANCE_CODES];
+
+                compressionDeflateGenerateHuffmanCodes((U8Array){.data = gDeflateLiteralSymsLengths, COMPRESSION_DEFLATE_NUM_LITERAL_CODES}, literalCodes);
+                compressionDeflateGenerateHuffmanCodes((U8Array){.data = gDeflateDistancesSymsLengths, COMPRESSION_DEFLATE_NUM_DISTANCE_CODES}, distCodes);
+
+                u64 i = 0;
+                while(true)
                 {
-                    break;
+                    u64 c = compressionDeflateDecodeHuffmanCode(inputStream, (U8Array){.data = gDeflateLiteralSymsLengths, COMPRESSION_DEFLATE_NUM_LITERAL_CODES}, literalCodes);
+                    if(c == 256)
+                    {
+                        break;
+                    }
+
+                    if(c < 256)
+                    {
+                        ((u8 *)outBuffer->data)[i] = (u8)c;
+                        i++;
+                    }
+                    else if(c >= 257 && c <= 285)
+                    {
+                        u8 extraBits = gDeflateLiteralSymsExtraBits[c];
+                    }
+                    else
+                    {
+                        // error
+                    }
                 }
+                
+            }break;
 
-            }
-            
-        }break;
+            // dynamic with huffman
+            case 2:
+            {
+                u8 hlit, hdist, uclen;
+                baseBitstreamPopBitsAsU8(inputStream, 5, &hlit);
+                baseBitstreamPopBitsAsU8(inputStream, 5, (&hdist));
+                baseBitstreamPopBitsAsU8(inputStream, 4, (&uclen));
 
-        // dynamic with huffman
-        case 2:
-        {
-            u8 hlit, hdist, uclen;
-            baseBitstreamPopBitsAsU8(inputStream, 5, &hlit);
-            baseBitstreamPopBitsAsU8(inputStream, 5, (&hdist));
-            baseBitstreamPopBitsAsU8(inputStream, 4, (&uclen));
+                u32 numLiteralCodes = (u32)hlit + 257;
+                u32 numDistCodes = (u32)hdist + 1;
+                u32 numCLCodes = (u32)uclen + 4;
+            }break;
 
-            u32 numLiteralCodes = (u32)hlit + 257;
-            u32 numDistCodes = (u32)hdist + 1;
-            u32 numCLCodes = (u32)uclen + 4;
-        }break;
+            default:
+            {
+                logProgErrorFmt("Error, deflate, unregognised compression type '%d'", compressionType);
+            }break;
+        }
+    }while(!finalBlock);
 
-        default:
-        {
-            logProgErrorFmt("Error, deflate, unregognised compression type '%d'", compressionType);
-        }break;
-    }
 
     return output;
 }

@@ -53,6 +53,27 @@ bool baseBitstreamPopU16LE(BaseBitstream *stream, u16 *out)
 
     return true;
 }
+bool baseBitstreamPopU16BE(BaseBitstream *stream, u16 *out)
+{
+    u64 b1, b2;
+    if(!baseBitstreamPopBitsAsU64(stream, 8, &b1) ||
+       !baseBitstreamPopBitsAsU64(stream, 8, &b2))
+    {
+        return false;
+    }
+
+    *out = (u16)(b2 | (b1 << 8));
+
+    return true;
+}
+
+void baseBitstreamPopTillNextByte(BaseBitstream *stream)
+{
+    while(stream->bitIndex % 8 != 0)
+    {
+        baseBitstreamConsumeBits(stream, 1);
+    }
+}
 
 void baseBitstreamConsumeBits(BaseBitstream *stream, u64 n)
 {

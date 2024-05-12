@@ -1,6 +1,5 @@
 #include "bitmap\bitmapPNG.h"
 #include "log\log.h"
-#include "s.h"
 
 u8 gBitmapPNGColorTypeComponentsTable[PNG_COLOR_TYPE_COUNT] = 
 {
@@ -125,13 +124,17 @@ PNGCollectIDATChunksData bitmapPNGCollectIDATChunks(BaseArena *arena, u8 *currBy
 ArrayView bitmapPNGCombineIDATDataBlocks(BaseArena *arena, PNGChunkList *list)
 {
     u64 combinedDataBlockLen = 0;
+    // https://www.w3.org/TR/png-3/#10CompressionCM0
+    // https://www.rfc-editor.org/rfc/rfc1950
+    // its hella confusing but the size of the compressed data block is size of chunk minus 1 minus 1
+    // not minus 1 minus 1 minus 4 (- 1 - 1 - 4), since the adlar sum thing is at the end of the entire data combined
+    // abit dumb.
     BASE_PTR_LIST_FOREACH(PNGChunk, chunk, list)
     {
-        // https://www.w3.org/TR/png-3/#10CompressionCM0
-        // https://www.rfc-editor.org/rfc/rfc1950
-        combinedDataBlockLen += chunk->length - 1 - 1 - 4;
+        combinedDataBlockLen += chunk->length;
     }
 
+    combinedDataBlockLen = combinedDataBlockLen - 1 - 1;
     ArrayView view = 
     {
         .data = baseArenaPush(arena, combinedDataBlockLen),
@@ -141,8 +144,13 @@ ArrayView bitmapPNGCombineIDATDataBlocks(BaseArena *arena, PNGChunkList *list)
     {
         // https://www.w3.org/TR/png-3/#10CompressionCM0
         // https://www.rfc-editor.org/rfc/rfc1950
-        u8 *dataBlock = chunk->chunkData + 2;
-        u64 dataBlockLen = chunk->length - 1 - 1 - 4;
+        u8 *dataBlock = chunk->chunkData;
+        u64 dataBlockLen = chunk->length;
+        if(chunk == list->first)
+        {
+            dataBlock = chunk->chunkData + 2;
+            dataBlockLen = chunk->length - 1 - 1;
+        }
 
         BASE_MEMCPY(((u8 *) view.data) + view.len, dataBlock, dataBlockLen);
         view.len += dataBlockLen;
@@ -151,25 +159,94 @@ ArrayView bitmapPNGCombineIDATDataBlocks(BaseArena *arena, PNGChunkList *list)
     return view;
 }
 
-void bitmapPNGUncompress(BaseArena *arena, PNGCompressedData input)
+PNGUncompressedData bitmapPNGUncompress(BaseArena *arena, PNGCompressedData input)
 {
+    PNGUncompressedData uncompressedRet = {0};
+    uncompressedRet.bitDepth = input.bitDepth;
+    uncompressedRet.colorComponents = input.colorComponents;
+    uncompressedRet.h = input.h;
+    uncompressedRet.w = input.w;
+
     BaseBitstream stream = {.bytes = (U8Array){.data = input.compressedStream.data, .len = input.compressedStream.len}};
-    u64 imageBufferLength = input.w * input.h * (input.bitDepth / 8);
+    u64 imageBufferLength = input.w * input.h * ((input.bitDepth * input.colorComponents) / 8);
 
-    BaseArenaTemp temp = baseTempBegin(&arena, 1);
+    // the filter is stored as one byte per scanline
+    // so the size of the decompressed buffer is
+    // image buffer size + (image height * 1);
+    ArrayView decompressedBuffer = {0};
+    u64 filteredBufferSize = imageBufferLength + input.h * 1;
+    decompressedBuffer.data = baseArenaPushNoZero(arena, filteredBufferSize);
+    decompressedBuffer.len = filteredBufferSize;
+
+    // when decompressing the filtered data will be stored in decompressedBuffer which is why u create it from temp arena
+    // the actuall unfiltereed data will be created with the arena passed in
+    compressionDeflateUncompress(&stream, &decompressedBuffer);
+    uncompressedRet.uncompressedStream = decompressedBuffer;
+
+    return uncompressedRet;
+}
+
+u32 bitmapPNGFilterPaethPredictor(u32 a, u32 b, u32 c)
+{
+    u32 p = a + b - c;
+    u32 pa = abs(p - a);
+    u32 pb = abs(p - b);
+    u32 pc = abs(p - c);
+    if (pa <= pb && pa <= pc)
     {
-
-        ArrayView decompressedBuffer = {0};
-        decompressedBuffer.data = baseArenaPushNoZero(temp.arena, imageBufferLength);
-        decompressedBuffer.len = imageBufferLength;
-
-        // when decompressing the filtered data will be stored in decompressedBuffer which is why u create it from temp arena
-        // the actuall unfiltereed data will be created with the arena passed in
-        compressionDeflateUncompress(&stream, &decompressedBuffer);
-
-        //todo unfilter png
+        return a;
     }
-    baseTempEnd(temp);
+    else if (pb <= pc)
+    {
+        return b;
+    }
+    else
+    {
+        return c;
+    }
+}
+
+void bitmapPNGUnfilter(BaseArena *arena, PNGUncompressedData uncompressedInput)
+{
+    u64 pixelWidth = (uncompressedInput.colorComponents * (uncompressedInput.bitDepth / 8));
+    u64 scanlineByteWidthIncludingFilter = uncompressedInput.w * pixelWidth + 1; //+1 for filter type byte at start
+
+    U8Array defilteredBuffer = {0};
+    u64 imageBufferLength = uncompressedInput.w * uncompressedInput.h * (pixelWidth);
+    defilteredBuffer.data = baseArenaPushNoZero(arena, imageBufferLength);
+    defilteredBuffer.len = imageBufferLength;
+
+    u8 *data = uncompressedInput.uncompressedStream.data;
+    for(u64 scanline = 0; scanline < uncompressedInput.h; scanline++)
+    {
+        u64 scanlineBeginByteIndex = scanline * (scanlineByteWidthIncludingFilter);
+        u8 filterType = data[scanlineBeginByteIndex];
+
+        for(u64 x = 0; x < scanlineByteWidthIncludingFilter - 1; x++)
+        {
+            u64 loadIndex = (scanlineBeginByteIndex + 1) + x;
+            u64 storeIndex = ((scanlineBeginByteIndex + 1) + x) - (1 * (scanline + 1));
+
+            // todo: for a, b and c i dont account for pixel bit depth, if its 16 i want to jump 2 byts each for component
+            i64 aIndex = (x < uncompressedInput.colorComponents) ? -1 : storeIndex - uncompressedInput.colorComponents;
+            i64 bIndex = (scanline <= 0) ? -1 : storeIndex - (scanlineByteWidthIncludingFilter - 1);
+            i64 cIndex = (x < uncompressedInput.colorComponents || scanline <= 0) ? -1 : bIndex - uncompressedInput.colorComponents;
+
+            u8 a = (aIndex < 0) ? 0 : defilteredBuffer.data[aIndex];
+            u8 b = (bIndex < 0) ? 0 : defilteredBuffer.data[bIndex];
+            u8 c = (cIndex < 0) ? 0 : defilteredBuffer.data[cIndex];
+            
+            switch(filterType)
+            {
+                case 0: defilteredBuffer.data[storeIndex] = data[loadIndex]; break;
+                case 1: defilteredBuffer.data[storeIndex] = data[loadIndex] + a; break;
+                case 2: defilteredBuffer.data[storeIndex] = data[loadIndex] + b; break;
+                case 3: defilteredBuffer.data[storeIndex] = data[loadIndex] + (a + b) / 2; break;
+                case 4: defilteredBuffer.data[storeIndex] = data[loadIndex] + bitmapPNGFilterPaethPredictor(a, b, c); break;
+                default: break;
+            }
+        }
+    }
 }
 
 Bitmap bitmapFromPNGRaw(BaseArena *arena, u8 *rawBytes, u64 byteLen)
@@ -178,7 +255,7 @@ Bitmap bitmapFromPNGRaw(BaseArena *arena, u8 *rawBytes, u64 byteLen)
 
     u8 *currBytePtr = rawBytes;
 
-    if (byteLen > gBitmapFileKindsTable[BITMAP_FILE_KIND_PNG].numOfMagicBytes)
+    if (byteLen > gBitmapFileKindsTable[BITMAP_FILE_KIND_PNG].numOfMagicBytes) 
     {
         u8 *magicBytes = gBitmapFileKindsTable[BITMAP_FILE_KIND_PNG].magicBytes;
         u32 numMagicBytes = gBitmapFileKindsTable[BITMAP_FILE_KIND_PNG].numOfMagicBytes;
@@ -202,15 +279,21 @@ Bitmap bitmapFromPNGRaw(BaseArena *arena, u8 *rawBytes, u64 byteLen)
                 .bitDepth = processedData.hdr.bitDepth,
             };
 
-            bitmapPNGUncompress(arena, input);
-
-            int a = 90;
+            BaseArenaTemp temp = baseTempBegin(&arena, 1);
+            {
+                PNGUncompressedData uncompressedData = bitmapPNGUncompress(temp.arena, input);
+                bitmapPNGUnfilter(arena, uncompressedData);
+            }
+            baseTempEnd(temp);
         }
     }
 
     bm.srcFile = BITMAP_FILE_KIND_PNG;
     return bm;
 }
+
+#define STB_IMAGE_IMPLEMENTATION
+#include "bitmap\s.h"
 Bitmap bitmapFromPNGPath(BaseArena *arena, str8 file)
 {
     Bitmap bm = {0};
@@ -218,6 +301,9 @@ Bitmap bitmapFromPNGPath(BaseArena *arena, str8 file)
     {
         u64 fileSize = 0;
         u8 *fileBytes = OSReadFileAll(temp.arena, file, &fileSize);
+
+        int x, y, c;
+        stbi_load_from_memory(fileBytes, fileSize, &x, &y, &c, 4);
 
         if(fileBytes != null)
         {

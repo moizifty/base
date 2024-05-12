@@ -16,6 +16,8 @@ bool baseBitstreamPopBit(BaseBitstream *stream, u8 *out);
 bool baseBitstreamPopBitsAsU8Impl(BaseBitstream *stream, u8 n, u8 *out);
 bool baseBitstreamPopBitsAsU64Impl(BaseBitstream *stream, u64 n, u64 *out);
 bool baseBitstreamPopU16LE(BaseBitstream *stream, u16 *out);
+bool baseBitstreamPopU16BE(BaseBitstream *stream, u16 *out);
+void baseBitstreamPopTillNextByte(BaseBitstream *stream);
 
 void baseBitstreamConsumeBits(BaseBitstream *stream, u64 n);
 bool baseBitstreamPeekBit(BaseBitstream *stream, u8 *out);

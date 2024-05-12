@@ -40,7 +40,7 @@ void ProgramMain(CmdLineHashMap *cmdline)
 	
 	OSGfxState *state = OSGfxInit(generalArena);
 	OSHandle window = OSGfxWindowOpen(STR8_LIT("Test"), Vec2i(-1, -1), Vec2i(-1, -1));
-
+	
 	RendererState *rend = rendererInit(generalArena, state);
 	RendererWindowState *wndState = rendererAttachToWindow(rend, generalArena, window);
 

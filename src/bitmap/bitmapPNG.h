@@ -81,6 +81,15 @@ typedef struct PNGCompressedData
     u32 h;
 }PNGCompressedData;
 
+typedef struct PNGUncompressedData
+{
+    ArrayView uncompressedStream;
+    u32 colorComponents;
+    u64 bitDepth;
+    u32 w;
+    u32 h;
+}PNGUncompressedData;
+
 Bitmap bitmapFromPNGRaw(BaseArena *arena, u8 *rawBytes, u64 byteLen);
 Bitmap bitmapFromPNGPath(BaseArena *arena, str8 file);
 
