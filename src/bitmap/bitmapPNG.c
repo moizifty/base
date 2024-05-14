@@ -10,7 +10,7 @@ u8 gBitmapPNGColorTypeComponentsTable[PNG_COLOR_TYPE_COUNT] =
     [PNG_COLOR_TYPE_TRUECOLOR_ALPHA] = 4,
 };
 
-PNGChunk bitmapPNGParseNextChunk(BaseArena *arena, u8 *currPtr)
+PNGChunk bitmapPNGParseNextChunk(u8 *currPtr)
 {
     PNGChunk chunk = {0};
 
@@ -30,7 +30,7 @@ PNGChunk bitmapPNGParseNextChunk(BaseArena *arena, u8 *currPtr)
     return chunk;
 }
 
-PNGChunkIHDR bitmapPNGParseIHDRInfo(BaseArena *arena, PNGChunk ihdrChunk)
+PNGChunkIHDR bitmapPNGParseIHDRInfo(PNGChunk ihdrChunk)
 {
     PNGChunkIHDR hdr = {0};
     BASE_MEMCPY_BE(&hdr.width, ihdrChunk.chunkData, sizeof(u32));
@@ -66,14 +66,14 @@ PNGCollectIDATChunksData bitmapPNGCollectIDATChunks(BaseArena *arena, u8 *currBy
 
     do
     {
-        currChunk = bitmapPNGParseNextChunk(arena, currBytePtr);
+        currChunk = bitmapPNGParseNextChunk(currBytePtr);
 
         switch(currChunk.chunkType)
         {
             //IHDR
             case PNG_CHUNK_TYPE_IHDR:
             {
-                hdrInfo = bitmapPNGParseIHDRInfo(arena, currChunk);
+                hdrInfo = bitmapPNGParseIHDRInfo(currChunk);
 
             }break;
 
@@ -116,12 +116,15 @@ PNGCollectIDATChunksData bitmapPNGCollectIDATChunks(BaseArena *arena, u8 *currBy
         .bytesMoved = (currBytePtr - originalBytePtr),
     };
 
-    ret.colorComponents = gBitmapPNGColorTypeComponentsTable[ret.hdr.colType];
+    ret.pngInfo.colorComponents = gBitmapPNGColorTypeComponentsTable[ret.hdr.colType];
+    ret.pngInfo.bitDepth = ret.hdr.bitDepth;
+    ret.pngInfo.w = ret.hdr.width;
+    ret.pngInfo.h = ret.hdr.height;
 
     return ret;
 }
 
-ArrayView bitmapPNGCombineIDATDataBlocks(BaseArena *arena, PNGChunkList *list)
+U8Array bitmapPNGCombineIDATDataBlocks(BaseArena *arena, PNGChunkList *list)
 {
     u64 combinedDataBlockLen = 0;
     // https://www.w3.org/TR/png-3/#10CompressionCM0
@@ -135,7 +138,7 @@ ArrayView bitmapPNGCombineIDATDataBlocks(BaseArena *arena, PNGChunkList *list)
     }
 
     combinedDataBlockLen = combinedDataBlockLen - 1 - 1;
-    ArrayView view = 
+    U8Array view = 
     {
         .data = baseArenaPush(arena, combinedDataBlockLen),
     };
@@ -162,19 +165,16 @@ ArrayView bitmapPNGCombineIDATDataBlocks(BaseArena *arena, PNGChunkList *list)
 PNGUncompressedData bitmapPNGUncompress(BaseArena *arena, PNGCompressedData input)
 {
     PNGUncompressedData uncompressedRet = {0};
-    uncompressedRet.bitDepth = input.bitDepth;
-    uncompressedRet.colorComponents = input.colorComponents;
-    uncompressedRet.h = input.h;
-    uncompressedRet.w = input.w;
+    uncompressedRet.pngInfo = input.pngInfo;
 
-    BaseBitstream stream = {.bytes = (U8Array){.data = input.compressedStream.data, .len = input.compressedStream.len}};
-    u64 imageBufferLength = input.w * input.h * ((input.bitDepth * input.colorComponents) / 8);
+    BaseBitstream stream = {.bytes = input.compressedStream };
+    u64 imageBufferLength = input.pngInfo.w * input.pngInfo.h * ((input.pngInfo.bitDepth * input.pngInfo.colorComponents) / 8);
 
     // the filter is stored as one byte per scanline
     // so the size of the decompressed buffer is
     // image buffer size + (image height * 1);
-    ArrayView decompressedBuffer = {0};
-    u64 filteredBufferSize = imageBufferLength + input.h * 1;
+    U8Array decompressedBuffer = {0};
+    u64 filteredBufferSize = imageBufferLength + input.pngInfo.h * 1;
     decompressedBuffer.data = baseArenaPushNoZero(arena, filteredBufferSize);
     decompressedBuffer.len = filteredBufferSize;
 
@@ -206,18 +206,18 @@ u32 bitmapPNGFilterPaethPredictor(u32 a, u32 b, u32 c)
     }
 }
 
-void bitmapPNGUnfilter(BaseArena *arena, PNGUncompressedData uncompressedInput)
+PNGUnfilteredData bitmapPNGUnfilter(BaseArena *arena, PNGUncompressedData uncompressedInput)
 {
-    u64 pixelWidth = (uncompressedInput.colorComponents * (uncompressedInput.bitDepth / 8));
-    u64 scanlineByteWidthIncludingFilter = uncompressedInput.w * pixelWidth + 1; //+1 for filter type byte at start
+    u64 pixelWidth = (uncompressedInput.pngInfo.colorComponents * (uncompressedInput.pngInfo.bitDepth / 8));
+    u64 scanlineByteWidthIncludingFilter = uncompressedInput.pngInfo.w * pixelWidth + 1; //+1 for filter type byte at start
 
     U8Array defilteredBuffer = {0};
-    u64 imageBufferLength = uncompressedInput.w * uncompressedInput.h * (pixelWidth);
+    u64 imageBufferLength = uncompressedInput.pngInfo.w * uncompressedInput.pngInfo.h * (pixelWidth);
     defilteredBuffer.data = baseArenaPushNoZero(arena, imageBufferLength);
     defilteredBuffer.len = imageBufferLength;
 
     u8 *data = uncompressedInput.uncompressedStream.data;
-    for(u64 scanline = 0; scanline < uncompressedInput.h; scanline++)
+    for(u64 scanline = 0; scanline < uncompressedInput.pngInfo.h; scanline++)
     {
         u64 scanlineBeginByteIndex = scanline * (scanlineByteWidthIncludingFilter);
         u8 filterType = data[scanlineBeginByteIndex];
@@ -228,9 +228,9 @@ void bitmapPNGUnfilter(BaseArena *arena, PNGUncompressedData uncompressedInput)
             u64 storeIndex = ((scanlineBeginByteIndex + 1) + x) - (1 * (scanline + 1));
 
             // todo: for a, b and c i dont account for pixel bit depth, if its 16 i want to jump 2 byts each for component
-            i64 aIndex = (x < uncompressedInput.colorComponents) ? -1 : storeIndex - uncompressedInput.colorComponents;
+            i64 aIndex = (x < uncompressedInput.pngInfo.colorComponents) ? -1 : storeIndex - uncompressedInput.pngInfo.colorComponents;
             i64 bIndex = (scanline <= 0) ? -1 : storeIndex - (scanlineByteWidthIncludingFilter - 1);
-            i64 cIndex = (x < uncompressedInput.colorComponents || scanline <= 0) ? -1 : bIndex - uncompressedInput.colorComponents;
+            i64 cIndex = (x < uncompressedInput.pngInfo.colorComponents || scanline <= 0) ? -1 : bIndex - uncompressedInput.pngInfo.colorComponents;
 
             u8 a = (aIndex < 0) ? 0 : defilteredBuffer.data[aIndex];
             u8 b = (bIndex < 0) ? 0 : defilteredBuffer.data[bIndex];
@@ -242,11 +242,13 @@ void bitmapPNGUnfilter(BaseArena *arena, PNGUncompressedData uncompressedInput)
                 case 1: defilteredBuffer.data[storeIndex] = data[loadIndex] + a; break;
                 case 2: defilteredBuffer.data[storeIndex] = data[loadIndex] + b; break;
                 case 3: defilteredBuffer.data[storeIndex] = data[loadIndex] + (a + b) / 2; break;
-                case 4: defilteredBuffer.data[storeIndex] = data[loadIndex] + bitmapPNGFilterPaethPredictor(a, b, c); break;
+                case 4: defilteredBuffer.data[storeIndex] = (u8)((u32)data[loadIndex] + bitmapPNGFilterPaethPredictor(a, b, c)); break;
                 default: break;
             }
         }
     }
+
+    return (PNGUnfilteredData){.pngInfo = uncompressedInput.pngInfo, .output = defilteredBuffer};
 }
 
 Bitmap bitmapFromPNGRaw(BaseArena *arena, u8 *rawBytes, u64 byteLen)
@@ -269,21 +271,26 @@ Bitmap bitmapFromPNGRaw(BaseArena *arena, u8 *rawBytes, u64 byteLen)
             PNGCollectIDATChunksData processedData = bitmapPNGCollectIDATChunks(arena, currBytePtr, &idatChunks);
             currBytePtr += processedData.bytesMoved;
 
-            ArrayView compressedStream = bitmapPNGCombineIDATDataBlocks(arena, &idatChunks);
+            U8Array compressedStream = bitmapPNGCombineIDATDataBlocks(arena, &idatChunks);
             PNGCompressedData input = 
             {
-                .w = processedData.hdr.width,
-                .h = processedData.hdr.height,
-                .colorComponents = processedData.colorComponents,
+                .pngInfo = processedData.pngInfo,
                 .compressedStream = compressedStream,
-                .bitDepth = processedData.hdr.bitDepth,
             };
 
             BaseArenaTemp temp = baseTempBegin(&arena, 1);
             {
                 PNGUncompressedData uncompressedData = bitmapPNGUncompress(temp.arena, input);
-                bitmapPNGUnfilter(arena, uncompressedData);
+                PNGUnfilteredData unfiltered = bitmapPNGUnfilter(arena, uncompressedData);
+
+                bm.pixels = unfiltered.output.data;
+                bm.size = Vec2i(unfiltered.pngInfo.w, unfiltered.pngInfo.h);
+
+                // todo: more robust, this is fixed
+                bm.bytesPerPixel = unfiltered.pngInfo.colorComponents * (unfiltered.pngInfo.bitDepth / 8);
+                bm.fmt = BITMAP_FORMAT_RGBA_8;
             }
+
             baseTempEnd(temp);
         }
     }

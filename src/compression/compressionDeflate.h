@@ -30,6 +30,7 @@ typedef struct CompressionDeflateDecodeHuffmanBlockInput
 
 void compressionDeflateGenerateHuffmanCodes(U8Array codeLengths, u32 *outCodes);
 u64 compressionDeflateDecodeHuffmanCode(BaseBitstream *stream, U8Array symbolLens, u32 *symbolCodes);
-CompressionDeflateUncompressedOutput compressionDeflateUncompress(BaseBitstream *inputStream, ArrayView *outBuffer);
+u64 compressionDeflateDecodeHuffmanBlock(BaseBitstream *stream, CompressionDeflateDecodeHuffmanBlockInput input);
 
+CompressionDeflateUncompressedOutput compressionDeflateUncompress(BaseBitstream *inputStream, U8Array *outBuffer);
 #endif

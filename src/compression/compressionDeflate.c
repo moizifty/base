@@ -1,4 +1,5 @@
 #include "compressionDeflate.h"
+#include "log\log.h"
 
 u8 gDeflateLiteralSymsLengths[COMPRESSION_DEFLATE_NUM_LITERAL_CODES] =
 {
@@ -86,7 +87,6 @@ void compressionDeflateGenerateHuffmanCodes(U8Array codeLengths, u32 *outCodes)
         }
     }
 }
-
 u64 compressionDeflateDecodeHuffmanCode(BaseBitstream *stream, U8Array symbolLens, u32 *symbolCodes)
 {
     for(u64 i = 0; i < symbolLens.len; i++)
@@ -104,7 +104,6 @@ u64 compressionDeflateDecodeHuffmanCode(BaseBitstream *stream, U8Array symbolLen
 
     return 0;
 }
-
 u64 compressionDeflateDecodeHuffmanBlock(BaseBitstream *stream, CompressionDeflateDecodeHuffmanBlockInput input)
 {
     u64 bytesWritten = 0;
@@ -144,14 +143,14 @@ u64 compressionDeflateDecodeHuffmanBlock(BaseBitstream *stream, CompressionDefla
         }
         else
         {
-            // error
+            logProgErrorFmt("Encountered invalid decoded huffman code '%llu'", c);
         }
     }
 
     return bytesWritten;
 }
 
-CompressionDeflateUncompressedOutput compressionDeflateUncompress(BaseBitstream *inputStream, ArrayView *outBuffer)
+CompressionDeflateUncompressedOutput compressionDeflateUncompress(BaseBitstream *inputStream, U8Array *outBuffer)
 {
     CompressionDeflateUncompressedOutput output = {0};
 
@@ -177,7 +176,7 @@ CompressionDeflateUncompressedOutput compressionDeflateUncompress(BaseBitstream 
                 baseBitstreamPopU16LE(inputStream, &blockLenComplement);
 
                 u64 byteIndex = inputStream->bitIndex / 8;
-                BASE_MEMCPY((u8*)outBuffer->data + bytesWritten, ((u8 *)inputStream->bytes.data) + byteIndex, blockLen);
+                BASE_MEMCPY(outBuffer->data + bytesWritten, inputStream->bytes.data + byteIndex, blockLen);
                 bytesWritten += blockLen;
                 
                 inputStream->bitIndex += (u64)blockLen * 8;
@@ -195,7 +194,7 @@ CompressionDeflateUncompressedOutput compressionDeflateUncompress(BaseBitstream 
 
                 CompressionDeflateDecodeHuffmanBlockInput input = 
                 {
-                    .outBuf = (U8Array){.data = outBuffer->data, .len = outBuffer->len},
+                    .outBuf = *outBuffer,
                     .writeOffset = bytesWritten,
                     .distSymsCodes = distCodes,
                     .distSymsLens = (U8Array){.data = gDeflateDistancesSymsLengths, COMPRESSION_DEFLATE_NUM_DISTANCE_CODES},
@@ -282,7 +281,7 @@ CompressionDeflateUncompressedOutput compressionDeflateUncompress(BaseBitstream 
 
                 CompressionDeflateDecodeHuffmanBlockInput input = 
                 {
-                    .outBuf = (U8Array){.data = outBuffer->data, .len = outBuffer->len},
+                    .outBuf = *outBuffer,
                     .writeOffset = bytesWritten,
                     .distSymsCodes = distCodes,
                     .distSymsLens = {.data = literalDistSymsLengths + numLiteralCodes, .len = numDistCodes},

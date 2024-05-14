@@ -64,31 +64,39 @@ typedef struct PNGChunkList
     u64 len;
 }PNGChunkList;
 
+typedef struct PNGInfo
+{
+    u32 colorComponents;
+    u64 bitDepth;
+    u32 w;
+    u32 h;
+}PNGInfo;
+
 typedef struct PNGCollectIDATChunksData
 {
     PNGChunkIHDR hdr;
     u64 bytesMoved;
 
-    u32 colorComponents;
+    PNGInfo pngInfo;
 }PNGCollectIDATChunksData;
 
 typedef struct PNGCompressedData
 {
-    ArrayView compressedStream;
-    u32 colorComponents;
-    u64 bitDepth;
-    u32 w;
-    u32 h;
+    U8Array compressedStream;
+    PNGInfo pngInfo;
 }PNGCompressedData;
 
 typedef struct PNGUncompressedData
 {
-    ArrayView uncompressedStream;
-    u32 colorComponents;
-    u64 bitDepth;
-    u32 w;
-    u32 h;
+    U8Array uncompressedStream;
+    PNGInfo pngInfo;
 }PNGUncompressedData;
+
+typedef struct PNGUnfilteredData
+{
+    U8Array output;
+    PNGInfo pngInfo;
+}PNGUnfilteredData;
 
 Bitmap bitmapFromPNGRaw(BaseArena *arena, u8 *rawBytes, u64 byteLen);
 Bitmap bitmapFromPNGPath(BaseArena *arena, str8 file);
