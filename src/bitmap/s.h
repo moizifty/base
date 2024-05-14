@@ -4338,7 +4338,18 @@ static int stbi__parse_huffman_block(stbi__zbuf *a)
          z = stbi__zhuffman_decode(a, &a->z_distance);
          if (z < 0 || z >= 30) return stbi__err("bad huffman code","Corrupt PNG"); // per DEFLATE, distance codes 30 and 31 must not appear in compressed data
          dist = stbi__zdist_base[z];
-         if (stbi__zdist_extra[z]) dist += stbi__zreceive(a, stbi__zdist_extra[z]);
+         if (stbi__zdist_extra[z])
+         {
+            int b = stbi__zreceive(a, stbi__zdist_extra[z]);
+            printf("%d\n", b);
+
+            dist += b;
+         }
+         else
+         {
+            printf("%d\n", (int)0);
+         }
+
          if (zout - a->zout_start < dist) return stbi__err("bad dist","Corrupt PNG");
          if (len > a->zout_end - zout) {
             if (!stbi__zexpand(a, zout, len)) return 0;

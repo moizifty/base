@@ -302,9 +302,6 @@ Bitmap bitmapFromPNGPath(BaseArena *arena, str8 file)
         u64 fileSize = 0;
         u8 *fileBytes = OSReadFileAll(temp.arena, file, &fileSize);
 
-        int x, y, c;
-        stbi_load_from_memory(fileBytes, fileSize, &x, &y, &c, 4);
-
         if(fileBytes != null)
         {
             bm = bitmapFromPNGRaw(arena, fileBytes, fileSize);

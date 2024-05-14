@@ -24,7 +24,7 @@ typedef struct CompressionDeflateDecodeHuffmanBlockInput
     U8Array distSymsLens;
     u32 *distSymsCodes;
 
-    U8Array *outBuf;
+    U8Array outBuf;
     u64 writeOffset;
 }CompressionDeflateDecodeHuffmanBlockInput;
 

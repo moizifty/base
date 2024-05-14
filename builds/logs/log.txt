@@ -1,0 +1,3 @@
+[14/05/2024 <-> 15:04:47][SeverityInfo]: Successfully initialized renderer - D3D11
+[14/05/2024 <-> 15:04:47][SeverityInfo]: Successfully attached renderer to window with handle '3542272' - D3D11
+[14/05/2024 <-> 15:04:47][SeverityInfo]: Successfully resized swapchain buffers to (1136 x 552).
