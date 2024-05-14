@@ -16,6 +16,18 @@ typedef struct CompressionDeflateUncompressedOutput
     u64 bytesMoved;
 }CompressionDeflateUncompressedOutput;
 
+typedef struct CompressionDeflateDecodeHuffmanBlockInput
+{
+    U8Array literalSymsLens;
+    u32 *literalSymsCodes;
+
+    U8Array distSymsLens;
+    u32 *distSymsCodes;
+
+    U8Array *outBuf;
+    u64 writeOffset;
+}CompressionDeflateDecodeHuffmanBlockInput;
+
 void compressionDeflateGenerateHuffmanCodes(U8Array codeLengths, u32 *outCodes);
 u64 compressionDeflateDecodeHuffmanCode(BaseBitstream *stream, U8Array symbolLens, u32 *symbolCodes);
 CompressionDeflateUncompressedOutput compressionDeflateUncompress(BaseBitstream *inputStream, ArrayView *outBuffer);

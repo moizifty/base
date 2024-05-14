@@ -24,6 +24,21 @@ bool baseBitstreamPopBitsAsU8Impl(BaseBitstream *stream, u8 n, u8 *out)
 
     return true;
 }
+bool baseBitstreamPopBitsReversedAsU8Impl(BaseBitstream *stream, u8 n, u8 *out)
+{
+    bool r = baseBitstreamPeekBitsReversedAsU8(stream, n, out);
+    baseBitstreamConsumeBits(stream, n);
+
+    return r;
+}
+bool baseBitstreamPopBitsReversedAsU64Impl(BaseBitstream *stream, u64 n, u64 *out)
+{
+    bool r = baseBitstreamPeekBitsReversedAsU64(stream, n, out);
+    baseBitstreamConsumeBits(stream, n);
+
+    return r;
+}
+
 bool baseBitstreamPopBitsAsU64Impl(BaseBitstream *stream, u64 n, u64 *out)
 {
     *out = 0;
@@ -142,6 +157,24 @@ bool baseBitstreamPeekBitsAsU64Impl(BaseBitstream *stream, u64 n, u64 *out)
     return result;
 }
 
+bool baseBitstreamPeekBitsReversedAsU8Impl(BaseBitstream *stream, u8 n, u8 *out)
+{
+    u8 code = 0;
+    if(baseBitstreamPeekBitsAsU8Impl(stream, n, &code))
+    {
+        *out = 0;
+        for(u64 i = 0; i < n; i++)
+        {
+            u8 bit = (code >> i) & 0b1;
+            u64 shiftAmount = n - (i + 1);
+            *out |= (u8)(bit << shiftAmount);
+        }
+
+        return true;
+    }
+
+    return false;
+}
 bool baseBitstreamPeekBitsReversedAsU64Impl(BaseBitstream *stream, u64 n, u64 *out)
 {
     u64 code = 0;

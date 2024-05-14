@@ -22,6 +22,7 @@
         "xtree": "c",
         "xiosbase": "c",
         "bitmapddsc": "c",
-        "atomic": "c"
+        "atomic": "c",
+        "xlocale": "c"
     }
 }
