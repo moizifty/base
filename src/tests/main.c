@@ -44,7 +44,14 @@ void ProgramMain(CmdLineHashMap *cmdline)
 	RendererState *rend = rendererInit(generalArena, state);
 	RendererWindowState *wndState = rendererAttachToWindow(rend, generalArena, window);
 
-	Bitmap bm =  bitmapFromPath(generalArena,STR8_LIT("C:\\Users\\Moizi\\OneDrive\\Documents\\Programming\\C\\base\\builds\\test.png"));
+	U8Array compressed = OSFileReadAll(generalArena, STR8_LIT("C:\\Users\\Moizi\\OneDrive\\Documents\\Programming\\C\\base\\builds\\test.txt.lz4"));
+
+	str8 str = STR8("abc moiz is so moiz is so cool i know.");
+	compressionLZ4Compress((U8Array){.data = str.data, .len = str.len}, (U8Array){0}, null);
+
+	U8Array uc = {.data = baseArenaPush(generalArena, 20), .len = 20};
+	compressionLZ4Uncompress(compressed, uc);
+	Bitmap bm =  bitmapFromPath(generalArena,STR8_LIT("C:\\Users\\Moizi\\OneDrive\\Documents\\Programming\\C\\base\\builds\\edgecase.qoi"));
 	
 	bool quit = false;
 	while(!quit)

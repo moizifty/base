@@ -8,6 +8,7 @@ BitmapFileKindTableEntry gBitmapFileKindsTable[BITMAP_FILE_KIND_COUNT] =
     [BITMAP_FILE_KIND_BMP]     = {.ext = STR8_LIT_COMP_CONST(".bmp"), .kind = BITMAP_FILE_KIND_BMP, .magicBytes = {0x42, 0x4d}, .numOfMagicBytes = 2},
     [BITMAP_FILE_KIND_TGA]     = {.ext = STR8_LIT_COMP_CONST(".tga"), .kind = BITMAP_FILE_KIND_TGA, .magicBytes = {0}, .numOfMagicBytes = 0},
     [BITMAP_FILE_KIND_PNG]     = {.ext = STR8_LIT_COMP_CONST(".png"), .kind = BITMAP_FILE_KIND_PNG, .magicBytes = {0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a}, .numOfMagicBytes = 8},
+    [BITMAP_FILE_KIND_QOI]     = {.ext = STR8_LIT_COMP_CONST(".qoi"), .kind = BITMAP_FILE_KIND_QOI, .magicBytes = {'q', 'o', 'i', 'f'}, .numOfMagicBytes = 4},
 };
 
 BitmapFileKind bitmapFileKindFromPath(str8 path)
@@ -28,10 +29,9 @@ BitmapFileKind bitmapFileKindFromPath(str8 path)
     BitmapFileKind fallBackKind = BITMAP_FILE_KIND_UNKNOWN;
     BaseArenaTemp temp = baseTempBegin(null, 0);
     {
-        u64 fileSize = 0;
-        u8 *fileBytes = OSReadFileAll(temp.arena, path, &fileSize);
+        U8Array fileBytes = OSFileReadAll(temp.arena, path);
 
-        if (fileBytes != null && fileSize >= BITMAP_MAX_MAGIC_BYTES)
+        if (fileBytes.data != null && fileBytes.len >= BITMAP_MAX_MAGIC_BYTES)
         {
             for(u64 i = 0; i < BASE_ARRAY_SIZE(gBitmapFileKindsTable); i++)
             {
@@ -41,7 +41,7 @@ BitmapFileKind bitmapFileKindFromPath(str8 path)
                 u32 eq = 0;
                 for(u64 mb = 0; mb < entry.numOfMagicBytes; mb++)
                 {
-                    if(entry.magicBytes[mb] == fileBytes[mb]) eq++;
+                    if(entry.magicBytes[mb] == fileBytes.data[mb]) eq++;
                     else continue;
                 }
 
@@ -68,6 +68,7 @@ Bitmap bitmapFromPath(BaseArena *arena, str8 file)
         {
             case BITMAP_FILE_KIND_DDS: return bitmapFromDDSPath(arena, file);
             case BITMAP_FILE_KIND_PNG: return bitmapFromPNGPath(arena, file);
+            case BITMAP_FILE_KIND_QOI: return bitmapFromQOIPath(arena, file);
             case BITMAP_FILE_KIND_BMP: return bitmapFromDDSPath(arena, file);
             case BITMAP_FILE_KIND_TGA: return bitmapFromDDSPath(arena, file);
 

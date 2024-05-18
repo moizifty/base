@@ -144,10 +144,34 @@ void OSFileWriteFmt(OSHandle fileHandle, char *fmt, ...)
 
     va_end(va);
 }
+U8Array OSFileReadAll(BaseArena *arena, str8 path)
+{
+    HANDLE fileHandle = CreateFileA((char *)path.data, 
+                                    FILE_GENERIC_READ, 
+                                    FILE_SHARE_READ, 
+                                    NULL, 
+                                    OPEN_EXISTING, 
+                                    FILE_ATTRIBUTE_NORMAL,
+                                    NULL);
+
+    if (fileHandle == null || fileHandle == INVALID_HANDLE_VALUE)
+    {
+        return (U8Array){0};
+    }
+
+    u64 fileSize = OSGetFileSizeFromHandle((OSHandle){(u64)fileHandle});
+    u8 *data = baseArenaPushNoZero(arena, fileSize);
+    ReadFile(fileHandle, data, (u32)fileSize, null, null);
+    CloseHandle(fileHandle);
+
+    return (U8Array){.data = data, .len = fileSize};
+}
+
 void OSFileClose(OSHandle handle)
 {
     CloseHandle((HANDLE)handle._u64);
 }
+
 bool OSPathExists(str8 path)
 {
     DWORD dwAttrib = 0;
@@ -184,34 +208,6 @@ u64 OSGetFileSizeFromHandle(OSHandle handle)
     GetFileSizeEx((HANDLE)handle._u64, &l);
 
     return l.QuadPart;
-}
-u8 *OSReadFileAll(BaseArena *arena, str8 path, u64 *outFileSize)
-{
-    HANDLE fileHandle = CreateFileA((char *)path.data, 
-                                    FILE_GENERIC_READ, 
-                                    FILE_SHARE_READ, 
-                                    NULL, 
-                                    OPEN_EXISTING, 
-                                    FILE_ATTRIBUTE_NORMAL,
-                                    NULL);
-
-    if (fileHandle == null || fileHandle == INVALID_HANDLE_VALUE)
-    {
-        return null;
-    }
-
-    u64 fileSize = OSGetFileSizeFromHandle((OSHandle){(u64)fileHandle});
-    u8 *data = baseArenaPushNoZero(arena, fileSize);
-    ReadFile(fileHandle, data, (u32)fileSize, null, null);
-
-    if (outFileSize != null)
-    {
-        *outFileSize = fileSize;
-    }
-
-    CloseHandle(fileHandle);
-
-    return data;
 }
 str8 OSGetFullPath(struct BaseArena *arena, str8 path)
 {

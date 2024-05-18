@@ -101,13 +101,13 @@ OSHandle OSFileOpen(str8 path, bool createLeadingDir, OSFileAccessFlags accessFl
 void OSFileWrite(OSHandle fileHandle, u8 *bytes, u64 numBytes);
 void OSFileWriteStr8(OSHandle fileHandle, str8 str);
 void OSFileWriteFmt(OSHandle fileHandle, char *fmt, ...);
+U8Array OSFileReadAll(struct BaseArena *arena, str8 path);
 void OSFileClose(OSHandle handle);
 
 bool OSPathExists(str8 path);
 bool OSPathIsDirectory(str8 path);
 u64 OSGetFileSize(str8 path);
 u64 OSGetFileSizeFromHandle(OSHandle handle);
-u8 *OSReadFileAll(struct BaseArena *arena, str8 path, u64 *outFileSize);
 str8 OSGetFullPath(struct BaseArena *arena, str8 path);
 
 bool OSCreateDirectory(str8 path, bool createIntermediateDirs);

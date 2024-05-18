@@ -155,7 +155,7 @@ CompressionDeflateUncompressedOutput compressionDeflateUncompress(BaseBitstream 
     CompressionDeflateUncompressedOutput output = {0};
 
     u64 bytesWritten = 0;
-    bool finalBlock;
+    u8 finalBlock;
     u8 compressionType;
     do
     {

@@ -10,6 +10,8 @@
 
 #include "bitmap\bitmapCoreTypes.h"
 #include "bitmap\bitmapDDS.h"
+#include "bitmap\bitmapPNG.h"
+#include "bitmap\bitmapQOI.h"
 
 BitmapFileKind bitmapFileKindFromPath(str8 path);
 

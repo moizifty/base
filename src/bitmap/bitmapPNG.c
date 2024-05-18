@@ -29,7 +29,6 @@ PNGChunk bitmapPNGParseNextChunk(u8 *currPtr)
 
     return chunk;
 }
-
 PNGChunkIHDR bitmapPNGParseIHDRInfo(PNGChunk ihdrChunk)
 {
     PNGChunkIHDR hdr = {0};
@@ -56,7 +55,6 @@ PNGChunkIHDR bitmapPNGParseIHDRInfo(PNGChunk ihdrChunk)
 
     return hdr;
 }
-
 PNGCollectIDATChunksData bitmapPNGCollectIDATChunks(BaseArena *arena, u8 *currBytePtr, PNGChunkList *list)
 {
     PNGChunkIHDR hdrInfo = {0};
@@ -123,7 +121,6 @@ PNGCollectIDATChunksData bitmapPNGCollectIDATChunks(BaseArena *arena, u8 *currBy
 
     return ret;
 }
-
 U8Array bitmapPNGCombineIDATDataBlocks(BaseArena *arena, PNGChunkList *list)
 {
     u64 combinedDataBlockLen = 0;
@@ -140,7 +137,7 @@ U8Array bitmapPNGCombineIDATDataBlocks(BaseArena *arena, PNGChunkList *list)
     combinedDataBlockLen = combinedDataBlockLen - 1 - 1;
     U8Array view = 
     {
-        .data = baseArenaPush(arena, combinedDataBlockLen),
+        .data = baseArenaPushNoZero(arena, combinedDataBlockLen),
     };
 
     BASE_PTR_LIST_FOREACH(PNGChunk, chunk, list)
@@ -161,7 +158,6 @@ U8Array bitmapPNGCombineIDATDataBlocks(BaseArena *arena, PNGChunkList *list)
 
     return view;
 }
-
 PNGUncompressedData bitmapPNGUncompress(BaseArena *arena, PNGCompressedData input)
 {
     PNGUncompressedData uncompressedRet = {0};
@@ -185,7 +181,6 @@ PNGUncompressedData bitmapPNGUncompress(BaseArena *arena, PNGCompressedData inpu
 
     return uncompressedRet;
 }
-
 u32 bitmapPNGFilterPaethPredictor(u32 a, u32 b, u32 c)
 {
     u32 p = a + b - c;
@@ -205,7 +200,6 @@ u32 bitmapPNGFilterPaethPredictor(u32 a, u32 b, u32 c)
         return c;
     }
 }
-
 PNGUnfilteredData bitmapPNGUnfilter(BaseArena *arena, PNGUncompressedData uncompressedInput)
 {
     u64 pixelWidth = (uncompressedInput.pngInfo.colorComponents * (uncompressedInput.pngInfo.bitDepth / 8));
@@ -250,7 +244,6 @@ PNGUnfilteredData bitmapPNGUnfilter(BaseArena *arena, PNGUncompressedData uncomp
 
     return (PNGUnfilteredData){.pngInfo = uncompressedInput.pngInfo, .output = defilteredBuffer};
 }
-
 Bitmap bitmapFromPNGRaw(BaseArena *arena, u8 *rawBytes, u64 byteLen)
 {
     Bitmap bm = {0};
@@ -299,19 +292,16 @@ Bitmap bitmapFromPNGRaw(BaseArena *arena, u8 *rawBytes, u64 byteLen)
     return bm;
 }
 
-#define STB_IMAGE_IMPLEMENTATION
-#include "bitmap\s.h"
 Bitmap bitmapFromPNGPath(BaseArena *arena, str8 file)
 {
     Bitmap bm = {0};
     BaseArenaTemp temp = baseTempBegin(&arena, 1);
     {
-        u64 fileSize = 0;
-        u8 *fileBytes = OSReadFileAll(temp.arena, file, &fileSize);
+        U8Array fileBytes = OSFileReadAll(temp.arena, file);
 
-        if(fileBytes != null)
+        if(fileBytes.data != null)
         {
-            bm = bitmapFromPNGRaw(arena, fileBytes, fileSize);
+            bm = bitmapFromPNGRaw(arena, fileBytes.data, fileBytes.len);
             if (bm.pixels == null)
             {
                 logProgErrorFmt("Failed to parse '%S'", file);

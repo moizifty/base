@@ -23,6 +23,7 @@
 #define baseDegToRadF32(DEG)   ((DEG) * ((f32)(BASE_PI)) / 180.0f)
 #define baseClamp(V, MN, MX)   (((V) < (MN)) ? (MN) : (((V) > (MX)) ? (MX) : (V)))
 #define baseGreater(V, MN)   (((V) < (MN)) ? (MN) : (V))
+#define baseLesser(V, MN)   (((V) < (MN)) ? (V) : (MN))
 
 #define Vec2f(X, Y)    ((vec2f){.x = (f32)(X), .y = (f32)(Y)})
 #define Vec2fFromVec(V)   (Vec2f((V).x, (V).y))
@@ -47,6 +48,9 @@
 
 #define Vec4i8(X, Y, Z, W)    ((vec4i8){.x = (i8)(X), .y = (i8)(Y), .z = (i8)(Z), .w = (i8)(W)})
 #define Vec4i8FromVec(V)   (Vec4i8((V).x, (V).y, (V).z, (V).w))
+
+#define Vec4u8(X, Y, Z, W)    ((vec4u8){.x = (u8)(X), .y = (u8)(Y), .z = (u8)(Z), .w = (u8)(W)})
+#define Vec4u8FromVec(V)   (Vec4u8((V).x, (V).y, (V).z, (V).w))
 
 #define Quatf(X, Y, Z, W)    ((quatf){.x = (f32)(X), .y = (f32)(Y), .z = (f32)(Z), .w = (f32)(W)})
 #define QUATF_IDENTITY  Quatf(0, 0, 0, 1)
@@ -273,6 +277,33 @@ typedef struct vec4i8
         };
     };   
 }vec4i8;
+
+typedef struct vec4u8
+{
+    union
+    {
+        u8 v[4];
+        struct
+        {
+            u8 x;
+            u8 y;
+            u8 z;
+            u8 w;
+        };
+        struct
+        {
+            u8 r;
+            u8 g;
+            u8 b;
+            u8 a;
+        };
+        struct
+        {
+            vec3u8 xyz;
+            u8 _w;
+        };
+    };   
+}vec4u8;
 
 typedef struct quatf
 {

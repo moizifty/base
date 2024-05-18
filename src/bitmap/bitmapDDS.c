@@ -342,12 +342,11 @@ Bitmap bitmapFromDDSPath(BaseArena *arena, str8 file)
     Bitmap bm = {0};
     BaseArenaTemp temp = baseTempBegin(&arena, 1);
     {
-        u64 fileSize = 0;
-        u8 *fileBytes = OSReadFileAll(temp.arena, file, &fileSize);
+        U8Array fileBytes = OSFileReadAll(temp.arena, file);
 
-        if(fileBytes != null)
+        if(fileBytes.data != null)
         {
-            bm = bitmapFromDDSRaw(arena, fileBytes, fileSize);
+            bm = bitmapFromDDSRaw(arena, fileBytes.data, fileBytes.len);
             if (bm.pixels == null)
             {
                 logProgErrorFmt("Failed to parse '%S'", file);

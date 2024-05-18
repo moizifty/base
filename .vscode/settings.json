@@ -3,26 +3,7 @@
         "*.amp": "jai",
         "*.bss": "csharp",
         "*.h": "c",
-        "vector": "c",
-        "xhash": "c",
-        "xstring": "c",
-        "xutility": "c",
-        "chrono": "c",
-        "utility": "c",
-        "algorithm": "c",
-        "optional": "c",
-        "system_error": "c",
-        "type_traits": "c",
-        "xlocmon": "c",
-        "xtr1common": "c",
-        "array": "c",
-        "format": "c",
-        "initializer_list": "c",
-        "list": "c",
-        "xtree": "c",
-        "xiosbase": "c",
-        "bitmapddsc": "c",
-        "atomic": "c",
-        "xlocale": "c"
+        "*.c": "c",
+        "compressionLZ.C": "c"
     }
 }
