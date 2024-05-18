@@ -81,8 +81,7 @@ PNGCollectIDATChunksData bitmapPNGCollectIDATChunks(BaseArena *arena, u8 *currBy
                 PNGChunk *idatNode = baseArenaPush(arena, sizeof(PNGChunk));
                 *idatNode = currChunk;
 
-                BaseDllNodePushLast(list->first, list->last, idatNode);
-                list->len++;
+                BasePtrListNodePushLast(list, idatNode);
             }break;
 
             // PLTE

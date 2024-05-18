@@ -46,13 +46,22 @@ void ProgramMain(CmdLineHashMap *cmdline)
 
 	U8Array compressed = OSFileReadAll(generalArena, STR8_LIT("C:\\Users\\Moizi\\OneDrive\\Documents\\Programming\\C\\base\\builds\\test.txt.lz4"));
 
-	str8 str = STR8("abc moiz is so moiz is so cool i know.");
-	compressionLZ4Compress((U8Array){.data = str.data, .len = str.len}, (U8Array){0}, null);
+	str8 str = STR8("abc moiz is so moiz is so abc i know.");
+	U8Array out = compressionLZ4MCompress(generalArena, (U8Array){.data = str.data, .len = str.len}, null);
 
-	U8Array uc = {.data = baseArenaPush(generalArena, 20), .len = 20};
-	compressionLZ4Uncompress(compressed, uc);
+	U8Array uc = {.data = baseArenaPush(generalArena, str.len), .len = str.len};
+	compressionLZ4MUncompress(out, uc);
 	Bitmap bm =  bitmapFromPath(generalArena,STR8_LIT("C:\\Users\\Moizi\\OneDrive\\Documents\\Programming\\C\\base\\builds\\edgecase.qoi"));
+	{
+		U8Array compressedBitmap = compressionLZ4MCompress(generalArena, (U8Array){.data = bm.pixels, .len = bm.size.w * bm.size.h * bm.bytesPerPixel}, null);
+
+		U8Array uncompressed = {.data = baseArenaPush(generalArena, bm.size.w * bm.size.h * bm.bytesPerPixel), .len = bm.size.w * bm.size.h * bm.bytesPerPixel};
+		compressionLZ4MUncompress(compressedBitmap, uncompressed);
+
+		int a = 90;
+	}
 	
+
 	bool quit = false;
 	while(!quit)
 	{

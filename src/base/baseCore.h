@@ -69,6 +69,12 @@
 #define BaseDllNodePushLast(f, l, n)    BaseDllNodeInsertEx(f, l, l, n, prev, next)
 #define BaseDllNodePushFirst(f, l, n)   BaseDllNodeInsertEx(l, f, f, n, next, prev)
 
+#define BaseListNodePushLast(list, n)   (BaseDllNodePushLast((list).first, (list).last, n), (list).len++)
+#define BasePtrListNodePushLast(list, n)   (BaseDllNodePushLast((list)->first, (list)->last, n), (list)->len++)
+
+#define BaseListNodePushFirst(list, n)   (BaseDllNodePushFirst((list).first, (list).last, n), (list).len++)
+#define BasePtrListNodePushFirst(list, n)   (BaseDllNodePushFirst((list)->first, (list)->last, n), (list)->len++)
+
 #define BASE_ANY_PTR(pL)     (((pL) != NULL) && (pL)->len != 0)
 #define BASE_ANY(L)     ((L).len != 0)
 

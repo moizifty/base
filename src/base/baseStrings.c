@@ -5,15 +5,13 @@
 
 void Str8ListPushNodeLast(Str8List *l, Str8ListNode *node)
 {
-	BaseDllNodePushLast(l->first, l->last, node);
-	l->len += 1;
+	BasePtrListNodePushLast(l, node);
 	l->totalSize += sizeof(node->val);
 	l->totalBytes += node->val.len;
 }
 void Str8ListPushNodeFirst(Str8List *l, Str8ListNode *node)
 {
-	BaseDllNodePushFirst(l->first, l->last, node);
-	l->len += 1;
+	BasePtrListNodePushFirst(l, node);
 	l->totalSize += sizeof(node->val);
 	l->totalBytes += node->val.len;
 }

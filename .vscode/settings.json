@@ -4,6 +4,8 @@
         "*.bss": "csharp",
         "*.h": "c",
         "*.c": "c",
-        "compressionLZ.C": "c"
+        "compressionLZ.C": "c",
+        "list": "c",
+        "cmath": "c"
     }
 }
