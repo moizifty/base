@@ -46,12 +46,12 @@ void ProgramMain(CmdLineHashMap *cmdline)
 
 	U8Array compressed = OSFileReadAll(generalArena, STR8_LIT("C:\\Users\\Moizi\\OneDrive\\Documents\\Programming\\C\\base\\builds\\test.txt.lz4"));
 
-	str8 str = STR8("abc moiz is so moiz is so abc i know.");
-	U8Array out = compressionLZ4MCompress(generalArena, (U8Array){.data = str.data, .len = str.len}, null);
+	// str8 str = STR8("255 255 255 150 150 150 255 255 255 255 255 150");
+	// U8Array out = compressionLZ4MCompress(generalArena, (U8Array){.data = str.data, .len = str.len}, null);
 
-	U8Array uc = {.data = baseArenaPush(generalArena, str.len), .len = str.len};
-	compressionLZ4MUncompress(out, uc);
-	Bitmap bm =  bitmapFromPath(generalArena,STR8_LIT("C:\\Users\\Moizi\\OneDrive\\Documents\\Programming\\C\\base\\builds\\edgecase.qoi"));
+	// U8Array uc = {.data = baseArenaPush(generalArena, str.len), .len = str.len};
+	// compressionLZ4MUncompress(out, uc);
+	Bitmap bm =  bitmapFromPath(generalArena,STR8_LIT("C:\\Users\\Moizi\\OneDrive\\Documents\\Programming\\C\\base\\builds\\test.png"));
 	{
 		U8Array compressedBitmap = compressionLZ4MCompress(generalArena, (U8Array){.data = bm.pixels, .len = bm.size.w * bm.size.h * bm.bytesPerPixel}, null);
 

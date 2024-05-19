@@ -208,7 +208,7 @@ Bitmap bitmapFromQOIRaw(BaseArena *arena, u8 *rawBytes, u64 byteLen)
                 prevPixels[bitmapQOIHashColor(prevPixel)] = prevPixel;
             }
 
-            bm.bytesPerPixel = 1;
+            bm.bytesPerPixel = 4;
             bm.fmt = BITMAP_FORMAT_RGBA_8,
             bm.pixels = imgPixels.data;
             bm.size = Vec2i(header.width, header.height);

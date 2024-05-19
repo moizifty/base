@@ -98,24 +98,63 @@ u64 compressionLZ4MCalculateCompressedOutputSize(CompressionLZ4MBlockCompoundLis
             case COMPRESSION_LZM4_BLOCK_COMPOUND_LITERAL:
             {
                 size += 1; //for token byte
-                size += (node->literals.len >= 15) ? (u64)ceil((f64)(node->literals.len - 15) / 255) : 0; // for extra len bytes
+
+                {
+                    i64 l = (i64) node->literals.len - 15;
+                    while(l >= 0)
+                    {
+                        size += 1;
+
+                        l -= 255;
+                    }
+                }
+
                 size += node->literals.len; // bytes for literal
-                size += (node->next != null) ? 2 : 1; // offset byte
+                size += 2;
 
                 u64 matchlenNumBytes = 0;
                 if(node->next != null)
                 {
-                    matchlenNumBytes = (node->next->backref.length >= 15) ? 
-                    (u64)ceil((f64)((i64)node->next->backref.length - 15 - COMPRESSION_LZ4M_MINIMUM_MATCHLEN) / 255) : 0;
+                   {
+                        i64 l = (i64)node->next->backref.length - 15 - COMPRESSION_LZ4M_MINIMUM_MATCHLEN;
+                        while(l >= 0)
+                        {
+                            size += 1;
+
+                            l -= 255;
+                        }
+                    }
                 }
 
                 size += matchlenNumBytes;
 
+                // the node after a literal cmpound should always be a backref,
+                // you want to skip processing tht one in the next iteration
+                //since we just did it above
+                if(node->next != null)
+                {
+                    node = node->next;
+                }
             }break;
 
             case COMPRESSION_LZM4_BLOCK_COMPOUND_BACKREF:
             {
-                continue;
+                size += 1; //for token byte
+                size += 2; // offset byte
+
+                u64 matchlenNumBytes = 0;
+
+                {
+                    i64 l = (i64)node->backref.length - 15 - COMPRESSION_LZ4M_MINIMUM_MATCHLEN;
+                    while(l >= 0)
+                    {
+                        size += 1;
+
+                        l -= 255;
+                    }
+                }
+
+                size += matchlenNumBytes;
             }break;
         }
     }
@@ -144,6 +183,7 @@ U8Array compressionLZ4MCompress(BaseArena *arena, U8Array input, CompressOptions
             u64 tokLitLen = 0;
             u64 tokMatchLen = 0;
             u64 offset = 0;
+
             switch(node->kind)
             {
                 case COMPRESSION_LZM4_BLOCK_COMPOUND_LITERAL:
@@ -159,10 +199,13 @@ U8Array compressionLZ4MCompress(BaseArena *arena, U8Array input, CompressOptions
                     if (tokLitLen == 15)
                     {
                         tokLitLen = node->literals.len;
-                        for(u64 i = 0; i < (u64)ceil((f64)(tokLitLen - 15) / 255); i++)
+                        i64 l = (i64) tokLitLen - 15;
+                        while(l >= 0)
                         {
-                            u64 val = (tokLitLen - 15 - (i * 255));
-                            output.data[bytesWritten++] = (val > 255) ? 255 : (u8)val;
+                            i64 val = baseLesser(255, l);
+                            output.data[bytesWritten++] = (u8)val;
+
+                            l -= 255;
                         }
                     }
 
@@ -172,25 +215,52 @@ U8Array compressionLZ4MCompress(BaseArena *arena, U8Array input, CompressOptions
                     }
 
                     output.data[bytesWritten++] = ((u8*)&offset)[0];
-                    if(offset > 0)
-                    {
-                        output.data[bytesWritten++] = ((u8*)&offset)[1];
-                    }
+                    output.data[bytesWritten++] = ((u8*)&offset)[1];
 
                     if (tokMatchLen == 15)
                     {
                         tokMatchLen = node->next->backref.length;
-                        for(u64 i = 0; i < (u64)ceil((f64)(tokMatchLen - 15 - COMPRESSION_LZ4M_MINIMUM_MATCHLEN) / 255); i++)
+                        i64 l = (i64) tokMatchLen - 15 - COMPRESSION_LZ4M_MINIMUM_MATCHLEN;
+                        while(l >= 0)
                         {
-                            u64 val = ((i64)tokMatchLen - 15 - COMPRESSION_LZ4M_MINIMUM_MATCHLEN - (i * 255));
-                            output.data[bytesWritten++] = (val > 255) ? 255 : (u8)val;
+                            i64 val = baseLesser(255, l);
+                            output.data[bytesWritten++] = (u8)val;
+
+                            l -= 255;
                         }
+                    }
+
+                    // the node after a literal cmpound should always be a backref,
+                    // you want to skip processing tht one in the next iteration
+                    //since we just did it above
+                    if(node->next != null)
+                    {
+                        node = node->next;
                     }
                 }break;
 
                 case COMPRESSION_LZM4_BLOCK_COMPOUND_BACKREF:
                 {
-                    continue;
+                    tokLitLen = 0;
+                    offset = node->backref.distance;
+                    tokMatchLen = (node->backref.length - COMPRESSION_LZ4M_MINIMUM_MATCHLEN >= 15) ? 15 : (u8)node->backref.length - COMPRESSION_LZ4M_MINIMUM_MATCHLEN;
+
+                    output.data[bytesWritten++] = (u8)(tokLitLen << 4) | (u8)tokMatchLen;
+                    output.data[bytesWritten++] = ((u8*)&offset)[0];
+                    output.data[bytesWritten++] = ((u8*)&offset)[1];
+
+                    if (tokMatchLen == 15)
+                    {
+                        tokMatchLen = node->backref.length;
+                        i64 l = (i64) tokMatchLen - 15 - COMPRESSION_LZ4M_MINIMUM_MATCHLEN;
+                        while(l >= 0)
+                        {
+                            i64 val = baseLesser(255, l);
+                            output.data[bytesWritten++] = (u8)val;
+
+                            l -= 255;
+                        }
+                    }
                 }break;
             }
         }
@@ -214,10 +284,13 @@ bool compressionLZ4MUncompress(U8Array input, U8Array output)
 
         if(len == 15)
         {
-            do 
+            while(input.data[bytesRead] == 255)
             {
-                len += input.data[bytesRead++];
-            }while(input.data[bytesRead] == 255);
+                len += 255;
+                bytesRead++;
+            };
+
+            len += input.data[bytesRead++];
         }
 
         for(u64 i = 0; i < len; i++)
@@ -228,19 +301,17 @@ bool compressionLZ4MUncompress(U8Array input, U8Array output)
         if(bytesRead >= input.len) break;
 
         u16 offset = input.data[bytesRead++];  
-        if(offset == 0)
-        {
-            continue;
-        }
-
         offset |= (input.data[bytesRead++] << 8);
         u64 matchlen = (tokByte & 0b0000'1111) + COMPRESSION_LZ4M_MINIMUM_MATCHLEN;
         if(matchlen == (15 + COMPRESSION_LZ4M_MINIMUM_MATCHLEN))
         {
-            do 
+            while(input.data[bytesRead] == 255)
             {
-                matchlen += input.data[bytesRead++];
-            }while(input.data[bytesRead] == 255);
+                matchlen += 255;
+                bytesRead++;
+            };
+
+            matchlen += input.data[bytesRead++];
         }
 
         for(u64 i = 0; i < matchlen; i++)
