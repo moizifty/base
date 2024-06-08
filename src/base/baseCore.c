@@ -12,6 +12,8 @@
 #define STB_SPRINTF_IMPLEMENTATION
 #include "thirdparty\ts_stb_sprintf.h"
 
+BASE_CREATE_LL_DEFS(U8ArrayList, U8Array);
+
 void BaseMainThreadEntry(ProgramMainFunc programMain, i64 argc, i8 **argv)
 {
     BASE_UNUSED_PARAM(argc);

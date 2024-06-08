@@ -75,6 +75,9 @@
 #define BaseListNodePushFirst(list, n)   (BaseDllNodePushFirst((list).first, (list).last, n), (list).len++)
 #define BasePtrListNodePushFirst(list, n)   (BaseDllNodePushFirst((list)->first, (list)->last, n), (list)->len++)
 
+#define BaseListNodeInsert(list, p, n)   (BaseDllNodeInsert((list).first, (list).last, p, n), (list).len++)
+#define BasePtrListNodeInsert(list, p, n)   (BaseDllNodeInsert((list)->first, (list)->last, p, n), (list)->len++)
+
 #define BASE_ANY_PTR(pL)     (((pL) != NULL) && (pL)->len != 0)
 #define BASE_ANY(L)     ((L).len != 0)
 
@@ -87,24 +90,6 @@
 #define BASE_CREATE_LL_JUST_LIST_DECLS_EX(NAME, NODENAME, ELEM) \
 typedef struct NAME NAME; \
 typedef struct NODENAME NODENAME; \
-inline void NAME##PushNodeLast(NAME *l, NODENAME *node); \
-inline void NAME##PushNodeFirst(NAME *l, NODENAME *node); \
-inline void NAME##InsertNode(NAME *l, NODENAME *prev, NODENAME *node); \
-inline void NAME##PushLast(BaseArena *arena, NAME *l, ELEM value); \
-inline void NAME##PushFirst(BaseArena *arena, NAME *l, ELEM value); \
-inline void NAME##PushInsert(BaseArena *arena, NAME *l, NODENAME *prev, ELEM value); \
-
-#define BASE_CREATE_LL_JUST_NODE_DECLS_EX(NAME, NODENAME, ELEM) \
-typedef struct NAME NAME; \
-typedef struct NODENAME NODENAME; \
-
-#define BASE_CREATE_LL_DECLS_EX(NAME, NODENAME, ELEM) \
-BASE_CREATE_LL_JUST_LIST_DECLS_EX(NAME, NODENAME, ELEM) \
-BASE_CREATE_LL_JUST_NODE_DECLS_EX(NAME, NODENAME, ELEM)  \
-
-#define BASE_CREATE_LL_JUST_LIST_DEFS_EX(NAME, NODENAME, ELEM) \
-typedef struct NAME NAME; \
-typedef struct NODENAME NODENAME; \
 typedef struct NAME \
 { \
 	NODENAME *first; \
@@ -112,6 +97,28 @@ typedef struct NAME \
 	u64 len; \
 	u64 totalSize; \
 }NAME; \
+inline void NAME##PushNodeLast(NAME *l, NODENAME *node); \
+inline void NAME##PushNodeFirst(NAME *l, NODENAME *node); \
+inline void NAME##InsertNode(NAME *l, NODENAME *prev, NODENAME *node); \
+inline void NAME##PushLast(struct BaseArena *arena, NAME *l, ELEM value); \
+inline void NAME##PushFirst(struct BaseArena *arena, NAME *l, ELEM value); \
+inline void NAME##PushInsert(struct BaseArena *arena, NAME *l, NODENAME *prev, ELEM value); \
+
+#define BASE_CREATE_LL_JUST_NODE_DECLS_EX(NAME, NODENAME, ELEM) \
+typedef struct NAME NAME; \
+typedef struct NODENAME NODENAME; \
+typedef struct NODENAME \
+{ \
+	NODENAME *next; \
+	NODENAME *prev; \
+	ELEM val; \
+}NODENAME;
+
+#define BASE_CREATE_LL_DECLS_EX(NAME, NODENAME, ELEM) \
+BASE_CREATE_LL_JUST_LIST_DECLS_EX(NAME, NODENAME, ELEM) \
+BASE_CREATE_LL_JUST_NODE_DECLS_EX(NAME, NODENAME, ELEM)  \
+
+#define BASE_CREATE_LL_JUST_LIST_DEFS_EX(NAME, NODENAME, ELEM) \
 inline void NAME##PushNodeLast(NAME *l, NODENAME *node) \
 { \
 	BaseDllNodePushLast(l->first, l->last, node); \
@@ -163,15 +170,7 @@ inline ArrayView NAME##FlattenToArray(BaseArena *arena, NAME *l) \
 	return view;\
 } \
 
-#define BASE_CREATE_LL_JUST_NODE_DEFS_EX(NAME, NODENAME, ELEM) \
-typedef struct NAME NAME; \
-typedef struct NODENAME NODENAME; \
-typedef struct NODENAME \
-{ \
-	NODENAME *next; \
-	NODENAME *prev; \
-	ELEM val; \
-}NODENAME;
+#define BASE_CREATE_LL_JUST_NODE_DEFS_EX(NAME, NODENAME, ELEM)
 
 #define BASE_CREATE_LL_DEFS_EX(NAME, NODENAME, ELEM) \
 BASE_CREATE_LL_JUST_NODE_DEFS_EX(NAME, NODENAME, ELEM) \
@@ -187,6 +186,32 @@ BASE_CREATE_LL_DEFS_EX(NAME, NAME##Node, ELEM) \
 BASE_CREATE_LL_JUST_LIST_DECLS_EX(NAME, NAME##Node, ELEM) \
 BASE_CREATE_LL_JUST_LIST_DEFS_EX(NAME, NAME##Node, ELEM) \
 
+// NODENAME is the node and value struct itself
+#define BASE_CREATE_EFFICIENT_LL_DECLS(NAME, NODENAME) \
+typedef struct NAME \
+{ \
+    struct NODENAME *first; \
+    struct NODENAME *last; \
+	u64 len; \
+}NAME; \
+inline void NAME##PushNodeLast(NAME *l, NODENAME *node); \
+inline void NAME##PushNodeFirst(NAME *l, NODENAME *node); \
+inline void NAME##InsertNode(NAME *l, NODENAME *prev, NODENAME *node);
+
+#define BASE_CREATE_EFFICIENT_LL_DEFS(NAME, NODENAME) \
+inline void NAME##PushNodeLast(NAME *l, NODENAME *node) \
+{ \
+	BasePtrListNodePushLast(l, node); \
+} \
+inline void NAME##PushNodeFirst(NAME *l, NODENAME *node) \
+{ \
+	BasePtrListNodePushFirst(l, node); \
+} \
+inline void NAME##InsertNode(NAME *l, NODENAME *prev, NODENAME *node) \
+{ \
+	BasePtrListNodeInsert(l, prev, node); \
+} \
+
 #define BASE_CREATE_ARRAY_VIEW_DECLS_EX(NAME, ELEM)   \
 typedef struct NAME NAME; \
 
@@ -196,6 +221,7 @@ typedef struct NAME \
 	ELEM *data; \
 	u64 len; \
 }NAME;\
+
 
 #define BASE_CREATE_ARRAY_VIEW_DECLS(NAME, ELEM)	BASE_CREATE_ARRAY_VIEW_DECLS_EX(NAME, ELEM)
 #define BASE_CREATE_ARRAY_VIEW_DEFS(NAME, ELEM)	BASE_CREATE_ARRAY_VIEW_DEFS_EX(NAME, ELEM)
@@ -210,6 +236,12 @@ BASE_CREATE_ARRAY_VIEW_DEFS(NAME, ELEM)
 #define ARRAY_VIEW_LIT(ARRAY, SIZE)			((ArrayView){ARRAY, .len = SIZE})
 
 BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(U8Array, u8);
+
+// disable this dumb warning
+#pragma warning( push )
+#pragma warning( disable : 4115)
+BASE_CREATE_LL_DECLS(U8ArrayList, U8Array);
+#pragma warning( pop ) 
 
 // program entry related
 typedef struct CmdLineHashMap CmdLineHashMap;

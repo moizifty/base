@@ -3,6 +3,6 @@
 
 #include "base\baseCore.h"
 
-u64 hashDJB2(i8 *bytes, i64 len);
+u64 hashDJB2(u8 *bytes, u64 len);
 
 #endif

@@ -2,7 +2,7 @@
 
 u64 cmdlineGetHashOfOption(str8 option)
 {
-    return hashDJB2((i8 *)option.data, option.len);
+    return hashDJB2(option.data, option.len);
 }
 CmdLineHashMap cmdlineParseCmdLineFromStringList(BaseArena *arena, Str8List list)
 {

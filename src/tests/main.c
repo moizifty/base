@@ -14,6 +14,7 @@
 #include "..\bitmap\bitmap.c"
 
 #include "..\os\core\osEntryPoint.c"
+#include "..\bss\bss.c"
 
 BASE_CREATE_LL_DECLS_DEFS(IntList, int);
 
@@ -38,6 +39,21 @@ void ProgramMain(CmdLineHashMap *cmdline)
 {
 	BaseArena *generalArena = baseArenaAlloc(BASE_GIGABYTES(2));
 	
+	BSSInterpretorState bs = {.lexerArena = generalArena, .parserArena = generalArena, .checkerArena = generalArena};
+	BssLexerState *ls = bssLexerInitFromFile(&bs, STR8_LIT("C:\\Users\\moizi\\OneDrive\\Documents\\Programming\\C\\base\\src\\bss\\tests\\test.bss"));
+	BssTokArray toks = bssLexerLexWholeBuffer(&bs, ls);
+
+	BssParserState s = {.lexer = ls};
+    ASTProject *proj = bssParserProject(&bs, &s);
+
+	for(u64 i = 0; i < toks.len; i++)
+	{
+		baseColPrintf("%d: %S\n", toks.data[i].kind, toks.data[i].lexeme);
+	}
+
+	BssCheckerState *cs = bssCheckerInitFromProject(&bs, proj);
+	bssCheckerCheckWholeProject(&bs, cs);
+
 	OSGfxState *state = OSGfxInit(generalArena);
 	OSHandle window = OSGfxWindowOpen(STR8_LIT("Test"), Vec2i(-1, -1), Vec2i(-1, -1));
 	
@@ -51,14 +67,13 @@ void ProgramMain(CmdLineHashMap *cmdline)
 
 	// U8Array uc = {.data = baseArenaPush(generalArena, str.len), .len = str.len};
 	// compressionLZ4MUncompress(out, uc);
-	Bitmap bm =  bitmapFromPath(generalArena,STR8_LIT("C:\\Users\\Moizi\\OneDrive\\Documents\\Programming\\C\\base\\builds\\test.png"));
+	// Bitmap bm =  bitmapFromPath(generalArena,STR8_LIT("C:\\Users\\Moizi\\OneDrive\\Documents\\Programming\\C\\base\\builds\\edgecase.qoi"));
 	{
-		U8Array compressedBitmap = compressionLZ4MCompress(generalArena, (U8Array){.data = bm.pixels, .len = bm.size.w * bm.size.h * bm.bytesPerPixel}, null);
-
-		U8Array uncompressed = {.data = baseArenaPush(generalArena, bm.size.w * bm.size.h * bm.bytesPerPixel), .len = bm.size.w * bm.size.h * bm.bytesPerPixel};
+		U8Array f = OSFileReadAll(generalArena, STR8_LIT("C:\\Users\\Moizi\\OneDrive\\Documents\\Programming\\C\\base\\builds\\edgecase.qoi"));
+		U8Array compressedBitmap = compressionLZ4MCompress(generalArena, f, null);
+		
+		U8Array uncompressed = {.data = baseArenaPush(generalArena, f.len), .len = f.len};
 		compressionLZ4MUncompress(compressedBitmap, uncompressed);
-
-		int a = 90;
 	}
 	
 

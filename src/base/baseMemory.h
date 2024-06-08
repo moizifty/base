@@ -9,6 +9,9 @@
 #define BASE_ARENA_DEFAULT_DECOMMIT_GRANULARITY (BASE_KILOBYTES(4))
 #define BASE_ARENA_DECOMMIT_THRESHOLD (BASE_MEGABYTES(64))
 
+#define baseArenaPushType(arena, TYPE)  ((TYPE*)baseArenaPush(arena, sizeof(TYPE)))
+#define baseArenaPushArray(arena, TYPE, COUNT)  ((TYPE*)baseArenaPush(arena, sizeof(TYPE) * (COUNT)))
+
 // the data ptr for the arena is the arena pointer itself, returned
 typedef struct BaseArena
 {

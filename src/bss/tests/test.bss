@@ -1,0 +1,46 @@
+libbssPath = "{#dir}\libbss";
+project libbss = "{libbssPath}\build.bss";
+build libbss {"build"};
+
+this = {
+    src = quoteit(getfiles("{#dir}\src\**\*.c")),
+    objs = quoteit(getfiles("{libbssPath}\objs\**\*.obj")) ,
+    libs = {
+        "shlwapi.lib"
+    },
+};
+
+if hasflag("build")
+{
+    onedrivefolder = (run "echo %onedrive%").out;
+
+    baselib = pathexists("{onedrivefolder}\Documents\Programming\C\base");
+
+    compiler = "cl";
+
+    objs = expand(this.objs, " ");
+    src = expand(this.src, " ");
+    flags = "/Zi";
+
+    includes = "/I~"{"{#currdir}\src\include"}~" /I~"{baselib}~" /I~"{"{libbssPath}\src\include"}~"";
+
+    link = "/link {expand(this.libs, " ")}";
+    outputName = "/Fe~"{"{#currdir}\builds\bss.exe"}~"";
+    objFolder = "/Fo~"{"{#currdir}\builds/"}~"";
+
+    command = "{compiler} {outputName} {objFolder} {flags} {includes} {src} {objs} {link}";
+    output = run command;
+
+    // for some BS reason msvc c compiler dumps errors in the stdout not stderr?
+    print("{output.out}~n");
+
+    deleteObjsCommand = run "del ~"{"{#currdir}\builds\*.obj"}~"";
+    print("{deleteObjsCommand}");
+
+    print("Finished Building bss!~n");
+}
+
+if hasflag("test") || hasflag("run")
+{
+    print("{run "~"{"#\builds\bss.exe"}~" ~"{"{#currdir}\build.bss"}~" build"}");
+}

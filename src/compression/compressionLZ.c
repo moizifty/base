@@ -1,5 +1,6 @@
 #include "compressionLZ.h"
 #include "base\baseMath.h"
+#include "base\baseHash.h"
 
 CompressBackReference compressionLZ4NaiveLinearBackRefMatch(U8Array backRefWindow, U8Array lookaheadWindow)
 {
@@ -26,17 +27,107 @@ CompressBackReference compressionLZ4NaiveLinearBackRefMatch(U8Array backRefWindo
     return br;
 }
 
+CompressBackReference compressionLZ4NaiveLinearBackRefMatch2(BaseArena *arena, CompressionLZ4MSubByteDict *dict, U8Array backRefWindow, U8ArrayList lookaheadsList)
+{
+    CompressBackReference br = {0};
+
+    for(u64 i = 0; i < backRefWindow.len; i++)
+    {
+        U8Array subbytes = {.data = backRefWindow.data + i, .len = backRefWindow.len - i};
+        if(lookaheadsList.len != 0 && backRefWindow.data[i] == lookaheadsList.first->val.data[0])
+        {
+            BASE_LIST_FOREACH(U8ArrayListNode, node, lookaheadsList)
+            {
+                u64 len = baseLesser(node->val.len, subbytes.len);
+                if(!BASE_MEMCMP(backRefWindow.data + i, node->val.data, len))
+                {
+                    br.found = true;
+                    br.length = len;
+                    br.distance = backRefWindow.len - i;
+                    return br;
+                }
+            }
+        }
+
+
+        // add to to dict
+        {
+            u64 index = hashDJB2(subbytes.data, subbytes.len) % dict->slots.len;
+
+            CompressionLZ4MSubByteDictEntry *entry = baseArenaPush(arena, sizeof(CompressionLZ4MSubByteDictEntry));
+            entry->subbytes = subbytes;
+            BaseListNodePushLast(dict->slots.data[index], entry);
+        }
+    }
+
+    return br;
+}
+
+
+CompressBackReference compressionLZ4DictBackRefMatch(BaseArena *arena, CompressionLZ4MSubByteDict *dict, U8Array backRefWindow, U8Array lookaheadWindow)
+{
+    CompressBackReference br = {0};
+
+    BaseArenaTemp temp = baseTempBegin(&arena, 1);
+    {
+        U8ArrayList lookaheadsList = {0};
+
+        for(u64 i = lookaheadWindow.len; i > 0; --i)
+        {
+            U8ArrayListPushLast(temp.arena, &lookaheadsList, (U8Array){.data = lookaheadWindow.data, .len = i});
+        }
+        
+        BASE_LIST_FOREACH(U8ArrayListNode, node, lookaheadsList)
+        {
+            u64 index = hashDJB2(node->val.data, node->val.len) % dict->slots.len;
+
+            CompressionLZ4MSubByteDictSlot slot = dict->slots.data[index];
+            BASE_LIST_FOREACH(CompressionLZ4MSubByteDictEntry, slotEntry, slot)
+            {
+                if(slotEntry->subbytes.len == node->val.len)
+                {
+                    if(!BASE_MEMCMP(slotEntry->subbytes.data, node->val.data, node->val.len))
+                    {
+                        // found, use
+                        br.found = true;
+                        br.distance = (backRefWindow.data + backRefWindow.len) - slotEntry->subbytes.data;
+                        br.length = node->val.len;
+
+                        baseTempEnd(temp); 
+                        return br;
+                    }
+                }
+
+
+            }
+        }
+
+        if(br.found != true)
+        {
+            br = compressionLZ4NaiveLinearBackRefMatch2(arena, dict, backRefWindow, lookaheadsList);
+        }
+    }
+    baseTempEnd(temp);
+
+    return br;
+}
+
 CompressionLZ4MBlockCompoundList compressionLZ4MCollectBlockCompounds(BaseArena *arena, U8Array input)
 {
     CompressionLZ4MBlockCompoundList compList = {0};
 
-    u64 backRefWindowMaxLen = BASE_KILOBYTES(32);
-    u64 lookaheadWindowMaxLen = BASE_BYTES(255);
+    u64 backRefWindowMaxLen = BASE_KILOBYTES(64);
+    u64 lookaheadWindowMaxLen = BASE_BYTES(128);
 
     U8Array backRefWindow = {.data = null, .len = 0};
     U8Array lookaheadWindow = {.data = null, .len = 0};
 
     u64 bytesRead = 0;
+
+    CompressionLZ4MSubByteDict backrefDict = {0};
+    backrefDict.slots.len = 569;
+    backrefDict.slots.data = baseArenaPush(arena, sizeof(CompressionLZ4MSubByteDictSlot) * backrefDict.slots.len);
+
     while(bytesRead < input.len)
     {
         u64 backRefWindowLen = (baseLesser(bytesRead, backRefWindowMaxLen));
@@ -88,6 +179,34 @@ CompressionLZ4MBlockCompoundList compressionLZ4MCollectBlockCompounds(BaseArena 
     return compList;
 }
 
+u64 compressionLZ4MCalculateNumOfExtraMatchlenBytes(CompressionLZ4MBlockCompound block)
+{
+    u64 size = 0;
+    switch(block.kind)
+    {
+        case COMPRESSION_LZM4_BLOCK_COMPOUND_LITERAL:
+        {
+            if(block.next != null)
+            {
+                size = compressionLZ4MCalculateNumOfExtraMatchlenBytes(*block.next);
+            }
+        }break;
+
+        case COMPRESSION_LZM4_BLOCK_COMPOUND_BACKREF:
+        {
+            i64 l = (i64)block.backref.length - 15 - COMPRESSION_LZ4M_MINIMUM_MATCHLEN;
+            while(l >= 0)
+            {
+                size += 1;
+
+                l -= 255;
+            }
+        }break;
+    }
+
+    return size;
+}
+
 u64 compressionLZ4MCalculateCompressedOutputSize(CompressionLZ4MBlockCompoundList compList)
 {
     u64 size = 0;
@@ -111,22 +230,7 @@ u64 compressionLZ4MCalculateCompressedOutputSize(CompressionLZ4MBlockCompoundLis
 
                 size += node->literals.len; // bytes for literal
                 size += 2;
-
-                u64 matchlenNumBytes = 0;
-                if(node->next != null)
-                {
-                   {
-                        i64 l = (i64)node->next->backref.length - 15 - COMPRESSION_LZ4M_MINIMUM_MATCHLEN;
-                        while(l >= 0)
-                        {
-                            size += 1;
-
-                            l -= 255;
-                        }
-                    }
-                }
-
-                size += matchlenNumBytes;
+                size += compressionLZ4MCalculateNumOfExtraMatchlenBytes(*node);
 
                 // the node after a literal cmpound should always be a backref,
                 // you want to skip processing tht one in the next iteration
@@ -142,19 +246,7 @@ u64 compressionLZ4MCalculateCompressedOutputSize(CompressionLZ4MBlockCompoundLis
                 size += 1; //for token byte
                 size += 2; // offset byte
 
-                u64 matchlenNumBytes = 0;
-
-                {
-                    i64 l = (i64)node->backref.length - 15 - COMPRESSION_LZ4M_MINIMUM_MATCHLEN;
-                    while(l >= 0)
-                    {
-                        size += 1;
-
-                        l -= 255;
-                    }
-                }
-
-                size += matchlenNumBytes;
+                size += compressionLZ4MCalculateNumOfExtraMatchlenBytes(*node);
             }break;
         }
     }
@@ -162,8 +254,6 @@ u64 compressionLZ4MCalculateCompressedOutputSize(CompressionLZ4MBlockCompoundLis
     return size;
 }
 
-//TODO: important, i cant just skip the COMPRESSION_LZM4_BLOCK_COMPOUND_BACKREF in the switch,
-//sine there might be multiple BACKREF in a row back to back
 U8Array compressionLZ4MCompress(BaseArena *arena, U8Array input, CompressOptions *options)
 {
     CompressOptions compressOpt = {0};

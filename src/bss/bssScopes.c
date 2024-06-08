@@ -1,0 +1,63 @@
+#include "base\baseHash.h"
+#include "base\baseStrings.h"
+
+#include "bssScopes.h"
+
+BssSymTable BssNewSymTable(BaseArena *arena)
+{
+    const u64 slotCount = 13;
+
+    BssSymTable symtable = {0};
+    symtable.slots.data = baseArenaPushArray(arena, BssSymTableSlot, slotCount);
+    symtable.slots.len = slotCount;
+
+    return symtable;
+}
+
+BssScope *bssNewScope(BaseArena *arena, BssScope *parent)
+{
+    BssScope *scope = baseArenaPushType(arena, BssScope);
+    scope->parent = parent;
+    scope->table = BssNewSymTable(arena);
+
+    return scope;
+}
+
+u64 bssScopeCalculateInsertIndex(BssScope *bssScope, str8 s)
+{
+    u64 hash = hashDJB2(s.data, s.len);
+    u64 index = hash % bssScope->table.slots.len;
+
+    return index;
+}
+
+BssSymTableSlotEntry *bssScopeAddEntry(BssScope *bssScope, BssSymTableSlotEntry *entry)
+{
+    u64 index = bssScopeCalculateInsertIndex(bssScope, entry->name);
+    BaseListNodePushFirst(bssScope->table.slots.data[index], entry);
+
+    return entry;
+}
+
+BssSymTableSlotEntry *bssScopeFindEntryFromName(BssScope *bssScope, bool checkParent, str8 name)
+{
+    u64 index = bssScopeCalculateInsertIndex(bssScope, name);
+
+    BssSymTableSlotEntry *found = null;
+
+    BASE_LIST_FOREACH(BssSymTableSlotEntry, entry, bssScope->table.slots.data[index])
+    {
+        if(baseStringsStrEquals(name, entry->name, 0))
+        {
+            found = entry;
+            break;
+        }
+    }
+
+    if (found == null && ((bssScope->parent != null) && checkParent))
+    {
+        found = bssScopeFindEntryFromName(bssScope->parent, checkParent, name);
+    }
+
+    return found;
+}

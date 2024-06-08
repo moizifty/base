@@ -6,6 +6,18 @@
         "*.c": "c",
         "compressionLZ.C": "c",
         "list": "c",
-        "cmath": "c"
+        "cmath": "c",
+        "xutility": "c",
+        "array": "c",
+        "vector": "c",
+        "xstring": "c",
+        "format": "c",
+        "algorithm": "c",
+        "chrono": "c",
+        "optional": "c",
+        "system_error": "c",
+        "type_traits": "c",
+        "xlocmon": "c",
+        "xtr1common": "c"
     }
 }
