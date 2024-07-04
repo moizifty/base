@@ -10,11 +10,11 @@ typedef struct BssTypeObjMemb BssTypeObjMemb;
 typedef struct BssTypeFuncParam BssTypeFuncParam;
 typedef struct BssTypeTable BssTypeTable;
 typedef struct BssTypeList BssTypeList;
-typedef struct BssTypeObjMembList BssTypeObjMembList;
-typedef struct BssTypeFuncParamList BssTypeFuncParamList;
 
 typedef enum BssTypeKind
 {
+    BSS_TYPE_INVALID = 0,
+
     BSS_TYPE_INT,
     BSS_TYPE_BOOL,
     BSS_TYPE_STRING,
@@ -35,7 +35,7 @@ typedef struct BssType
         struct
         {
             BssType *ret;
-            BssTypeFuncParamList *params;
+            struct BssScope *scope;
         }func;
 
         struct
@@ -45,30 +45,10 @@ typedef struct BssType
 
         struct
         {
-            BssTypeObjMembList *membs;
+            struct BssScope *membScope;
         }obj;
     };
 }BssType;
-
-typedef struct BssTypeObjMemb
-{
-    struct BssTypeObjMemb *next;
-    struct BssTypeObjMemb *prev;
-    
-    BssTok name;
-    BssType *type;
-
-    i64 index;
-}BssTypeObjMemb;
-
-typedef struct BssTypeFuncParam
-{
-    struct BssTypeFuncParam *next;
-    struct BssTypeFuncParam *prev;
-
-    BssTok name;
-    BssType *type;
-}BssTypeFuncParam;
 
 BASE_CREATE_EFFICIENT_LL_DECLS(BssTypeList, BssType);
 
@@ -77,22 +57,20 @@ typedef struct BssTypeTable
     BssTypeList entries;
 }BssTypeTable;
 
-BASE_CREATE_EFFICIENT_LL_DECLS(BssTypeObjMembList, BssTypeObjMemb);
-BASE_CREATE_EFFICIENT_LL_DECLS(BssTypeFuncParamList, BssTypeFuncParam);
-
 BssType *bssAllocType(BaseArena *arena, BssTypeKind kind);
 BssType *bssAllocTypeInt(BaseArena *arena, BssTypeTable *typeTable);
 BssType *bssAllocTypeBool(BaseArena *arena, BssTypeTable *typeTable);
 BssType *bssAllocTypeString(BaseArena *arena, BssTypeTable *typeTable);
-BssType *bssAllocTypeFunc(BaseArena *arena, BssTypeTable *typeTable, BssType *ret, BssTypeFuncParamList *params);
+BssType *bssAllocTypeFunc(BaseArena *arena, BssTypeTable *typeTable, BssType *ret, struct BssScope *scope);
 BssType *bssAllocTypeArray(BaseArena *arena, BssTypeTable *typeTable, BssType *base);
-BssType *bssAllocTypeObj(BaseArena *arena, BssTypeTable *typeTable, BssTypeObjMembList *membs);
+BssType *bssAllocTypeObj(BaseArena *arena, BssTypeTable *typeTable, struct BssScope *scope);
 
 BssTypeObjMemb *bssAllocTypeObjMemb(BaseArena *arena, BssTok name, BssType *type, i64 index);
 
 bool bssAreBssTypesEqual(BssType *a, BssType *b);
 bool bssIsTypeArray(BssType *a);
 bool bssIsTypeInt(BssType *a);
+bool bssIsTypeBool(BssType *a);
 bool bssIsTypeString(BssType *a);
 bool bssIsTypeObj(BssType *a);
 bool bssIsTypeFunc(BssType *a);

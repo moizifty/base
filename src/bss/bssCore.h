@@ -10,7 +10,9 @@ typedef struct BSSInterpretorState
     BaseArena *parserArena;
     BaseArena *checkerArena;
     
-    struct BssLexerStateList *lexed;
+    struct BssLexerState *lState;
+    struct BssParserState *pState;
+    struct BssCheckerState *cState;
 }BSSInterpretorState;
 
 
@@ -55,6 +57,7 @@ typedef struct BssTok
     BssTokPos pos;
 
     str8 lexeme;
+    bool isFmtStr;
 }BssTok;
 
 BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(BssTokArray, BssTok);
@@ -79,5 +82,6 @@ typedef struct BssTokChunkList
 
 
 i64 bssGetEscapeCharValue(str8 escapeCharString);
+str8 bssGetStr8RepFromTokLexeme(BaseArena *arena, BssTok tok);
 
 #endif

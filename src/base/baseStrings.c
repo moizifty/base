@@ -1,3 +1,4 @@
+#include "baseCore.h"
 #include "baseMemory.h"
 #include "baseStrings.h"
 #include "baseThreads.h"

@@ -14,6 +14,46 @@
 
 BASE_CREATE_LL_DEFS(U8ArrayList, U8Array);
 
+void U8ChunkListPushLast(BaseArena *arena, U8ChunkList *l, u8 u)
+{
+    if(!BASE_ANY_PTR(l) || (l->last->chunk.len >= l->last->cap))
+    {
+        U8ChunkListNode *n = baseArenaPushType(arena, U8ChunkListNode);
+        n->cap = l->defaultCap == 0 ? BASE_U8CHUNKLIST_DEFAULT_CAP : l->defaultCap;
+        n->chunk.data = baseArenaPushArray(arena, u8, n->cap);
+        n->chunk.len = 0;
+
+        BasePtrListNodePushLast(l, n);
+    }
+    
+    l->last->chunk.data[l->last->chunk.len] = u;
+    l->last->chunk.len += 1;
+    l->totalLen += 1;
+}
+U8Array U8ChunkListFlattenToArray(BaseArena *arena, U8ChunkList *l)
+{
+    U8Array flattened = {0};
+
+    if (!BASE_ANY_PTR(l))
+    {
+        return flattened;
+    }
+
+    flattened.data = baseArenaPushArray(arena, u8, l->totalLen);
+    flattened.len = l->totalLen;
+
+    u64 i = 0;
+    BASE_PTR_LIST_FOREACH(U8ChunkListNode, chunk, l)
+    {
+        for(u64 j = 0; j < chunk->chunk.len; j++)
+        {
+            flattened.data[i++] = chunk->chunk.data[j];
+        }
+    }
+
+    return flattened;
+}
+
 void BaseMainThreadEntry(ProgramMainFunc programMain, i64 argc, i8 **argv)
 {
     BASE_UNUSED_PARAM(argc);

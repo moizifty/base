@@ -315,8 +315,26 @@ ASTExpr *bssParserExpr(BSSInterpretorState *iState, BssParserState *pState)
 {
     ASTExpr *expr = null;
 
-    expr = bssParserExprLogical(iState, pState);
+    expr = bssParserExprEq(iState, pState);
     while((PARSER_CURR_TOK(pState).kind == '+'))
+    {
+        BssTok op = PARSER_CURR_TOK(pState);
+        PARSER_ADV_TOK(pState);
+
+        ASTExpr *rhs = bssParserExprEq(iState, pState);
+        
+        expr = bssAllocASTExprBinary(iState->parserArena, expr->startTok, rhs->endTok, op, expr, rhs);
+    }
+
+    return expr;
+}
+ASTExpr *bssParserExprEq(BSSInterpretorState *iState, BssParserState *pState)
+{
+    ASTExpr *expr = null;
+
+    expr = bssParserExprLogical(iState, pState);
+    while((PARSER_CURR_TOK(pState).kind == TOK_EQ_OP) || 
+          (PARSER_CURR_TOK(pState).kind == TOK_NEQ_OP))
     {
         BssTok op = PARSER_CURR_TOK(pState);
         PARSER_ADV_TOK(pState);

@@ -46,14 +46,10 @@ void ProgramMain(CmdLineHashMap *cmdline)
 	BssParserState s = {.lexer = ls};
     ASTProject *proj = bssParserProject(&bs, &s);
 
-	for(u64 i = 0; i < toks.len; i++)
-	{
-		baseColPrintf("%d: %S\n", toks.data[i].kind, toks.data[i].lexeme);
-	}
-
 	BssCheckerState *cs = bssCheckerInitFromProject(&bs, proj);
 	bssCheckerCheckWholeProject(&bs, cs);
-
+	bssInterpWholeProject(&bs, cs);
+	
 	OSGfxState *state = OSGfxInit(generalArena);
 	OSHandle window = OSGfxWindowOpen(STR8_LIT("Test"), Vec2i(-1, -1), Vec2i(-1, -1));
 	

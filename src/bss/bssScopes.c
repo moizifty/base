@@ -3,6 +3,9 @@
 
 #include "bssScopes.h"
 
+BASE_CREATE_EFFICIENT_LL_DEFS(BssValueList, BssValue);
+BASE_CREATE_EFFICIENT_LL_DEFS(BssValueObjMembList, BssValueObjMemb);
+
 BssSymTable BssNewSymTable(BaseArena *arena)
 {
     const u64 slotCount = 13;
@@ -34,7 +37,10 @@ u64 bssScopeCalculateInsertIndex(BssScope *bssScope, str8 s)
 BssSymTableSlotEntry *bssScopeAddEntry(BssScope *bssScope, BssSymTableSlotEntry *entry)
 {
     u64 index = bssScopeCalculateInsertIndex(bssScope, entry->name);
-    BaseListNodePushFirst(bssScope->table.slots.data[index], entry);
+    BaseListNodePushFirstEx(bssScope->table.slots.data[index], entry, hashPrev, hashNext);
+    BaseListNodePushLastEx(bssScope->table, entry, prev, next);
+
+    entry->ownerBssScope = bssScope;
 
     return entry;
 }
@@ -45,7 +51,7 @@ BssSymTableSlotEntry *bssScopeFindEntryFromName(BssScope *bssScope, bool checkPa
 
     BssSymTableSlotEntry *found = null;
 
-    BASE_LIST_FOREACH(BssSymTableSlotEntry, entry, bssScope->table.slots.data[index])
+    BASE_LIST_FOREACH_EX(BssSymTableSlotEntry, entry, bssScope->table.slots.data[index], hashNext)
     {
         if(baseStringsStrEquals(name, entry->name, 0))
         {

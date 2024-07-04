@@ -48,14 +48,24 @@
 #define BASE_MEMZERO(DEST, SZ) BASE_MEMSET((DEST), 0, (SZ))
 
 // lists, and stuff
-#define BASE_PTR_LIST_FOREACH(NODETYPE, NAME, LIST)		for(NODETYPE *NAME = (LIST)->first; (NAME) != null; (NAME) = (NAME)->next)
-#define BASE_LIST_FOREACH(NODETYPE, NAME, LIST)			for(NODETYPE *NAME = (LIST).first; (NAME) != null; (NAME) = (NAME)->next)
+#define BASE_LIST_FOREACH_EX(NODETYPE, NAME, LIST, next)			for(NODETYPE *NAME = (LIST).first; (NAME) != null; (NAME) = (NAME)->next)
+#define BASE_PTR_LIST_FOREACH_EX(NODETYPE, NAME, LIST, next)		BASE_LIST_FOREACH_EX(NODETYPE, NAME, *(LIST), next)
 
-#define BASE_PTR_LIST_REVFOREACH(NODETYPE, NAME, LIST)		for(NODETYPE *NAME = (LIST)->last; (NAME) != null; (NAME) = (NAME)->prev)
-#define BASE_LIST_REVFOREACH(NODETYPE, NAME, LIST)			for(NODETYPE *NAME = (LIST).last; (NAME) != null; (NAME) = (NAME)->prev)
+#define BASE_LIST_REVFOREACH_EX(NODETYPE, NAME, LIST, prev)			for(NODETYPE *NAME = (LIST).last; (NAME) != null; (NAME) = (NAME)->prev)
+#define BASE_PTR_LIST_REVFOREACH_EX(NODETYPE, NAME, LIST, prev)		BASE_LIST_REVFOREACH_EX(NODETYPE, NAME, *(LIST), prev)	
 
-#define BASE_PTR_LIST_FOREACH_INDEX(NODETYPE, NAME, LIST, INDEX)		for(NODETYPE *NAME = (LIST)->first; (NAME) != null; (NAME) = (NAME)->next, (INDEX)++)
-#define BASE_LIST_FOREACH_INDEX(NODETYPE, NAME, LIST, INDEX)			for(NODETYPE *NAME = (LIST).first; (NAME) != null; (NAME) = (NAME)->next, (INDEX)++)
+#define BASE_LIST_FOREACH_INDEX_EX(NODETYPE, NAME, LIST, INDEX, next)			for(NODETYPE *NAME = (LIST).first; (NAME) != null; (NAME) = (NAME)->next, (INDEX)++)
+#define BASE_PTR_LIST_FOREACH_INDEX_EX(NODETYPE, NAME, LIST, INDEX, next)		BASE_LIST_FOREACH_INDEX_EX(NODETYPE, NAME, *(LIST), INDEX, next)
+
+#define BASE_LIST_FOREACH(NODETYPE, NAME, LIST)			BASE_LIST_FOREACH_EX(NODETYPE, NAME, LIST, next)
+#define BASE_PTR_LIST_FOREACH(NODETYPE, NAME, LIST)		BASE_PTR_LIST_FOREACH_EX(NODETYPE, NAME, LIST, next)
+
+#define BASE_LIST_REVFOREACH(NODETYPE, NAME, LIST)			BASE_LIST_REVFOREACH_EX(NODETYPE, NAME, LIST, prev)		
+#define BASE_PTR_LIST_REVFOREACH(NODETYPE, NAME, LIST)		BASE_PTR_LIST_REVFOREACH_EX(NODETYPE, NAME, LIST, prev)	
+
+#define BASE_LIST_FOREACH_INDEX(NODETYPE, NAME, LIST, INDEX)			BASE_LIST_FOREACH_INDEX_EX(NODETYPE, NAME, LIST, INDEX, next)
+#define BASE_PTR_LIST_FOREACH_INDEX(NODETYPE, NAME, LIST, INDEX)		BASE_PTR_LIST_FOREACH_INDEX_EX(NODETYPE, NAME, LIST, INDEX, next)
+
 
 #define CheckNull(p) ((p)==0)
 #define SetNull(p) ((p)=0)
@@ -69,14 +79,24 @@
 #define BaseDllNodePushLast(f, l, n)    BaseDllNodeInsertEx(f, l, l, n, prev, next)
 #define BaseDllNodePushFirst(f, l, n)   BaseDllNodeInsertEx(l, f, f, n, next, prev)
 
-#define BaseListNodePushLast(list, n)   (BaseDllNodePushLast((list).first, (list).last, n), (list).len++)
-#define BasePtrListNodePushLast(list, n)   (BaseDllNodePushLast((list)->first, (list)->last, n), (list)->len++)
+#define BaseListNodePushLastEx(list, n, prev, next)   (BaseDllNodeInsertEx((list).first, (list).last, (list).last, n, prev, next), (list).len++)
+#define BasePtrListNodePushLastEx(list, n, prev, next)   (BaseListNodePushLastEx(*list, n, prev, next))
 
-#define BaseListNodePushFirst(list, n)   (BaseDllNodePushFirst((list).first, (list).last, n), (list).len++)
-#define BasePtrListNodePushFirst(list, n)   (BaseDllNodePushFirst((list)->first, (list)->last, n), (list)->len++)
+#define BaseListNodePushFirstEx(list, n, prev, next)   (BaseDllNodeInsertEx((list).last, (list).first, (list).first, n, next, prev), (list).len++)
+#define BasePtrListNodePushFirstEx(list, n, prev, next) (BaseListNodePushFirstEx(*(list), n, next, prev))
 
-#define BaseListNodeInsert(list, p, n)   (BaseDllNodeInsert((list).first, (list).last, p, n), (list).len++)
-#define BasePtrListNodeInsert(list, p, n)   (BaseDllNodeInsert((list)->first, (list)->last, p, n), (list)->len++)
+#define BaseListNodeInsertEx(list, p, n, prev, next)   (BaseDllNodeInsertEx((list).first, (list).last, p, n, prev, next), (list).len++)
+#define BasePtrListNodeInsertEx(list, p, n, prev, next)   (BaseListNodeInsertEx(*(list), p, n, prev, next))
+
+#define BaseListNodePushLast(list, n)   (BaseListNodePushLastEx((list), (n), prev, next))
+#define BasePtrListNodePushLast(list, n)   (BasePtrListNodePushLastEx((list), (n), prev, next))
+
+#define BaseListNodePushFirst(list, n)   (BaseListNodePushFirstEx((list), (n), next, prev))
+#define BasePtrListNodePushFirst(list, n)   (BasePtrListNodePushFirstEx((list), (n), next, prev))
+
+#define BaseListNodeInsert(list, p, n)   (BaseListNodeInsertEx((list), p, n, prev, next))
+#define BasePtrListNodeInsert(list, p, n)   (BasePtrListNodeInsertEx((list), p, n, prev, next))
+
 
 #define BASE_ANY_PTR(pL)     (((pL) != NULL) && (pL)->len != 0)
 #define BASE_ANY(L)     ((L).len != 0)
@@ -237,11 +257,36 @@ BASE_CREATE_ARRAY_VIEW_DEFS(NAME, ELEM)
 
 BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(U8Array, u8);
 
+#define BASE_U8CHUNKLIST_DEFAULT_CAP	128
+typedef struct U8ChunkListNode
+{
+	struct U8ChunkListNode *next;
+	struct U8ChunkListNode *prev;
+
+	U8Array chunk;
+	u64 cap;
+}U8ChunkListNode;
+
+typedef struct U8ChunkList
+{
+	U8ChunkListNode *first;
+	U8ChunkListNode *last;
+	
+	u64 len;
+	u64 totalLen;
+
+	u64 defaultCap;
+}U8ChunkList;
+
+void U8ChunkListPushLast(struct BaseArena *arena, U8ChunkList *l, u8 n);
+U8Array U8ChunkListFlattenToArray(struct BaseArena *arena, U8ChunkList *l);
+
 // disable this dumb warning
 #pragma warning( push )
 #pragma warning( disable : 4115)
 BASE_CREATE_LL_DECLS(U8ArrayList, U8Array);
 #pragma warning( pop ) 
+
 
 // program entry related
 typedef struct CmdLineHashMap CmdLineHashMap;

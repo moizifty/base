@@ -189,6 +189,8 @@ LEX_START:
             }
             else if (lState->ch == '{')
             {
+                tok.isFmtStr = true;
+                bool prevOpenBrack = true;
                 u64 bracketCount = 1;
                 while(lState->ch != '}' || (bracketCount != 0))
                 {
@@ -198,12 +200,22 @@ LEX_START:
                     if(lState->ch == '}')
                     {
                         bracketCount -= 1;
+                        prevOpenBrack = false;
                     }
                     else if(lState->ch == '{')
                     {
-                        bracketCount += 1;
-                    }
+                        if(prevOpenBrack)
+                        {
+                            tok.isFmtStr = false;
+                        }
 
+                        bracketCount += 1;
+                        prevOpenBrack = true;
+                    }
+                    else
+                    {
+                        prevOpenBrack = false;
+                    }
                 }
             }
 

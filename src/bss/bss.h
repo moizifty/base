@@ -8,5 +8,6 @@
 #include "bss\bssTypes.h"
 #include "bss\bssScopes.h"
 #include "bss\bssChecker.h"
+#include "bss\bssInterp.h"
 
 #endif

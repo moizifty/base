@@ -168,6 +168,9 @@ typedef struct ASTExpr
     };
 
     BssType *checkType;
+    struct BssScope *scope;
+    struct BssSymTableSlotEntry *idenEntry;
+    struct BssValue *value;
 }ASTExpr;
 
 typedef struct ASTProject

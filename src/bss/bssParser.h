@@ -23,6 +23,7 @@ ASTStmtList bssParserStmtList(BSSInterpretorState *iState, BssParserState *pStat
 ASTBlock *bssParserBlock(BSSInterpretorState *iState, BssParserState *pState);
 
 ASTExpr *bssParserExpr(BSSInterpretorState *iState, BssParserState *pState);
+ASTExpr *bssParserExprEq(BSSInterpretorState *iState, BssParserState *pState);
 ASTExpr *bssParserExprLogical(BSSInterpretorState *iState, BssParserState *pState);
 ASTExpr *bssParserExprPost(BSSInterpretorState *iState, BssParserState *pState);
 ASTExpr *bssParserExprPrimary(BSSInterpretorState *iState, BssParserState *pState);

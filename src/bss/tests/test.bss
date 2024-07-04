@@ -1,46 +1,38 @@
-libbssPath = "{#dir}\libbss";
-project libbss = "{libbssPath}\build.bss";
-build libbss {"build"};
+print("~nBuilding {"#"}~n~n");
 
 this = {
-    src = quoteit(getfiles("{#dir}\src\**\*.c")),
-    objs = quoteit(getfiles("{libbssPath}\objs\**\*.obj")) ,
+    src = quoteit(getfiles("#\src\**\*.c")),
+    objs = {
+        ""
+    },
     libs = {
-        "shlwapi.lib"
+        ""
     },
 };
 
-if hasflag("build")
+exePath = "#\builds\main.exe";
+
+if hasflag("-build")
 {
-    onedrivefolder = (run "echo %onedrive%").out;
-
-    baselib = pathexists("{onedrivefolder}\Documents\Programming\C\base");
-
     compiler = "cl";
 
-    objs = expand(this.objs, " ");
-    src = expand(this.src, " ");
-    flags = "/Zi";
-
-    includes = "/I~"{"{#currdir}\src\include"}~" /I~"{baselib}~" /I~"{"{libbssPath}\src\include"}~"";
-
-    link = "/link {expand(this.libs, " ")}";
-    outputName = "/Fe~"{"{#currdir}\builds\bss.exe"}~"";
-    objFolder = "/Fo~"{"{#currdir}\builds/"}~"";
-
-    command = "{compiler} {outputName} {objFolder} {flags} {includes} {src} {objs} {link}";
+    includeArg = "/I" + "src";
+    outputName = "/Fe~"{exePath}~"";
+    objFolder = "/Fo~"{"#\builds/"}~"";
+    
+    command = "{compiler} /Zi {includeArg} src\tests\main.c {outputName} {objFolder} /Wall /wd4062 /wd4063 /wd4061 /wd4255 /wd4201 /wd4774 /wd4668 /wd4464 /wd5045 /wd4820 /DBUILD_CONSOLE_APP ";
     output = run command;
 
     // for some BS reason msvc c compiler dumps errors in the stdout not stderr?
-    print("{output.out}~n");
+    print("{output}~n");
 
-    deleteObjsCommand = run "del ~"{"{#currdir}\builds\*.obj"}~"";
+    deleteObjsCommand = run "del ~"{"#\builds\*.obj"}~"";
     print("{deleteObjsCommand}");
-
-    print("Finished Building bss!~n");
 }
 
-if hasflag("test") || hasflag("run")
+if hasflag("-test")
 {
-    print("{run "~"{"#\builds\bss.exe"}~" ~"{"{#currdir}\build.bss"}~" build"}");
+    print("{(run "~"{exePath}~"").out}");
 }
+
+print("~nFinished Building {"#"}~n");

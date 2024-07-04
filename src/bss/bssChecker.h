@@ -12,6 +12,9 @@ typedef struct BssCheckerState
 {
     ASTProject *proj;
     BssTypeTable typeTable;
+
+    BssType *runOutput;
+    BssType *projectType;
 }BssCheckerState;
 
 void bssCheckerError(BSSInterpretorState *iState, BssTok tok, char *msg, ...);
@@ -22,6 +25,7 @@ BssCheckerState *bssCheckerInitFromProject(BSSInterpretorState *iState, ASTProje
 void bssCheckerCheckWholeProject(BSSInterpretorState *iState, BssCheckerState *cState);
 
 void bssCheckerCheckStmts(BSSInterpretorState *iState, BssCheckerState *cState, ASTStmtList stmts, BssScope *parentScope);
+void bssCheckerCheckStmtsEx(BSSInterpretorState *iState, BssCheckerState *cState, ASTStmtList stmts, BssScope *parentScope, BssScope *newScope);
 void bssCheckerCheckStmt(BSSInterpretorState *iState, BssCheckerState *cState, ASTStmt *stmt, BssScope *scope);
 void bssCheckerCheckExpr(BSSInterpretorState *iState, BssCheckerState *cState, ASTExpr *expr, BssScope *scope);
 
