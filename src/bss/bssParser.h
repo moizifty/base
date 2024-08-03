@@ -5,30 +5,25 @@
 #include "bssLexer.h"
 #include "bssAST.h"
 
-#define PARSER_CURR_TOK(pCS)    ((pCS)->lexer->tok)
-#define PARSER_ADV_TOK(pCS)    ((pCS)->lexer->tok = bssLexerNext((pCS)->lexer))
+#define PARSER_CURR_TOK(iCS)    ((iCS)->lState.tok)
+#define PARSER_ADV_TOK(iCS)    ((iCS)->lState.tok = bssLexerNext((iCS)))
 
-typedef struct BssParserState
-{
-    BssLexerState *lexer;
-}BssParserState;
+void bssParserError(struct BSSInterpretorState *iState, BssTok tok, char *msg, ...);
 
-void bssParserError(BSSInterpretorState *iState, BssTok tok, char *msg, ...);
+void bssParserProject(struct BSSInterpretorState *iState);
 
-ASTProject *bssParserProject(BSSInterpretorState *iState, BssParserState *pState);
+ASTStmt *bssParserStmt(struct BSSInterpretorState *iState);
+ASTStmtList bssParserStmtList(struct BSSInterpretorState *iState, BssTokKind tokToEndParse);
 
-ASTStmt *bssParserStmt(BSSInterpretorState *iState, BssParserState *pState);
-ASTStmtList bssParserStmtList(BSSInterpretorState *iState, BssParserState *pState, BssTokKind tokToEndParse);
+ASTBlock *bssParserBlock(struct BSSInterpretorState *iState);
 
-ASTBlock *bssParserBlock(BSSInterpretorState *iState, BssParserState *pState);
+ASTExpr *bssParserExpr(struct BSSInterpretorState *iState);
+ASTExpr *bssParserExprEq(struct BSSInterpretorState *iState);
+ASTExpr *bssParserExprLogical(struct BSSInterpretorState *iState);
+ASTExpr *bssParserExprPost(struct BSSInterpretorState *iState);
+ASTExpr *bssParserExprPrimary(struct BSSInterpretorState *iState);
 
-ASTExpr *bssParserExpr(BSSInterpretorState *iState, BssParserState *pState);
-ASTExpr *bssParserExprEq(BSSInterpretorState *iState, BssParserState *pState);
-ASTExpr *bssParserExprLogical(BSSInterpretorState *iState, BssParserState *pState);
-ASTExpr *bssParserExprPost(BSSInterpretorState *iState, BssParserState *pState);
-ASTExpr *bssParserExprPrimary(BSSInterpretorState *iState, BssParserState *pState);
-
-ASTNamedExpr *bssParserNamedExpr(BSSInterpretorState *iState, BssParserState *pState);
-ASTNamedExprList bssParserNamedExprList(BSSInterpretorState *iState, BssParserState *pState, BssTokKind tokToEndParse);
+ASTNamedExpr *bssParserNamedExpr(struct BSSInterpretorState *iState);
+ASTNamedExprList bssParserNamedExprList(struct BSSInterpretorState *iState, BssTokKind tokToEndParse);
 
 #endif

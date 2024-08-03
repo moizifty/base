@@ -9,7 +9,7 @@
 # define COMPILER_MSVC 1
 
 # if defined(_WIN32)
-#  define OS_WINDOWS 1
+#  define OS_WIN32 1
 # else
 #  error _MSC_VER is defined, but _WIN32 is not. This setup is not supported.
 # endif
@@ -157,8 +157,8 @@
 #if !defined(COMPILER_CLANG)
 # define COMPILER_CLANG 0
 #endif
-#if !defined(OS_WINDOWS)
-# define OS_WINDOWS 0
+#if !defined(OS_WIN32)
+# define OS_WIN32 0
 #endif
 #if !defined(OS_LINUX)
 # define OS_LINUX 0
@@ -209,7 +209,7 @@
 #define RENDERER_D3D11 1
 
 #if !defined(RENDERER_BACKEND)
-# if OS_WINDOWS
+# if OS_WIN32
 #  define RENDERER_BACKEND RENDERER_D3D11
 # else
 #  error No renderer backend exists

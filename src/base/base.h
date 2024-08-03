@@ -11,5 +11,6 @@
 #include "baseCmdLine.h"
 #include "baseMath.h"
 #include "baseBitstream.h"
+#include "baseLog.h"
 
 #endif

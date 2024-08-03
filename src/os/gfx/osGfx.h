@@ -6,7 +6,7 @@
 #include "base\baseMemory.h"
 #include "os\core\osCore.h"
 
-#ifdef OS_WINDOWS
+#ifdef OS_WIN32
 #include "win32\osGfxWin32.h"
 #else
 #error Platform not defined

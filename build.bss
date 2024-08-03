@@ -1,7 +1,7 @@
-print("~nBuilding {"#"}~n~n");
+print("~nBuilding {cwd}~n~n");
 
 this = {
-    src = quoteit(getfiles("#\src\**\*.c")),
+    src = quoteit(getfiles("{cwd}\src\", "*.c", true)),
     objs = {
         ""
     },
@@ -10,29 +10,29 @@ this = {
     },
 };
 
-exePath = "#\builds\main.exe";
+exePath = "{cwd}\builds\main.exe";
 
-if hasflag("-build")
+if hasflag("build")
 {
     compiler = "cl";
 
     includeArg = "/I" + "src";
     outputName = "/Fe~"{exePath}~"";
-    objFolder = "/Fo~"{"#\builds/"}~"";
+    objFolder = "/Fo~"{"{cwd}\builds/"}~"";
     
     command = "{compiler} /Zi {includeArg} src\tests\main.c {outputName} {objFolder} /Wall /wd4062 /wd4063 /wd4061 /wd4255 /wd4201 /wd4774 /wd4668 /wd4464 /wd5045 /wd4820 /DBUILD_CONSOLE_APP ";
     output = run command;
 
-    // for some BS reason msvc c compiler dumps errors in the stdout not stderr?
-    print("{output}~n");
+    print("{output.stdout}~n");
+    print("{output.stderr}~n");
 
-    deleteObjsCommand = run "del ~"{"#\builds\*.obj"}~"";
+    deleteObjsCommand = run "del ~"{"{cwd}\builds\*.obj"}~"";
     print("{deleteObjsCommand}");
 }
 
-if hasflag("-test")
+if hasflag("test")
 {
     print("{(run "~"{exePath}~"").out}");
 }
 
-print("~nFinished Building {"#"}~n");
+print("~nFinished Building {cwd}~n");

@@ -103,9 +103,9 @@ void bssParserError(BSSInterpretorState *iState, BssTok tok, char *msg, ...)
     va_end(args);
 }
 
-ASTProject *bssParserProject(BSSInterpretorState *iState, BssParserState *pState)
+void bssParserProject(BSSInterpretorState *iState)
 {
-    ASTStmtList stmts = bssParserStmtList(iState, pState, TOK_END_INPUT);
+    ASTStmtList stmts = bssParserStmtList(iState, TOK_END_INPUT);
 
     BssTok startTok, endTok;
     if(BASE_ANY(stmts))
@@ -115,7 +115,7 @@ ASTProject *bssParserProject(BSSInterpretorState *iState, BssParserState *pState
     }
     else
     {
-        startTok = pState->lexer->tok;
+        startTok = iState->lState.tok;
         endTok = startTok;
     }
 
@@ -124,7 +124,7 @@ ASTProject *bssParserProject(BSSInterpretorState *iState, BssParserState *pState
     project->endTok = endTok;
     project->stmts = stmts;
 
-    return project;
+    iState->pState.proj = project;
 }
 
 bool bssParserDoesStmtNeedSemiColon(ASTStmt *stmt)
@@ -142,60 +142,60 @@ bool bssParserDoesStmtNeedSemiColon(ASTStmt *stmt)
     }
 }
 
-ASTStmt *bssParserStmt(BSSInterpretorState *iState, BssParserState *pState)
+ASTStmt *bssParserStmt(BSSInterpretorState *iState)
 {
     ASTStmt *stmt = null;
 
-    switch(PARSER_CURR_TOK(pState).kind)
+    switch(PARSER_CURR_TOK(iState).kind)
     {
         case TOK_PROJECT:
         {
-            PARSER_ADV_TOK(pState);
+            PARSER_ADV_TOK(iState);
 
             BssTok iden = {0};
-            if(PARSER_CURR_TOK(pState).kind != TOK_IDEN)
+            if(PARSER_CURR_TOK(iState).kind != TOK_IDEN)
             {
-                bssParserError(iState, PARSER_CURR_TOK(pState), "Expected identifier instead got '%S'", pState->lexer->tok);
+                bssParserError(iState, PARSER_CURR_TOK(iState), "Expected identifier instead got '%S'", PARSER_CURR_TOK(iState).lexeme);
             }
 
-            iden = PARSER_CURR_TOK(pState);
-            PARSER_ADV_TOK(pState);
+            iden = PARSER_CURR_TOK(iState);
+            PARSER_ADV_TOK(iState);
 
-            if(PARSER_CURR_TOK(pState).kind != '=')
+            if(PARSER_CURR_TOK(iState).kind != '=')
             {
-                bssParserError(iState, PARSER_CURR_TOK(pState), "Expected '=' instead got '%S'", pState->lexer->tok);
+                bssParserError(iState, PARSER_CURR_TOK(iState), "Expected '=' instead got '%S'", PARSER_CURR_TOK(iState).lexeme);
             }
 
-            PARSER_ADV_TOK(pState);
+            PARSER_ADV_TOK(iState);
 
-            ASTExpr *expr = bssParserExpr(iState, pState);
+            ASTExpr *expr = bssParserExpr(iState);
 
             stmt = bssAllocASTStmtProjDecl(iState->parserArena, iden, expr);
         }break;
 
         case TOK_BUILD:
         {
-            PARSER_ADV_TOK(pState);
+            PARSER_ADV_TOK(iState);
 
-            ASTExpr *expr = bssParserExpr(iState, pState);
+            ASTExpr *expr = bssParserExpr(iState);
 
-            ASTExpr *args = bssParserExpr(iState, pState);
+            ASTExpr *args = bssParserExpr(iState);
 
             stmt = bssAllocASTStmtBuild(iState->parserArena, expr, args);
         }break;
         
         case TOK_IF:
         {
-            PARSER_ADV_TOK(pState);
+            PARSER_ADV_TOK(iState);
 
-            ASTExpr *expr = bssParserExpr(iState, pState);
-            ASTBlock *block = bssParserBlock(iState, pState);
+            ASTExpr *expr = bssParserExpr(iState);
+            ASTBlock *block = bssParserBlock(iState);
             ASTBlock *elseblock = null;
 
-            if (PARSER_CURR_TOK(pState).kind == TOK_ELSE)
+            if (PARSER_CURR_TOK(iState).kind == TOK_ELSE)
             {
-                PARSER_ADV_TOK(pState);
-                elseblock = bssParserBlock(iState, pState);
+                PARSER_ADV_TOK(iState);
+                elseblock = bssParserBlock(iState);
             }
 
             stmt = bssAllocASTStmtIf(iState->parserArena, expr, block, elseblock);
@@ -203,44 +203,44 @@ ASTStmt *bssParserStmt(BSSInterpretorState *iState, BssParserState *pState)
 
         case TOK_FOR:
         {
-            PARSER_ADV_TOK(pState);
+            PARSER_ADV_TOK(iState);
 
             BssTok iden = {0};
-            if(PARSER_CURR_TOK(pState).kind != TOK_IDEN)
+            if(PARSER_CURR_TOK(iState).kind != TOK_IDEN)
             {
-                bssParserError(iState, PARSER_CURR_TOK(pState), "Expected identifier instead got '%S'", pState->lexer->tok);
+                bssParserError(iState, PARSER_CURR_TOK(iState), "Expected identifier instead got '%S'", PARSER_CURR_TOK(iState).lexeme);
             }
 
-            iden = PARSER_CURR_TOK(pState);
-            PARSER_ADV_TOK(pState);
+            iden = PARSER_CURR_TOK(iState);
+            PARSER_ADV_TOK(iState);
 
-            if(PARSER_CURR_TOK(pState).kind != TOK_IN)
+            if(PARSER_CURR_TOK(iState).kind != TOK_IN)
             {
-                bssParserError(iState, PARSER_CURR_TOK(pState), "Expected identifier instead got '%S'", pState->lexer->tok);
+                bssParserError(iState, PARSER_CURR_TOK(iState), "Expected identifier instead got '%S'", PARSER_CURR_TOK(iState).lexeme);
             }
 
-            PARSER_ADV_TOK(pState);
+            PARSER_ADV_TOK(iState);
 
-            ASTExpr *expr = bssParserExpr(iState, pState);
-            ASTBlock *block = bssParserBlock(iState, pState);
+            ASTExpr *expr = bssParserExpr(iState);
+            ASTBlock *block = bssParserBlock(iState);
 
             stmt = bssAllocASTStmtFor(iState->parserArena, iden, expr, block);
         }break;
 
         case (BssTokKind)'{':
         {
-            ASTBlock *block = bssParserBlock(iState, pState);
+            ASTBlock *block = bssParserBlock(iState);
             stmt = bssAllocASTStmtBlock(iState->parserArena, block);
         }break;
 
         default:
         {
-            ASTExpr *lhs = bssParserExpr(iState, pState);
-            if(PARSER_CURR_TOK(pState).kind == '=')
+            ASTExpr *lhs = bssParserExpr(iState);
+            if(PARSER_CURR_TOK(iState).kind == '=')
             {
-                PARSER_ADV_TOK(pState);
+                PARSER_ADV_TOK(iState);
 
-                ASTExpr *rhs = bssParserExpr(iState, pState);
+                ASTExpr *rhs = bssParserExpr(iState);
                 stmt = bssAllocASTStmtAssign(iState->parserArena, lhs, rhs);
             }
             else
@@ -252,24 +252,24 @@ ASTStmt *bssParserStmt(BSSInterpretorState *iState, BssParserState *pState)
 
     return stmt;
 }
-ASTStmtList bssParserStmtList(BSSInterpretorState *iState, BssParserState *pState, BssTokKind tokToEndParse)
+ASTStmtList bssParserStmtList(BSSInterpretorState *iState, BssTokKind tokToEndParse)
 {
     ASTStmtList list = {0};
     
-    while ((PARSER_CURR_TOK(pState).kind != tokToEndParse) &&
-           (PARSER_CURR_TOK(pState).kind != TOK_END_INPUT))
+    while ((PARSER_CURR_TOK(iState).kind != tokToEndParse) &&
+           (PARSER_CURR_TOK(iState).kind != TOK_END_INPUT))
     {
-        ASTStmt *stmt = bssParserStmt(iState, pState);
+        ASTStmt *stmt = bssParserStmt(iState);
 
         if(bssParserDoesStmtNeedSemiColon(stmt))
         {
-            if (PARSER_CURR_TOK(pState).kind == ';')
+            if (PARSER_CURR_TOK(iState).kind == ';')
             {
-                PARSER_ADV_TOK(pState);
+                PARSER_ADV_TOK(iState);
             }
             else
             {
-                bssParserError(iState, PARSER_CURR_TOK(pState), "Expected a semi colon after statement, instead got '%S'", PARSER_CURR_TOK(pState).lexeme);
+                bssParserError(iState, PARSER_CURR_TOK(iState), "Expected a semi colon after statement, instead got '%S'", PARSER_CURR_TOK(iState).lexeme);
             }
         }
 
@@ -279,27 +279,27 @@ ASTStmtList bssParserStmtList(BSSInterpretorState *iState, BssParserState *pStat
     return list;
 }
 
-ASTBlock *bssParserBlock(BSSInterpretorState *iState, BssParserState *pState)
+ASTBlock *bssParserBlock(BSSInterpretorState *iState)
 {
     ASTBlock *block = null;
     
     BssTok start = {0}, end = {0};
-    if(PARSER_CURR_TOK(pState).kind == '{')
+    if(PARSER_CURR_TOK(iState).kind == '{')
     {
-        start = PARSER_CURR_TOK(pState);
+        start = PARSER_CURR_TOK(iState);
 
-        PARSER_ADV_TOK(pState);
+        PARSER_ADV_TOK(iState);
 
-        ASTStmtList stmts = bssParserStmtList(iState, pState, '}');
+        ASTStmtList stmts = bssParserStmtList(iState, '}');
         
-        if(PARSER_CURR_TOK(pState).kind == '}')
+        if(PARSER_CURR_TOK(iState).kind == '}')
         {
-            end = PARSER_CURR_TOK(pState);
-            PARSER_ADV_TOK(pState);
+            end = PARSER_CURR_TOK(iState);
+            PARSER_ADV_TOK(iState);
         }
         else
         {
-            bssParserError(iState, pState->lexer->tok, "Expected '}' to close block instead got '%S'", pState->lexer->tok.lexeme);
+            bssParserError(iState, PARSER_CURR_TOK(iState), "Expected '}' to close block instead got '%S'", PARSER_CURR_TOK(iState).lexeme);
         }
 
         block = baseArenaPushType(iState->parserArena, ASTBlock);
@@ -311,125 +311,125 @@ ASTBlock *bssParserBlock(BSSInterpretorState *iState, BssParserState *pState)
     return block;
 }
 
-ASTExpr *bssParserExpr(BSSInterpretorState *iState, BssParserState *pState)
+ASTExpr *bssParserExpr(BSSInterpretorState *iState)
 {
     ASTExpr *expr = null;
 
-    expr = bssParserExprEq(iState, pState);
-    while((PARSER_CURR_TOK(pState).kind == '+'))
+    expr = bssParserExprEq(iState);
+    while((PARSER_CURR_TOK(iState).kind == '+'))
     {
-        BssTok op = PARSER_CURR_TOK(pState);
-        PARSER_ADV_TOK(pState);
+        BssTok op = PARSER_CURR_TOK(iState);
+        PARSER_ADV_TOK(iState);
 
-        ASTExpr *rhs = bssParserExprEq(iState, pState);
+        ASTExpr *rhs = bssParserExprEq(iState);
         
         expr = bssAllocASTExprBinary(iState->parserArena, expr->startTok, rhs->endTok, op, expr, rhs);
     }
 
     return expr;
 }
-ASTExpr *bssParserExprEq(BSSInterpretorState *iState, BssParserState *pState)
+ASTExpr *bssParserExprEq(BSSInterpretorState *iState)
 {
     ASTExpr *expr = null;
 
-    expr = bssParserExprLogical(iState, pState);
-    while((PARSER_CURR_TOK(pState).kind == TOK_EQ_OP) || 
-          (PARSER_CURR_TOK(pState).kind == TOK_NEQ_OP))
+    expr = bssParserExprLogical(iState);
+    while((PARSER_CURR_TOK(iState).kind == TOK_EQ_OP) || 
+          (PARSER_CURR_TOK(iState).kind == TOK_NEQ_OP))
     {
-        BssTok op = PARSER_CURR_TOK(pState);
-        PARSER_ADV_TOK(pState);
+        BssTok op = PARSER_CURR_TOK(iState);
+        PARSER_ADV_TOK(iState);
 
-        ASTExpr *rhs = bssParserExprLogical(iState, pState);
+        ASTExpr *rhs = bssParserExprLogical(iState);
         
         expr = bssAllocASTExprBinary(iState->parserArena, expr->startTok, rhs->endTok, op, expr, rhs);
     }
 
     return expr;
 }
-ASTExpr *bssParserExprLogical(BSSInterpretorState *iState, BssParserState *pState)
+ASTExpr *bssParserExprLogical(BSSInterpretorState *iState)
 {
     ASTExpr *expr = null;
 
-    expr = bssParserExprPost(iState, pState);
-    while((PARSER_CURR_TOK(pState).kind == TOK_LOGICAL_OR_OP))
+    expr = bssParserExprPost(iState);
+    while((PARSER_CURR_TOK(iState).kind == TOK_LOGICAL_OR_OP))
     {
-        BssTok op = PARSER_CURR_TOK(pState);
-        PARSER_ADV_TOK(pState);
+        BssTok op = PARSER_CURR_TOK(iState);
+        PARSER_ADV_TOK(iState);
 
-        ASTExpr *rhs = bssParserExprPost(iState, pState);
+        ASTExpr *rhs = bssParserExprPost(iState);
         
         expr = bssAllocASTExprBinary(iState->parserArena, expr->startTok, rhs->endTok, op, expr, rhs);
     }
 
     return expr;
 }
-ASTExpr *bssParserExprPost(BSSInterpretorState *iState, BssParserState *pState)
+ASTExpr *bssParserExprPost(BSSInterpretorState *iState)
 {
-    ASTExpr *expr = bssParserExprPrimary(iState, pState);
+    ASTExpr *expr = bssParserExprPrimary(iState);
 
-    while (((PARSER_CURR_TOK(pState).kind == '[') || 
-            (PARSER_CURR_TOK(pState).kind == '.') || 
-            (PARSER_CURR_TOK(pState).kind == '(')))
+    while (((PARSER_CURR_TOK(iState).kind == '[') || 
+            (PARSER_CURR_TOK(iState).kind == '.') || 
+            (PARSER_CURR_TOK(iState).kind == '(')))
     {
-        if(PARSER_CURR_TOK(pState).kind == '[')
+        if(PARSER_CURR_TOK(iState).kind == '[')
         {
-            PARSER_ADV_TOK(pState);
+            PARSER_ADV_TOK(iState);
 
-            ASTExpr *index = bssParserExpr(iState, pState);
+            ASTExpr *index = bssParserExpr(iState);
 
-            if(PARSER_CURR_TOK(pState).kind == ']')
+            if(PARSER_CURR_TOK(iState).kind == ']')
             {
-                BssTok endtok = PARSER_CURR_TOK(pState);
-                PARSER_ADV_TOK(pState);
+                BssTok endtok = PARSER_CURR_TOK(iState);
+                PARSER_ADV_TOK(iState);
 
                 expr = bssAllocASTExprIndex(iState->parserArena, expr->startTok, endtok, expr, index);
             }
             else
             {
-                bssParserError(iState, PARSER_CURR_TOK(pState), "Expected closing ']' instead got '%S'", PARSER_CURR_TOK(pState).lexeme);
+                bssParserError(iState, PARSER_CURR_TOK(iState), "Expected closing ']' instead got '%S'", PARSER_CURR_TOK(iState).lexeme);
             }
         }
-        else if(PARSER_CURR_TOK(pState).kind == '.')
+        else if(PARSER_CURR_TOK(iState).kind == '.')
         {
-            PARSER_ADV_TOK(pState);
+            PARSER_ADV_TOK(iState);
 
-            if(PARSER_CURR_TOK(pState).kind == TOK_IDEN)
+            if(PARSER_CURR_TOK(iState).kind == TOK_IDEN)
             {
-                BssTok memb = PARSER_CURR_TOK(pState);
+                BssTok memb = PARSER_CURR_TOK(iState);
                 expr = bssAllocASTExprMembAccess(iState->parserArena, expr->startTok, memb, expr, memb);
 
-                PARSER_ADV_TOK(pState);
+                PARSER_ADV_TOK(iState);
             }
             else
             {
-                bssParserError(iState, PARSER_CURR_TOK(pState), "Expected an identifier after '.' but instead got '%S'", PARSER_CURR_TOK(pState).lexeme);
+                bssParserError(iState, PARSER_CURR_TOK(iState), "Expected an identifier after '.' but instead got '%S'", PARSER_CURR_TOK(iState).lexeme);
             }
         }
-        else if(PARSER_CURR_TOK(pState).kind == '(')
+        else if(PARSER_CURR_TOK(iState).kind == '(')
         {
-            PARSER_ADV_TOK(pState);
+            PARSER_ADV_TOK(iState);
 
             BssTok endToken = {0};
 
             ASTNamedExprList argsList = {0};
 
-            if(PARSER_CURR_TOK(pState).kind == ')')
+            if(PARSER_CURR_TOK(iState).kind == ')')
             {
-                endToken = PARSER_CURR_TOK(pState);
-                PARSER_ADV_TOK(pState);
+                endToken = PARSER_CURR_TOK(iState);
+                PARSER_ADV_TOK(iState);
             }
             else
             {
-                argsList = bssParserNamedExprList(iState, pState, ')');
+                argsList = bssParserNamedExprList(iState, ')');
 
-                if(PARSER_CURR_TOK(pState).kind == ')')
+                if(PARSER_CURR_TOK(iState).kind == ')')
                 {
-                    endToken = PARSER_CURR_TOK(pState);
-                    PARSER_ADV_TOK(pState);
+                    endToken = PARSER_CURR_TOK(iState);
+                    PARSER_ADV_TOK(iState);
                 }
                 else
                 {
-                    bssParserError(iState, PARSER_CURR_TOK(pState), "Expected ')' to end argument lists for function call, instead got '%S'", PARSER_CURR_TOK(pState).lexeme);
+                    bssParserError(iState, PARSER_CURR_TOK(iState), "Expected ')' to end argument lists for function call, instead got '%S'", PARSER_CURR_TOK(iState).lexeme);
                 }
             }
 
@@ -439,70 +439,70 @@ ASTExpr *bssParserExprPost(BSSInterpretorState *iState, BssParserState *pState)
 
     return expr;
 }
-ASTExpr *bssParserExprPrimary(BSSInterpretorState *iState, BssParserState *pState)
+ASTExpr *bssParserExprPrimary(BSSInterpretorState *iState)
 {
     ASTExpr *expr = null;
-    switch(PARSER_CURR_TOK(pState).kind)
+    switch(PARSER_CURR_TOK(iState).kind)
     {
         case TOK_INT_LIT:
         case TOK_BOOL_LIT:
         case TOK_STR_LIT:
         {
-            expr = bssAllocASTExprLit(iState->parserArena, PARSER_CURR_TOK(pState));
+            expr = bssAllocASTExprLit(iState->parserArena, PARSER_CURR_TOK(iState));
 
-            PARSER_ADV_TOK(pState);
+            PARSER_ADV_TOK(iState);
         }break;
 
         case '(':
         {
-            PARSER_ADV_TOK(pState);
+            PARSER_ADV_TOK(iState);
 
-            expr = bssParserExpr(iState, pState);
+            expr = bssParserExpr(iState);
 
-            if(PARSER_CURR_TOK(pState).kind == ')')
+            if(PARSER_CURR_TOK(iState).kind == ')')
             {
-                PARSER_ADV_TOK(pState);
+                PARSER_ADV_TOK(iState);
             }
             else
             {
-                bssParserError(iState, PARSER_CURR_TOK(pState), "Expected a ')' after expression, instead got' '%S'", PARSER_CURR_TOK(pState).lexeme);
+                bssParserError(iState, PARSER_CURR_TOK(iState), "Expected a ')' after expression, instead got' '%S'", PARSER_CURR_TOK(iState).lexeme);
             }
 
         }break;
 
         case TOK_IDEN:
         {
-            expr = bssAllocASTExprIden(iState->parserArena, PARSER_CURR_TOK(pState));
+            expr = bssAllocASTExprIden(iState->parserArena, PARSER_CURR_TOK(iState));
 
-            PARSER_ADV_TOK(pState);
+            PARSER_ADV_TOK(iState);
         }break;
 
         case '{':
         {
             ASTNamedExprList membs = {0};
-            BssTok startTok = PARSER_CURR_TOK(pState);
+            BssTok startTok = PARSER_CURR_TOK(iState);
             BssTok endTok = {0};
 
-            PARSER_ADV_TOK(pState);
+            PARSER_ADV_TOK(iState);
 
-            if(PARSER_CURR_TOK(pState).kind == '}')
+            if(PARSER_CURR_TOK(iState).kind == '}')
             {
-                endTok = PARSER_CURR_TOK(pState);
-                PARSER_ADV_TOK(pState);
+                endTok = PARSER_CURR_TOK(iState);
+                PARSER_ADV_TOK(iState);
             }
             else 
             {
-                membs = bssParserNamedExprList(iState, pState, '}');
+                membs = bssParserNamedExprList(iState, '}');
 
-                if(PARSER_CURR_TOK(pState).kind == '}')
+                if(PARSER_CURR_TOK(iState).kind == '}')
                 {
-                    endTok = PARSER_CURR_TOK(pState);
+                    endTok = PARSER_CURR_TOK(iState);
 
-                    PARSER_ADV_TOK(pState);
+                    PARSER_ADV_TOK(iState);
                 }
                 else
                 {
-                    bssParserError(iState, PARSER_CURR_TOK(pState), "Expected '}' to end compound literal but instead got '%S'", PARSER_CURR_TOK(pState).lexeme);
+                    bssParserError(iState, PARSER_CURR_TOK(iState), "Expected '}' to end compound literal but instead got '%S'", PARSER_CURR_TOK(iState).lexeme);
                 }
             }
 
@@ -511,10 +511,10 @@ ASTExpr *bssParserExprPrimary(BSSInterpretorState *iState, BssParserState *pStat
 
         case TOK_RUN:
         {
-            BssTok startTok = PARSER_CURR_TOK(pState);
+            BssTok startTok = PARSER_CURR_TOK(iState);
 
-            PARSER_ADV_TOK(pState);
-            ASTExpr *e = bssParserExpr(iState, pState);
+            PARSER_ADV_TOK(iState);
+            ASTExpr *e = bssParserExpr(iState);
 
             expr = bssAllocASTExprRun(iState->parserArena, startTok, e->endTok, e);
 
@@ -522,28 +522,28 @@ ASTExpr *bssParserExprPrimary(BSSInterpretorState *iState, BssParserState *pStat
 
         default:
         {
-            bssParserError(iState, PARSER_CURR_TOK(pState), "Unexpected tok to begin expression, got '%S'", PARSER_CURR_TOK(pState).lexeme);
+            bssParserError(iState, PARSER_CURR_TOK(iState), "Unexpected tok to begin expression, got '%S'", PARSER_CURR_TOK(iState).lexeme);
         }break;
     }
 
     return expr;
 }
 
-ASTNamedExpr *bssParserNamedExpr(BSSInterpretorState *iState, BssParserState *pState)
+ASTNamedExpr *bssParserNamedExpr(BSSInterpretorState *iState)
 {
-    ASTExpr *exprLhs = bssParserExpr(iState, pState);
+    ASTExpr *exprLhs = bssParserExpr(iState);
     ASTExpr *exprRhs = null;
 
-    if(PARSER_CURR_TOK(pState).kind == '=')
+    if(PARSER_CURR_TOK(iState).kind == '=')
     {
         if(exprLhs->kind == AST_EXPR_IDEN)
         {
-            PARSER_ADV_TOK(pState);
-            exprRhs = bssParserExpr(iState, pState); 
+            PARSER_ADV_TOK(iState);
+            exprRhs = bssParserExpr(iState); 
         }
         else
         {
-            bssParserError(iState, PARSER_CURR_TOK(pState), "Expected a identifier tok for beginning named expression");
+            bssParserError(iState, PARSER_CURR_TOK(iState), "Expected a identifier tok for beginning named expression");
         }
     }
 
@@ -552,24 +552,24 @@ ASTNamedExpr *bssParserNamedExpr(BSSInterpretorState *iState, BssParserState *pS
     
     return ret;
 }
-ASTNamedExprList bssParserNamedExprList(BSSInterpretorState *iState, BssParserState *pState, BssTokKind tokToEndParse)
+ASTNamedExprList bssParserNamedExprList(BSSInterpretorState *iState,  BssTokKind tokToEndParse)
 {
     ASTNamedExprList list = {0};
     
-    while ((PARSER_CURR_TOK(pState).kind != tokToEndParse) &&
-           (PARSER_CURR_TOK(pState).kind != TOK_END_INPUT))
+    while ((PARSER_CURR_TOK(iState).kind != tokToEndParse) &&
+           (PARSER_CURR_TOK(iState).kind != TOK_END_INPUT))
     {
-        ASTNamedExpr *namedExpr = bssParserNamedExpr(iState, pState);
+        ASTNamedExpr *namedExpr = bssParserNamedExpr(iState);
         ASTNamedExprListPushNodeLast(&list, namedExpr);
 
-        if(PARSER_CURR_TOK(pState).kind == ',')
+        if(PARSER_CURR_TOK(iState).kind == ',')
         {
-            PARSER_ADV_TOK(pState);
+            PARSER_ADV_TOK(iState);
         }
-        else if((PARSER_CURR_TOK(pState).kind != tokToEndParse) &&
-                (PARSER_CURR_TOK(pState).kind != TOK_END_INPUT))
+        else if((PARSER_CURR_TOK(iState).kind != tokToEndParse) &&
+                (PARSER_CURR_TOK(iState).kind != TOK_END_INPUT))
         {
-            bssParserError(iState, PARSER_CURR_TOK(pState), "Expected a ',' after expression, instead got '%S'", PARSER_CURR_TOK(pState).lexeme);
+            bssParserError(iState, PARSER_CURR_TOK(iState), "Expected a ',' after expression, instead got '%S'", PARSER_CURR_TOK(iState).lexeme);
         }
     }
     

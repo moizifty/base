@@ -3,8 +3,6 @@
 
 #include "bss\bssLexer.h"
 
-BASE_CREATE_EFFICIENT_LL_DEFS(BssLexerStateList, BssLexerState);
-
 str8 gBssBssTokLexemeTable[] =
 {
     [TOK_IF] = STR8_LIT_COMP_CONST("if"),
@@ -64,145 +62,145 @@ BssTokArray BssTokChunkListFlattenToArray(BaseArena *arena, BssTokChunkList *l)
     return flattened;
 }
 
-BssLexerState *bssLexerInitFromFile(BSSInterpretorState *iState, str8 filePath)
+bool bssLexerInitFromFile(BSSInterpretorState *iState, str8 filePath)
 {
     U8Array buffer = OSFileReadAll(iState->lexerArena, filePath);
     if(buffer.data == null)
     {
-        return null;
+        return false;
     }
 
-    BssLexerState *lState = bssLexerInitFromBuffer(iState, buffer);
-    lState->filePath = filePath;
+    bssLexerInitFromBuffer(iState, buffer);
+    iState->lState.filePath = filePath;
 
-    return lState;
+    return true;
 }
-BssLexerState *bssLexerInitFromBuffer(BSSInterpretorState *iState, U8Array buffer)
+bool bssLexerInitFromBuffer(BSSInterpretorState *iState, U8Array buffer)
 {
-    BssLexerState *lState = baseArenaPushType(iState->lexerArena, BssLexerState);
-    lState->buffer = buffer;
-    lState->ch = ' ';
-    lState->currLocInBuffer = buffer.data;
-    lState->line = 1;
-    lState->col = 1;
-    lState->nextBssTokIndex = 0;
+    iState->lState = (BssLexerState){0};
+    iState->lState.buffer = buffer;
+    iState->lState.ch = ' ';
+    iState->lState.currLocInBuffer = buffer.data;
+    iState->lState.line = 1;
+    iState->lState.col = 1;
+    iState->lState.nextBssTokIndex = 0;
 
-    return lState;
+    return true;
 }
-BssTokArray bssLexerLexWholeBuffer(BSSInterpretorState *iState, BssLexerState *lState)
+BssTokArray bssLexerLexWholeBuffer(struct BSSInterpretorState *iState)
 {
     BssTokChunkList tokChunks = {0};
 
     BaseArenaTemp temp = baseTempBegin(&iState->lexerArena, 1);
     {
-        while((lState->tok = bssLexerNextFromBuffer(iState, lState)).kind != TOK_END_INPUT)
+        while((iState->lState.tok = bssLexerNextFromBuffer(iState)).kind != TOK_END_INPUT)
         {
-            BssTokChunkListPushLast(iState->lexerArena, &tokChunks, lState->tok);
+            BssTokChunkListPushLast(iState->lexerArena, &tokChunks, iState->lState.tok);
         }
 
-        BssTokChunkListPushLast(iState->lexerArena, &tokChunks, lState->tok);
+        BssTokChunkListPushLast(iState->lexerArena, &tokChunks, iState->lState.tok);
     }
     baseTempEnd(temp);
 
-    lState->lexedBssToks = BssTokChunkListFlattenToArray(iState->lexerArena, &tokChunks);
-    lState->tok = bssLexerNext(lState);
+    iState->lState.lexedBssToks = BssTokChunkListFlattenToArray(iState->lexerArena, &tokChunks);
+    iState->lState.tok = bssLexerNext(iState);
 
-    return lState->lexedBssToks;
+    return iState->lState.lexedBssToks;
 }
 
-bool bssLexerAdvanceChar(BssLexerState *lState)
+bool bssLexerAdvanceChar(struct BSSInterpretorState *iState)
 {
-    if(lState->currLocInBuffer > (lState->buffer.data + lState->buffer.len))
+    if(iState->lState.currLocInBuffer > (iState->lState.buffer.data + iState->lState.buffer.len))
     {
         return false;
     }
 
-    if(lState->ch == '\n')
+    if(iState->lState.ch == '\n')
     {
-       lState->line++;
-       lState->col = 0;
+       iState->lState.line++;
+       iState->lState.col = 0;
     }
 
-    if((lState->ch != '\n') && (lState->ch != '\f') && (lState->ch != '\r'))
-        lState->col++;
+    if((iState->lState.ch != '\n') && (iState->lState.ch != '\f') && (iState->lState.ch != '\r'))
+        iState->lState.col++;
 
-    lState->ch = *lState->currLocInBuffer;
-    lState->currLocInBuffer++;
+    iState->lState.ch = *iState->lState.currLocInBuffer;
+    iState->lState.currLocInBuffer++;
 
     return true;
 }
-u8 bssLexerPeekChar(BssLexerState *lState)
+u8 bssLexerPeekChar(struct BSSInterpretorState *iState)
 {
-    return bssLexerPeekCharEx(lState, 1);
+    return bssLexerPeekCharEx(iState, 1);
 }
-u8 bssLexerPeekCharEx(BssLexerState *lState, u64 amount)
+u8 bssLexerPeekCharEx(struct BSSInterpretorState *iState, u64 amount)
 {
-    return *((lState->currLocInBuffer - 1) + amount);
+    return *((iState->lState.currLocInBuffer - 1) + amount);
 }
 
-BssTok bssLexerNextFromBuffer(BSSInterpretorState *iState, BssLexerState *lState)
+BssTok bssLexerNextFromBuffer(struct BSSInterpretorState *iState)
 {
 LEX_START:
-    while(lState->currLocInBuffer <= (lState->buffer.data + lState->buffer.len) 
-          && (isspace(lState->ch) || lState->ch == '\0'))
+    while(iState->lState.currLocInBuffer <= (iState->lState.buffer.data + iState->lState.buffer.len) 
+          && (isspace(iState->lState.ch) || iState->lState.ch == '\0'))
     {
-        bssLexerAdvanceChar(lState);
+        bssLexerAdvanceChar(iState);
     }
 
-    BssTokPos pos = {.line = lState->line, .col = lState->col, .ownerLexer = lState, .tokRange.data = lState->currLocInBuffer - 1};
+    BssTokPos pos = {.line = iState->lState.line, .col = iState->lState.col, .ownerLexer = &iState->lState, .tokRange.data = iState->lState.currLocInBuffer - 1};
     BssTok tok = {.pos = pos};
 
-    if(lState->currLocInBuffer > (lState->buffer.data + lState->buffer.len))
+    if(iState->lState.currLocInBuffer > (iState->lState.buffer.data + iState->lState.buffer.len))
     {
         tok.pos.tokRange.len = 0;
         tok.kind = TOK_END_INPUT;
         tok.lexeme = gBssBssTokLexemeTable[TOK_END_INPUT];
     }
-    else if(lState->ch == '/' && bssLexerPeekChar(lState) == '/')
+    else if(iState->lState.ch == '/' && bssLexerPeekChar(iState) == '/')
     {
-        while(lState->currLocInBuffer <= (lState->buffer.data + lState->buffer.len) 
-              && (lState->ch != '\n' || lState->ch == '\0' ))
+        while(iState->lState.currLocInBuffer <= (iState->lState.buffer.data + iState->lState.buffer.len) 
+              && (iState->lState.ch != '\n' || iState->lState.ch == '\0' ))
         {
-            bssLexerAdvanceChar(lState);
+            bssLexerAdvanceChar(iState);
         }
 
         goto LEX_START;
     }
-    else if(lState->ch == '\"')
+    else if(iState->lState.ch == '\"')
     {
         u64 tokLen = 1;
-        if(!bssLexerAdvanceChar(lState)) goto LEX_START;
+        if(!bssLexerAdvanceChar(iState)) goto LEX_START;
 
-        while(lState->ch != '\"')
+        while(iState->lState.ch != '\"')
         {
-            if (lState->ch == '~')
+            if (iState->lState.ch == '~')
             {
                 str8 charLitStr = {0};
-                charLitStr.data = lState->currLocInBuffer - 1;
+                charLitStr.data = iState->lState.currLocInBuffer - 1;
                 charLitStr.len = 2;
 
                 if(bssGetEscapeCharValue(charLitStr) == '\"')
                 {
                     tokLen++;
-                    bssLexerAdvanceChar(lState);
+                    bssLexerAdvanceChar(iState);
                 }
             }
-            else if (lState->ch == '{')
+            else if (iState->lState.ch == '{')
             {
                 tok.isFmtStr = true;
                 bool prevOpenBrack = true;
                 u64 bracketCount = 1;
-                while(lState->ch != '}' || (bracketCount != 0))
+                while(iState->lState.ch != '}' || (bracketCount != 0))
                 {
                     tokLen++;
-                    bssLexerAdvanceChar(lState);
+                    bssLexerAdvanceChar(iState);
 
-                    if(lState->ch == '}')
+                    if(iState->lState.ch == '}')
                     {
                         bracketCount -= 1;
                         prevOpenBrack = false;
                     }
-                    else if(lState->ch == '{')
+                    else if(iState->lState.ch == '{')
                     {
                         if(prevOpenBrack)
                         {
@@ -220,35 +218,35 @@ LEX_START:
             }
 
             tokLen++;
-            if(!bssLexerAdvanceChar(lState))
+            if(!bssLexerAdvanceChar(iState))
             {
                 goto LEX_START;
             }
         }
 
-        bssLexerAdvanceChar(lState);
+        bssLexerAdvanceChar(iState);
         tokLen += 1;
 
         str8 lexeme = {0};
-        lexeme.data =  lState->currLocInBuffer - 1 - tokLen;
+        lexeme.data =  iState->lState.currLocInBuffer - 1 - tokLen;
         lexeme.len = tokLen;
 
         tok.pos.tokRange.len = tokLen;
         tok.kind = TOK_STR_LIT;
         tok.lexeme = lexeme;
     }
-    else if(isdigit(lState->ch))
+    else if(isdigit(iState->lState.ch))
     {
         u64 tokLen = 0;
         
-        while(isdigit(lState->ch))
+        while(isdigit(iState->lState.ch))
         {
             tokLen++;
-            bssLexerAdvanceChar(lState);
+            bssLexerAdvanceChar(iState);
         }
 
         str8 lexeme = {0};
-        lexeme.data =  lState->currLocInBuffer - 1 - tokLen;
+        lexeme.data =  iState->lState.currLocInBuffer - 1 - tokLen;
         lexeme.len = tokLen;
 
         tok.pos.tokRange.len = tokLen;
@@ -262,18 +260,18 @@ LEX_START:
         for(u64 i = TOK_KIND_START; i < BASE_ARRAY_SIZE(gBssBssTokLexemeTable); i++)
         {
             u64 longestMatch = 0;
-            if (gBssBssTokLexemeTable[i].len > 0 && lState->ch == gBssBssTokLexemeTable[i].data[0])
+            if (gBssBssTokLexemeTable[i].len > 0 && iState->lState.ch == gBssBssTokLexemeTable[i].data[0])
             {
-                u64 charsLeftInBuffer = (lState->currLocInBuffer - 1) - lState->buffer.data + lState->buffer.len;
+                u64 charsLeftInBuffer = (iState->lState.currLocInBuffer - 1) - iState->lState.buffer.data + iState->lState.buffer.len;
                 if(charsLeftInBuffer >= gBssBssTokLexemeTable[i].len)
                 {
-                    str8 l = baseStr8(lState->currLocInBuffer - 1, gBssBssTokLexemeTable[i].len);
+                    str8 l = baseStr8(iState->lState.currLocInBuffer - 1, gBssBssTokLexemeTable[i].len);
                     if(baseStringsStrEquals(l, gBssBssTokLexemeTable[i], 0) && (l.len > longestMatch))
                     {
                         // for it to match with a keyword identifier,
                         // it should be a token, forexample
                         // fornite should not match with the keyword for, but for tnite should.
-                        if (isalpha(l.data[0]) && isalnum(bssLexerPeekCharEx(lState, l.len)))
+                        if (isalpha(l.data[0]) && isalnum(bssLexerPeekCharEx(iState, l.len)))
                         {
                             continue;
                         }
@@ -290,9 +288,9 @@ LEX_START:
         if (lexeme.len == 0)
         {
             u64 tokLen = 0;
-            if(isalpha(lState->ch))
+            if(isalpha(iState->lState.ch))
             {
-                while(isalnum(bssLexerPeekCharEx(lState, tokLen)))
+                while(isalnum(bssLexerPeekCharEx(iState, tokLen)))
                 {
                     tokLen++;
                 }
@@ -301,11 +299,11 @@ LEX_START:
             }
             else
             {
-                tokKind = lState->ch;
+                tokKind = iState->lState.ch;
                 tokLen = 1;
             }
 
-            lexeme.data =  lState->currLocInBuffer - 1;
+            lexeme.data =  iState->lState.currLocInBuffer - 1;
             lexeme.len = tokLen;
 
             if(baseStringsStrEquals(STR8_LIT("false"), lexeme, 0) || baseStringsStrEquals(STR8_LIT("true"), lexeme, 0))
@@ -318,31 +316,31 @@ LEX_START:
         tok.lexeme = lexeme;
         tok.pos.tokRange.len = lexeme.len;
 
-        lState->ch = *((lState->currLocInBuffer += lexeme.len) - 1);
+        iState->lState.ch = *((iState->lState.currLocInBuffer += lexeme.len) - 1);
     }
 
     return tok;
 }
-BssTok bssLexerNext(BssLexerState *lState)
+BssTok bssLexerNext(struct BSSInterpretorState *iState)
 {
-    return lState->tok = lState->lexedBssToks.data[lState->nextBssTokIndex++];
+    return iState->lState.tok = iState->lState.lexedBssToks.data[iState->lState.nextBssTokIndex++];
 }
-BssTok bssLexerPeekEx(BssLexerState *lState, u64 amount)
+BssTok bssLexerPeekEx(struct BSSInterpretorState *iState, u64 amount)
 {
-    if ((lState->nextBssTokIndex + (amount - 1)) >= lState->lexedBssToks.len)
+    if ((iState->lState.nextBssTokIndex + (amount - 1)) >= iState->lState.lexedBssToks.len)
     {
-        return lState->lexedBssToks.data[lState->lexedBssToks.len - 1];
+        return iState->lState.lexedBssToks.data[iState->lState.lexedBssToks.len - 1];
     }
 
-    return lState->lexedBssToks.data[lState->nextBssTokIndex + (amount - 1)];
+    return iState->lState.lexedBssToks.data[iState->lState.nextBssTokIndex + (amount - 1)];
 }
-BssTok bssLexerPeek(BssLexerState *lState)
+BssTok bssLexerPeek(struct BSSInterpretorState *iState)
 {
-    return bssLexerPeekEx(lState, 1);
+    return bssLexerPeekEx(iState, 1);
 }
 
-void bssLexerPrint(BSSInterpretorState *iState, BssLexerState *lState, char *fmt, ...);
-void bssLexerError(BSSInterpretorState *iState, BssLexerState *lState, char *fmt, ...);
+void bssLexerPrint(struct BSSInterpretorState *iState, char *fmt, ...);
+void bssLexerError(struct BSSInterpretorState *iState, char *fmt, ...);
 
 void bssLexerPrintTokenRange(BssTok start, BssTok end)
 {

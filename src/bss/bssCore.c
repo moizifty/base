@@ -1,5 +1,31 @@
 #include "base\baseThreads.h"
 #include "bssCore.h"
+#include "bssLexer.h"
+#include "bssParser.h"
+#include "bssChecker.h"
+#include "bssInterp.h"
+
+void bssInterpFile(BSSInterpretorState *iState, str8 path)
+{
+    bssLexerInitFromFile(iState, path);
+    bssLexerLexWholeBuffer(iState);
+
+    bssParserProject(iState);
+    bssCheckerInit(iState);
+    bssCheckerCheckWholeProject(iState);
+    bssInterpWholeProject(iState);
+}
+
+void bssInterpBuffer(BSSInterpretorState *iState, U8Array buffer)
+{
+    bssLexerInitFromBuffer(iState, buffer);
+    bssLexerLexWholeBuffer(iState);
+
+    bssParserProject(iState);
+    bssCheckerInit(iState);
+    bssCheckerCheckWholeProject(iState);
+    bssInterpWholeProject(iState);
+}
 
 i64 bssGetEscapeCharValue(str8 escapeCharString)
 {
@@ -77,4 +103,21 @@ str8 bssGetStr8RepFromTokLexeme(BaseArena *arena, BssTok tok)
     baseArenaTempEnd(temp);
 
     return ret;
+}
+
+bool bssHasFlag(BSSInterpretorState *iState, str8 flag)
+{
+    BASE_LIST_FOREACH(Str8ListNode, n, iState->buildFlags)
+    {
+        if(baseStringsStrEquals(n->val, flag, 0))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
+void bssAddFlag(BSSInterpretorState *iState, str8 flag)
+{
+    Str8ListPushLast(iState->checkerArena, &iState->buildFlags, flag);
 }

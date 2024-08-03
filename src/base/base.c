@@ -9,5 +9,6 @@
 #include "baseCmdLine.c"
 #include "baseMath.c"
 #include "baseBitstream.c"
+#include "baseLog.c"
 
 #endif

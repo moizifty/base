@@ -278,12 +278,12 @@ typedef struct U8ChunkList
 	u64 defaultCap;
 }U8ChunkList;
 
-void U8ChunkListPushLast(struct BaseArena *arena, U8ChunkList *l, u8 n);
-U8Array U8ChunkListFlattenToArray(struct BaseArena *arena, U8ChunkList *l);
-
 // disable this dumb warning
 #pragma warning( push )
 #pragma warning( disable : 4115)
+void U8ChunkListPushLast(struct BaseArena *arena, U8ChunkList *l, u8 n);
+void U8ChunkListPushStr8Last(struct BaseArena *arena, U8ChunkList *l, str8 str);
+U8Array U8ChunkListFlattenToArray(struct BaseArena *arena, U8ChunkList *l);
 BASE_CREATE_LL_DECLS(U8ArrayList, U8Array);
 #pragma warning( pop ) 
 

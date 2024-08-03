@@ -27,6 +27,8 @@ typedef struct RendererWindowState
     RendererWindowStatePlatform *platformSpecific;
     vec2i lastResolution;
     bool preformedFirstPaint;
+
+    vec4f clearColor;
 }RendererWindowState;
 
 RendererState *rendererInit(BaseArena *arena, OSGfxState *gfxState);

@@ -5,7 +5,7 @@
 #include "..\..\..\base\baseStrings.h"
 #include "..\..\..\base\baseMemory.h"
 #include "..\..\..\base\baseThreads.h"
-#include "log\log.h"
+#include "base\baseLog.h"
 
 OSState *OSInit(BaseArena *arena)
 {
@@ -262,23 +262,10 @@ OSFileFindIter *OSFindFileBegin(struct BaseArena *arena, str8 path, OSFileFindOp
     OSFileFindIter *findIter = (OSFileFindIter *) findFileData;
     findFileData->optParams = (opt == null) ? (OSFileFindOptionalParams){0} : *opt;
 
-    if (!baseStringsStrContains(path, '*'))
+    if (path.len > 0)
     {
-        bool topLevel = findFileData->optParams.type == OS_FILEFIND_TYPE_TOP_LEVEL_DIR;
-
-        if (path.len > 0)
-        {
-            str8 searchPath = path;
-            if (topLevel)
-            {
-                searchPath = baseStringsPushStr8Fmt(arena, "%S\\*", path);
-            }
-
-            findFileData->handle = FindFirstFileA((i8 *) searchPath.data, &findFileData->findData);
-            findFileData->originalPath = baseStringsPushStr8Fmt(arena, "%S", path);
-        }
+        findFileData->handle = FindFirstFileA((i8 *) path.data, &findFileData->findData);
     }
-
     return findIter;
 }
 
@@ -315,16 +302,7 @@ bool OSFindFileNext(struct BaseArena *arena, OSFileFindIter *iter, OSFileInfo *o
 
     if (result)
     {
-        bool topLevel = win32Iter->optParams.type == OS_FILEFIND_TYPE_TOP_LEVEL_DIR;
-        if (topLevel)
-        {
-            out->path = baseStringsPushStr8Fmt(arena, "%S\\%s", win32Iter->originalPath, win32Iter->findData.cFileName);
-        }
-        else
-        {
-            out->path = baseStringsPushStr8Fmt(arena, "%S", win32Iter->originalPath);
-        }
-
+        out->name = baseStringsPushStr8Fmt(arena, "%s", win32Iter->findData.cFileName);
         out->attrs = OSFileAttributesFromWin32(win32Iter->findData.dwFileAttributes);
     }
 
@@ -337,6 +315,44 @@ void OSFindFileEnd(OSFileFindIter *iter)
     {
         FindClose(win32Iter->handle);
     }
+}
+
+Str8List OSGetFilePaths(BaseArena *arena, str8 dir, str8 pattern, bool recursive)
+{
+    Str8List ret = {0};
+
+    str8 searchPath = (recursive) ? baseStringsPushStr8Fmt(arena, "%S\\*", dir) : baseStringsPushStr8Fmt(arena, "%S\\%S", dir, pattern);
+
+    OSFileFindIter *findIter = OSFindFileBegin(arena, searchPath, null);
+    for(OSFileInfo fileInfo = {0}; OSFindFileNext(arena, findIter, &fileInfo); )
+    {
+        if (fileInfo.attrs & OS_FILEATTR_DIR)
+        {
+            if (recursive)
+            {
+                str8 subDirPath = baseStringsPushStr8Fmt(arena, "%S\\%S", dir, fileInfo.name);
+                Str8List subDirList = OSGetFilePaths(arena, subDirPath, pattern, recursive);
+
+                Str8ListPushListLast(arena, &ret, &subDirList);
+            }
+        }
+        else
+        {
+            if (recursive)
+            {
+                if (PathMatchSpecA((i8*) fileInfo.name.data, (i8*) pattern.data))
+                {
+                    Str8ListPushLastFmt(arena, &ret, "%S\\%S", dir, fileInfo.name);
+                }
+            }
+            else 
+            {
+                Str8ListPushLastFmt(arena, &ret, "%S\\%S", dir, fileInfo.name);
+            }
+        }
+    }
+
+    return ret;
 }
 
 //process
@@ -404,7 +420,7 @@ bool OSRunProcessEx(BaseArena *arena, str8 app, str8 args, void *peb, str8 *outS
 
     // Launch the child process
     PROCESS_INFORMATION pi = {0};
-    if (!CreateProcessA((LPSTR) app.data, (LPSTR) args.data, NULL, NULL, TRUE, 0, peb, NULL, &si, &pi)) 
+    if (!CreateProcessA((app.len == 0) ? null : (LPSTR) app.data, args.len == 0 ? null : (LPSTR) args.data, NULL, NULL, TRUE, 0, peb, NULL, &si, &pi)) 
     {
         return false;
     }
@@ -419,9 +435,9 @@ bool OSRunProcessEx(BaseArena *arena, str8 app, str8 args, void *peb, str8 *outS
     i64 totalStdoutSize = 0;
     i64 totalStderrSize = 0;
 
-    Str8List outList = {0};
-    Str8List errList = {0};
-    
+    U8ChunkList outChunkList = {0};
+    U8ChunkList errChunkList = {0};
+
     DWORD exitCode = 0;
 
     while(true)
@@ -436,7 +452,7 @@ bool OSRunProcessEx(BaseArena *arena, str8 app, str8 args, void *peb, str8 *outS
         DWORD availBytes = 0;
         if((PeekNamedPipe(stdoutPread, NULL, 0, NULL, &availBytes, NULL) && availBytes))
         {
-            char buf[255];
+            char buf[255] = {0};
 
             if(!ReadFile(stdoutPread, buf, BASE_ARRAY_SIZE(buf), &readSize, NULL) || (readSize == 0))
             {
@@ -452,11 +468,11 @@ bool OSRunProcessEx(BaseArena *arena, str8 app, str8 args, void *peb, str8 *outS
 
                 ReadFile(stdoutPread, s.data, readSize, &readSize, NULL);
 
-                Str8ListPushLast(arena, &outList, s);
+                U8ChunkListPushStr8Last(arena, &outChunkList, s);
             }
             else
             {
-                Str8ListPushLast(arena, &outList, baseStr8((u8*)buf, readSize));
+                U8ChunkListPushStr8Last(arena, &outChunkList, baseStr8((u8*)buf, readSize));
             }
 
             totalStdoutSize += readSize;
@@ -480,11 +496,11 @@ bool OSRunProcessEx(BaseArena *arena, str8 app, str8 args, void *peb, str8 *outS
 
                 ReadFile(stderrPread, s.data, readSize, &readSize, NULL);
 
-                Str8ListPushLast(arena, &errList, s);
+                U8ChunkListPushStr8Last(arena, &errChunkList, s);
             }
             else
             {
-                Str8ListPushLast(arena, &errList, baseStr8((u8*)buf, readSize));
+                U8ChunkListPushStr8Last(arena, &errChunkList, baseStr8((u8*)buf, readSize));
             }
 
             totalStderrSize += readSize;
@@ -499,11 +515,14 @@ bool OSRunProcessEx(BaseArena *arena, str8 app, str8 args, void *peb, str8 *outS
 
     if(totalStdoutSize > 0)
     {
-        *outStr = Str8ListJoin(arena, &outList, null);
+        // todo, when making u8chunklist put on temp arena
+        U8Array flattened = U8ChunkListFlattenToArray(arena, &outChunkList);
+        *outStr = baseStr8(flattened.data, flattened.len);
     }
     if(totalStderrSize > 0)
     {
-        *errStr = Str8ListJoin(arena, &errList, null);
+        U8Array flattened = U8ChunkListFlattenToArray(arena, &errChunkList);
+        *errStr = baseStr8(flattened.data, flattened.len);
     }
 
     CloseHandle(stdoutPread);
@@ -552,6 +571,23 @@ DateTime OSGetLocalTime(void)
         .sec = (u8)sysTimeWin32.wSecond,
         .milli = (u16)sysTimeWin32.wMilliseconds,
     };
+}
+
+//env
+str8 OSGetEnvironmentVar(BaseArena *arena, str8 var)
+{
+    str8 val = STR8_LIT("");
+
+    i64 size = GetEnvironmentVariableA((i8*)var.data, null, 0);
+    if(size > 0)
+    {
+        val.data = baseArenaPushArray(arena, u8, size);
+        val.len = size;
+
+        GetEnvironmentVariableA((i8*)var.data, (i8*)val.data, (DWORD)val.len);
+    }
+
+    return val;
 }
 
 //other

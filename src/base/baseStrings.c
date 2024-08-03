@@ -54,6 +54,14 @@ void Str8ListPushLastFmt(BaseArena *arena, Str8List *l, const i8 *fmt, ...)
     Str8ListPushLast(arena, l, s);
 }
 
+void Str8ListPushListLast(BaseArena *arena, Str8List *l, Str8List* a)
+{
+    BASE_PTR_LIST_FOREACH(Str8ListNode, n, a)
+    {
+        Str8ListPushLast(arena, l, n->val);
+    }
+}
+
 str8 Str8ListJoin(BaseArena *arena, Str8List *l, Str8ListJoinParams *optionals)
 {
     Str8ListJoinParams params = {0};
@@ -181,6 +189,7 @@ i64 baseStringsStrCompare(str8 a, str8 b)
 
     return strcmp((char *)a.data, (char *) b.data);
 }
+
 bool baseStringsStrEquals(str8 a, str8 b, StrMatchFlags flags)
 {
     bool result = false;

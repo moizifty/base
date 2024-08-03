@@ -1,4 +1,6 @@
 #include "base\baseThreads.h"
+
+#include "bssAST.h"
 #include "bssChecker.h"
 #include "bssTypes.h"
 
@@ -32,59 +34,71 @@ void bssCheckerError(BSSInterpretorState *iState, BssTok tok, char *msg, ...)
 }
 void bssCheckerPrint(char *msg, ...);
 
-BssCheckerState *bssCheckerInitFromProject(BSSInterpretorState *iState, ASTProject *proj)
+void bssCheckerInit(struct BSSInterpretorState *iState)
 {
-    BssCheckerState *cState = baseArenaPushType(iState->checkerArena, BssCheckerState);
+    iState->cState.rootScope = bssNewScope(iState->checkerArena, null);
     
-    cState->proj = proj;
+    {
+        str8 cwdPath = baseStringsStrChopPastLastSlash(iState->lState.filePath);
+        if (baseStringsStrEquals(cwdPath, iState->lState.filePath, 0))
+        {
+            cwdPath = STR8_LIT(".\\");
+        }
 
-    return cState;
-}
+        BssSymTableSlotEntry *cwdVar = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
+        cwdVar->name = STR8_LIT("cwd");
+        cwdVar->type = bssAllocTypeString(iState->checkerArena);
 
-void bssCheckerCheckWholeProject(BSSInterpretorState *iState, BssCheckerState *cState)
-{
-    BssScope *scope = bssNewScope(iState->checkerArena, null);
+        cwdVar->value = baseArenaPushType(iState->checkerArena, BssValue);
+        cwdVar->value->type = cwdVar->type;
+        cwdVar->value->hasBssValue = true;
+        cwdVar->value->strRep = cwdPath;
+        
+        Str8ListPushLast(iState->checkerArena, &cwdVar->value->str.val, cwdPath);
 
-    //types
+        bssScopeAddEntry(iState->cState.rootScope, cwdVar);
+    }
+
+     //types
     {
         BssScope *s = bssNewScope(iState->checkerArena, null);
-        BssType *runOutput = bssAllocTypeObj(iState->checkerArena, &cState->typeTable, s);
+        BssType *runOutput = bssAllocTypeObj(iState->checkerArena, s);
 
         BssSymTableSlotEntry *stdoutMemb = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
         stdoutMemb->name = STR8_LIT("stdout");
-        stdoutMemb->type = bssAllocTypeString(iState->checkerArena, &cState->typeTable);
+        stdoutMemb->type = bssAllocTypeString(iState->checkerArena);
 
         BssSymTableSlotEntry *stderrMemb = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
         stderrMemb->name = STR8_LIT("stderr");
-        stderrMemb->type = bssAllocTypeString(iState->checkerArena, &cState->typeTable);
+        stderrMemb->type = bssAllocTypeString(iState->checkerArena);
 
         bssScopeAddEntry(s, stdoutMemb);
         bssScopeAddEntry(s, stderrMemb);
 
-        cState->runOutput = runOutput;
+        iState->cState.runOutput = runOutput;
     }
 
     {
         BssScope *s = bssNewScope(iState->checkerArena, null);
-        BssType *projectDeclType = bssAllocTypeObj(iState->checkerArena, &cState->typeTable, s);
+        BssType *projectDeclType = bssAllocTypeObj(iState->checkerArena, s);
 
         BssSymTableSlotEntry *srcMemb = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
         srcMemb->name = STR8_LIT("src");
-        srcMemb->type = bssAllocTypeArray(iState->checkerArena, &cState->typeTable, bssAllocTypeString(iState->checkerArena, &cState->typeTable));
+        srcMemb->type = bssAllocTypeArray(iState->checkerArena, bssAllocTypeString(iState->checkerArena));
 
         BssSymTableSlotEntry *objMemb = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
         objMemb->name = STR8_LIT("objs");
-        objMemb->type = bssAllocTypeArray(iState->checkerArena, &cState->typeTable, bssAllocTypeString(iState->checkerArena, &cState->typeTable));
+        objMemb->type = bssAllocTypeArray(iState->checkerArena, bssAllocTypeString(iState->checkerArena));
 
         BssSymTableSlotEntry *libsMemb = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
         libsMemb->name = STR8_LIT("libs");
-        libsMemb->type = bssAllocTypeArray(iState->checkerArena, &cState->typeTable, bssAllocTypeString(iState->checkerArena, &cState->typeTable));
+        libsMemb->type = bssAllocTypeArray(iState->checkerArena, bssAllocTypeString(iState->checkerArena));
 
         bssScopeAddEntry(s, srcMemb);
         bssScopeAddEntry(s, objMemb);
         bssScopeAddEntry(s, libsMemb);
 
-        cState->projectType = projectDeclType;
+        iState->cState.projectType = projectDeclType;
     }
 
     //functions
@@ -92,151 +106,182 @@ void bssCheckerCheckWholeProject(BSSInterpretorState *iState, BssCheckerState *c
         BssScope *fs = bssNewScope(iState->checkerArena, null);
         BssSymTableSlotEntry *p1 = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
         p1->name = STR8_LIT("path");
-        p1->type = bssAllocTypeString(iState->checkerArena, &cState->typeTable);
+        p1->type = bssAllocTypeString(iState->checkerArena);
+
+        BssSymTableSlotEntry *p2 = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
+        p2->name = STR8_LIT("pattern");
+        p2->type = bssAllocTypeString(iState->checkerArena);
+
+        BssSymTableSlotEntry *p3 = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
+        p3->name = STR8_LIT("recursive");
+        p3->type = bssAllocTypeBool(iState->checkerArena);
 
         bssScopeAddEntry(fs, p1);
+        bssScopeAddEntry(fs, p2);
+        bssScopeAddEntry(fs, p3);
 
-        BssType *r = bssAllocTypeArray(iState->checkerArena, &cState->typeTable, bssAllocTypeString(iState->checkerArena, &cState->typeTable));
+        BssType *r = bssAllocTypeArray(iState->checkerArena, bssAllocTypeString(iState->checkerArena));
 
         BssSymTableSlotEntry *f = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
         f->name = STR8_LIT("getfiles");
-        f->type = bssAllocTypeFunc(iState->checkerArena, &cState->typeTable, r, fs);
+        f->type = bssAllocTypeFunc(iState->checkerArena, r, fs);
 
         
-        bssScopeAddEntry(scope, f);
+        bssScopeAddEntry(iState->cState.rootScope, f);
     }
 
     {
         BssScope *fs = bssNewScope(iState->checkerArena, null);
         BssSymTableSlotEntry *p1 = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
         p1->name = STR8_LIT("str");
-        p1->type = bssAllocTypeString(iState->checkerArena, &cState->typeTable);
+        p1->type = bssAllocTypeString(iState->checkerArena);
 
         bssScopeAddEntry(fs, p1);
 
-        BssType *r = bssAllocTypeString(iState->checkerArena, &cState->typeTable);
+        BssType *r = bssAllocTypeString(iState->checkerArena);
 
         BssSymTableSlotEntry *f = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
         f->name = STR8_LIT("print");
-        f->type = bssAllocTypeFunc(iState->checkerArena, &cState->typeTable, r, fs);
+        f->type = bssAllocTypeFunc(iState->checkerArena, r, fs);
 
         
-        bssScopeAddEntry(scope, f);
+        bssScopeAddEntry(iState->cState.rootScope, f);
     }
 
     {
         BssScope *fs = bssNewScope(iState->checkerArena, null);
         BssSymTableSlotEntry *p1 = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
         p1->name = STR8_LIT("str");
-        p1->type = bssAllocTypeString(iState->checkerArena, &cState->typeTable);
+        p1->type = bssAllocTypeString(iState->checkerArena);
 
         bssScopeAddEntry(fs, p1);
 
-        BssType *r = bssAllocTypeBool(iState->checkerArena, &cState->typeTable);
+        BssType *r = bssAllocTypeBool(iState->checkerArena);
 
         BssSymTableSlotEntry *f = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
         f->name = STR8_LIT("pathexists");
-        f->type = bssAllocTypeFunc(iState->checkerArena, &cState->typeTable, r, fs);
+        f->type = bssAllocTypeFunc(iState->checkerArena, r, fs);
 
         
-        bssScopeAddEntry(scope, f);
+        bssScopeAddEntry(iState->cState.rootScope, f);
     }
 
     {
         BssScope *fs = bssNewScope(iState->checkerArena, null);
         BssSymTableSlotEntry *p1 = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
         p1->name = STR8_LIT("arr");
-        p1->type = bssAllocTypeArray(iState->checkerArena, &cState->typeTable, bssAllocTypeString(iState->checkerArena, &cState->typeTable));
+        p1->type = bssAllocTypeArray(iState->checkerArena, bssAllocTypeString(iState->checkerArena));
 
         BssSymTableSlotEntry *p2 = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
         p2->name = STR8_LIT("sep");
-        p2->type = bssAllocTypeString(iState->checkerArena, &cState->typeTable);
+        p2->type = bssAllocTypeString(iState->checkerArena);
 
         bssScopeAddEntry(fs, p1);
         bssScopeAddEntry(fs, p2);
 
-        BssType *r = bssAllocTypeString(iState->checkerArena, &cState->typeTable);
+        BssType *r = bssAllocTypeString(iState->checkerArena);
 
         BssSymTableSlotEntry *f = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
         f->name = STR8_LIT("join");
-        f->type = bssAllocTypeFunc(iState->checkerArena, &cState->typeTable, r, fs);
+        f->type = bssAllocTypeFunc(iState->checkerArena, r, fs);
 
         
-        bssScopeAddEntry(scope, f);
+        bssScopeAddEntry(iState->cState.rootScope, f);
     }
 
     {
         BssScope *fs = bssNewScope(iState->checkerArena, null);
         BssSymTableSlotEntry *p1 = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
         p1->name = STR8_LIT("arr");
-        p1->type = bssAllocTypeArray(iState->checkerArena, &cState->typeTable, bssAllocTypeString(iState->checkerArena, &cState->typeTable));
+        p1->type = bssAllocTypeArray(iState->checkerArena, bssAllocTypeString(iState->checkerArena));
 
         bssScopeAddEntry(fs, p1);
 
-        BssType *r = bssAllocTypeArray(iState->checkerArena, &cState->typeTable, bssAllocTypeString(iState->checkerArena, &cState->typeTable));
+        BssType *r = bssAllocTypeArray(iState->checkerArena, bssAllocTypeString(iState->checkerArena));
 
         BssSymTableSlotEntry *f = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
         f->name = STR8_LIT("quoteit");
-        f->type = bssAllocTypeFunc(iState->checkerArena, &cState->typeTable, r, fs);
+        f->type = bssAllocTypeFunc(iState->checkerArena, r, fs);
 
         
-        bssScopeAddEntry(scope, f);
+        bssScopeAddEntry(iState->cState.rootScope, f);
     }
 
     {
         BssScope *fs = bssNewScope(iState->checkerArena, null);
         BssSymTableSlotEntry *p1 = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
         p1->name = STR8_LIT("flag");
-        p1->type = bssAllocTypeString(iState->checkerArena, &cState->typeTable);
+        p1->type = bssAllocTypeString(iState->checkerArena);
 
         bssScopeAddEntry(fs, p1);
 
-        BssType *r = bssAllocTypeBool(iState->checkerArena, &cState->typeTable);
+        BssType *r = bssAllocTypeBool(iState->checkerArena);
 
         BssSymTableSlotEntry *f = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
         f->name = STR8_LIT("hasflag");
-        f->type = bssAllocTypeFunc(iState->checkerArena, &cState->typeTable, r, fs);
+        f->type = bssAllocTypeFunc(iState->checkerArena, r, fs);
 
         
-        bssScopeAddEntry(scope, f);
+        bssScopeAddEntry(iState->cState.rootScope, f);
     }
 
     {
         BssScope *fs = bssNewScope(iState->checkerArena, null);
         BssSymTableSlotEntry *p1 = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
         p1->name = STR8_LIT("flag");
-        p1->type = bssAllocTypeString(iState->checkerArena, &cState->typeTable);
+        p1->type = bssAllocTypeString(iState->checkerArena);
 
         bssScopeAddEntry(fs, p1);
 
-        BssType *r = bssAllocTypeBool(iState->checkerArena, &cState->typeTable);
+        BssType *r = bssAllocTypeBool(iState->checkerArena);
 
         BssSymTableSlotEntry *f = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
         f->name = STR8_LIT("addflag");
-        f->type = bssAllocTypeFunc(iState->checkerArena, &cState->typeTable, r, fs);
+        f->type = bssAllocTypeFunc(iState->checkerArena, r, fs);
 
         
-        bssScopeAddEntry(scope, f);
+        bssScopeAddEntry(iState->cState.rootScope, f);
     }
 
-    bssCheckerCheckStmtsEx(iState, cState, cState->proj->stmts, null, scope);
+    {
+        BssScope *fs = bssNewScope(iState->checkerArena, null);
+        BssSymTableSlotEntry *p1 = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
+        p1->name = STR8_LIT("env");
+        p1->type = bssAllocTypeString(iState->checkerArena);
+
+        bssScopeAddEntry(fs, p1);
+
+        BssType *r = bssAllocTypeString(iState->checkerArena);
+
+        BssSymTableSlotEntry *f = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
+        f->name = STR8_LIT("getenv");
+        f->type = bssAllocTypeFunc(iState->checkerArena, r, fs);
+
+        
+        bssScopeAddEntry(iState->cState.rootScope, f);
+    }
 }
 
-void bssCheckerCheckStmts(BSSInterpretorState *iState, BssCheckerState *cState, ASTStmtList stmts, BssScope *parentScope)
+void bssCheckerCheckWholeProject(struct BSSInterpretorState *iState)
+{
+    bssCheckerCheckStmtsEx(iState, iState->pState.proj->stmts, iState->cState.rootScope);
+}
+
+void bssCheckerCheckStmts(struct BSSInterpretorState *iState, ASTStmtList stmts, BssScope *parentScope)
 {
     BssScope *scope = bssNewScope(iState->checkerArena, parentScope);
 
-    bssCheckerCheckStmtsEx(iState, cState, stmts, parentScope, scope);
+    bssCheckerCheckStmtsEx(iState, stmts, scope);
 }
-void bssCheckerCheckStmtsEx(BSSInterpretorState *iState, BssCheckerState *cState, ASTStmtList stmts, BssScope *parentScope, BssScope *newScope)
+void bssCheckerCheckStmtsEx(struct BSSInterpretorState *iState, ASTStmtList stmts, BssScope *newScope)
 {
     BASE_LIST_FOREACH(ASTStmt, stmt, stmts)
     {
-        bssCheckerCheckStmt(iState, cState, stmt, newScope);
+        bssCheckerCheckStmt(iState, stmt, newScope);
     }
 }
 
-void bssCheckerCheckStmt(BSSInterpretorState *iState, BssCheckerState *cState, ASTStmt *stmt, BssScope *scope)
+void bssCheckerCheckStmt(struct BSSInterpretorState *iState, ASTStmt *stmt, BssScope *scope)
 {
     switch(stmt->kind)
     {
@@ -248,9 +293,9 @@ void bssCheckerCheckStmt(BSSInterpretorState *iState, BssCheckerState *cState, A
             {
                 entry = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
                 entry->name = name;
-                entry->type = cState->projectType;
+                entry->type = iState->cState.projectType;
 
-                bssCheckerCheckExpr(iState, cState, stmt->proj.assign, scope);
+                bssCheckerCheckExpr(iState, stmt->proj.assign, scope);
 
                 if(!bssIsTypeString(stmt->proj.assign->checkType))
                 {
@@ -269,10 +314,10 @@ void bssCheckerCheckStmt(BSSInterpretorState *iState, BssCheckerState *cState, A
 
         case AST_STMT_BUILD:
         {
-            bssCheckerCheckExpr(iState, cState, stmt->build.expr, scope);
-            if(bssAreBssTypesEqual(cState->projectType, stmt->build.expr->checkType))
+            bssCheckerCheckExpr(iState, stmt->build.expr, scope);
+            if(bssAreBssTypesEqual(iState->cState.projectType, stmt->build.expr->checkType))
             {
-                bssCheckerCheckExpr(iState, cState, stmt->build.buildArgs, scope);
+                bssCheckerCheckExpr(iState, stmt->build.buildArgs, scope);
             }
             else
             {
@@ -283,7 +328,7 @@ void bssCheckerCheckStmt(BSSInterpretorState *iState, BssCheckerState *cState, A
 
         case AST_STMT_EXPR:
         {
-            bssCheckerCheckExpr(iState, cState, stmt->expr, scope);
+            bssCheckerCheckExpr(iState, stmt->expr, scope);
         }break;
 
         case AST_STMT_ASSIGN:
@@ -301,7 +346,7 @@ void bssCheckerCheckStmt(BSSInterpretorState *iState, BssCheckerState *cState, A
                     entry = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
                     entry->name = name;
 
-                    bssCheckerCheckExpr(iState, cState, rhs, scope);
+                    bssCheckerCheckExpr(iState, rhs, scope);
                     entry->type = rhs->checkType;
 
                     bssScopeAddEntry(scope, entry);
@@ -313,8 +358,8 @@ void bssCheckerCheckStmt(BSSInterpretorState *iState, BssCheckerState *cState, A
 
             if(!addedNewIden)
             {
-                bssCheckerCheckExpr(iState, cState, lhs, scope);
-                bssCheckerCheckExpr(iState, cState, rhs, scope);
+                bssCheckerCheckExpr(iState, lhs, scope);
+                bssCheckerCheckExpr(iState, rhs, scope);
 
                 // todo check if equal types
                 if(!bssAreBssTypesEqual(lhs->checkType, rhs->checkType))
@@ -328,13 +373,13 @@ void bssCheckerCheckStmt(BSSInterpretorState *iState, BssCheckerState *cState, A
 
         case AST_STMT_BLOCK:
         {
-            bssCheckerCheckStmts(iState, cState, stmt->block->stmts, scope);
+            bssCheckerCheckStmts(iState, stmt->block->stmts, scope);
         }break;
 
         case AST_STMT_FOR_LOOP:
         {
             ASTExpr *container = stmt->forStmt.container;
-            bssCheckerCheckExpr(iState, cState, container, scope);
+            bssCheckerCheckExpr(iState, container, scope);
 
             if(bssIsTypeArray(container->checkType))
             {
@@ -356,7 +401,7 @@ void bssCheckerCheckStmt(BSSInterpretorState *iState, BssCheckerState *cState, A
                     bssLexerPrintTokenRange(stmt->forStmt.item, stmt->forStmt.item);
                 }
 
-                bssCheckerCheckStmtsEx(iState, cState, stmt->forStmt.block->stmts, scope, s);
+                bssCheckerCheckStmtsEx(iState, stmt->forStmt.block->stmts, s);
             }
             else
             {
@@ -371,15 +416,15 @@ void bssCheckerCheckStmt(BSSInterpretorState *iState, BssCheckerState *cState, A
             ASTBlock *then = stmt->ifstmt.then;
             ASTBlock *els = stmt->ifstmt.elseblock;
 
-            bssCheckerCheckExpr(iState, cState, cond, scope);
+            bssCheckerCheckExpr(iState, cond, scope);
             
             if(bssIsTypeBool(cond->checkType))
             {
-                bssCheckerCheckStmts(iState, cState, then->stmts, scope);
+                bssCheckerCheckStmts(iState, then->stmts, scope);
 
                 if(els != null)
                 {
-                    bssCheckerCheckStmts(iState, cState, els->stmts, scope);
+                    bssCheckerCheckStmts(iState, els->stmts, scope);
                 }
             }
             else
@@ -414,7 +459,7 @@ bool bssCheckerCheckIfTypeAllowedForBinaryOp(BssType *a, BssType *b, BssTokKind 
     return false;
 }
 
-void bssCheckerCheckExpr(BSSInterpretorState *iState, BssCheckerState *cState, ASTExpr *expr, BssScope *scope)
+void bssCheckerCheckExpr(struct BSSInterpretorState *iState, ASTExpr *expr, BssScope *scope)
 {
     expr->scope = scope;
     switch(expr->kind)
@@ -425,17 +470,17 @@ void bssCheckerCheckExpr(BSSInterpretorState *iState, BssCheckerState *cState, A
             {
                 case TOK_INT_LIT:
                 {
-                    expr->checkType = bssAllocTypeInt(iState->checkerArena, &cState->typeTable);
+                    expr->checkType = bssAllocTypeInt(iState->checkerArena);
                 }break;
 
                 case TOK_BOOL_LIT:
                 {
-                    expr->checkType = bssAllocTypeBool(iState->checkerArena, &cState->typeTable);
+                    expr->checkType = bssAllocTypeBool(iState->checkerArena);
                 }break;
 
                 case TOK_STR_LIT:
                 {
-                    expr->checkType = bssAllocTypeString(iState->checkerArena, &cState->typeTable);
+                    expr->checkType = bssAllocTypeString(iState->checkerArena);
                 }break;
             }
         }break;
@@ -458,8 +503,8 @@ void bssCheckerCheckExpr(BSSInterpretorState *iState, BssCheckerState *cState, A
             ASTExpr *l = expr->binaryOp.lhs;
             ASTExpr *r = expr->binaryOp.rhs;
 
-            bssCheckerCheckExpr(iState, cState, l, scope);
-            bssCheckerCheckExpr(iState, cState, r, scope);
+            bssCheckerCheckExpr(iState, l, scope);
+            bssCheckerCheckExpr(iState, r, scope);
 
             if (l->checkType && r->checkType)
             {
@@ -493,8 +538,8 @@ void bssCheckerCheckExpr(BSSInterpretorState *iState, BssCheckerState *cState, A
             ASTExpr *arr = expr->index.lhs;
             ASTExpr *index = expr->index.indexExpr;
 
-            bssCheckerCheckExpr(iState, cState, arr, scope);
-            bssCheckerCheckExpr(iState, cState, index, scope);
+            bssCheckerCheckExpr(iState, arr, scope);
+            bssCheckerCheckExpr(iState, index, scope);
 
             if(bssIsTypeArray(arr->checkType))
             {
@@ -519,7 +564,7 @@ void bssCheckerCheckExpr(BSSInterpretorState *iState, BssCheckerState *cState, A
             ASTExpr *o = expr->membAccess.lhs;
             BssTok iden = expr->membAccess.memb;
 
-            bssCheckerCheckExpr(iState, cState, o, scope);
+            bssCheckerCheckExpr(iState, o, scope);
 
             if(bssIsTypeObj(o->checkType))
             {
@@ -543,7 +588,7 @@ void bssCheckerCheckExpr(BSSInterpretorState *iState, BssCheckerState *cState, A
         }break;
         case AST_EXPR_RUN:
         {
-            bssCheckerCheckExpr(iState, cState, expr->run.expr, scope);
+            bssCheckerCheckExpr(iState, expr->run.expr, scope);
 
             if(!bssIsTypeString(expr->run.expr->checkType))
             {
@@ -551,14 +596,14 @@ void bssCheckerCheckExpr(BSSInterpretorState *iState, BssCheckerState *cState, A
                 bssLexerPrintTokenRange(expr->startTok, expr->endTok);
             }
 
-            expr->checkType = cState->runOutput;
+            expr->checkType = iState->cState.runOutput;
         }break;
         case AST_EXPR_FUNC_CALL:
         {
             ASTExpr *iden = expr->funcCall.func;
             if (iden->kind == AST_EXPR_IDEN)
             {
-                bssCheckerCheckExpr(iState, cState, iden, scope);
+                bssCheckerCheckExpr(iState, iden, scope);
                 if(bssIsTypeFunc(iden->checkType))
                 {
                     BssType *funcType = iden->checkType;
@@ -572,7 +617,7 @@ void bssCheckerCheckExpr(BSSInterpretorState *iState, BssCheckerState *cState, A
                         BssSymTableSlotEntry *currParam = funcType->func.scope->table.first;
                         BASE_LIST_FOREACH(ASTNamedExpr, ne, expr->funcCall.args)
                         {
-                            bssCheckerCheckExpr(iState, cState, ne->exprLhs, scope);
+                            bssCheckerCheckExpr(iState, ne->exprLhs, scope);
 
                             if(!bssAreBssTypesEqual(currParam->type, ne->exprLhs->checkType))
                             {
@@ -619,7 +664,7 @@ void bssCheckerCheckExpr(BSSInterpretorState *iState, BssCheckerState *cState, A
                 BASE_LIST_FOREACH(ASTNamedExpr, ne, expr->compoundLit.membs)
                 {
                     BssSymTableSlotEntry *e = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
-                    bssCheckerCheckExpr(iState, cState, ne->exprRhs, scope);
+                    bssCheckerCheckExpr(iState, ne->exprRhs, scope);
 
                     e->name = ne->exprLhs->iden.lexeme;
                     e->type = ne->exprRhs->checkType;
@@ -627,14 +672,14 @@ void bssCheckerCheckExpr(BSSInterpretorState *iState, BssCheckerState *cState, A
                     bssScopeAddEntry(s, e);
                 }
 
-                expr->checkType = bssAllocTypeObj(iState->checkerArena, &cState->typeTable, s);
+                expr->checkType = bssAllocTypeObj(iState->checkerArena, s);
             }
             else
             {
                 BssType *base = null;
                 BASE_LIST_FOREACH(ASTNamedExpr, ne, expr->compoundLit.membs)
                 {
-                    bssCheckerCheckExpr(iState, cState, ne->exprLhs, scope);
+                    bssCheckerCheckExpr(iState, ne->exprLhs, scope);
                     if(base == null)
                     {
                         base = ne->exprLhs->checkType;
@@ -648,7 +693,7 @@ void bssCheckerCheckExpr(BSSInterpretorState *iState, BssCheckerState *cState, A
                     }
                 }
 
-                expr->checkType = bssAllocTypeArray(iState->checkerArena, &cState->typeTable, base);
+                expr->checkType = bssAllocTypeArray(iState->checkerArena, base);
             }
 
         }break;

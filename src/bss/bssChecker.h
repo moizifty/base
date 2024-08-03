@@ -8,25 +8,16 @@
 #include "bssTypes.h"
 #include "bssScopes.h"
 
-typedef struct BssCheckerState
-{
-    ASTProject *proj;
-    BssTypeTable typeTable;
 
-    BssType *runOutput;
-    BssType *projectType;
-}BssCheckerState;
-
-void bssCheckerError(BSSInterpretorState *iState, BssTok tok, char *msg, ...);
+void bssCheckerError(struct BSSInterpretorState *iState, BssTok tok, char *msg, ...);
 void bssCheckerPrint(char *msg, ...);
 
-BssCheckerState *bssCheckerInitFromProject(BSSInterpretorState *iState, ASTProject *proj);
+void bssCheckerInit(struct BSSInterpretorState *iState);
+void bssCheckerCheckWholeProject(struct BSSInterpretorState *iState);
 
-void bssCheckerCheckWholeProject(BSSInterpretorState *iState, BssCheckerState *cState);
-
-void bssCheckerCheckStmts(BSSInterpretorState *iState, BssCheckerState *cState, ASTStmtList stmts, BssScope *parentScope);
-void bssCheckerCheckStmtsEx(BSSInterpretorState *iState, BssCheckerState *cState, ASTStmtList stmts, BssScope *parentScope, BssScope *newScope);
-void bssCheckerCheckStmt(BSSInterpretorState *iState, BssCheckerState *cState, ASTStmt *stmt, BssScope *scope);
-void bssCheckerCheckExpr(BSSInterpretorState *iState, BssCheckerState *cState, ASTExpr *expr, BssScope *scope);
+void bssCheckerCheckStmts(struct BSSInterpretorState *iState, ASTStmtList stmts, BssScope *parentScope);
+void bssCheckerCheckStmtsEx(struct BSSInterpretorState *iState, ASTStmtList stmts, BssScope *newScope);
+void bssCheckerCheckStmt(struct BSSInterpretorState *iState, ASTStmt *stmt, BssScope *scope);
+void bssCheckerCheckExpr(struct BSSInterpretorState *iState, ASTExpr *expr, BssScope *scope);
 
 #endif

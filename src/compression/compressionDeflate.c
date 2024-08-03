@@ -1,5 +1,5 @@
 #include "compressionDeflate.h"
-#include "log\log.h"
+#include "base\baseLog.h"
 
 u8 gDeflateLiteralSymsLengths[COMPRESSION_DEFLATE_NUM_LITERAL_CODES] =
 {

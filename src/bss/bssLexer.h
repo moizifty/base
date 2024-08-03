@@ -7,47 +7,25 @@
 
 #include "bss\bssCore.h"
 
-typedef struct BssLexerState BssLexerState;
-
-typedef struct BssLexerState
-{
-    struct BssLexerState *next;
-    struct BssLexerState *prev;
-
-    str8 filePath;
-    U8Array buffer;
-    BssTokArray lexedBssToks;
-
-    BssTok tok;
-    u64 nextBssTokIndex;
-
-    u8 ch;
-    u64 line;
-    u64 col;
-    u8 *currLocInBuffer;
-}BssLexerState;
-
-BASE_CREATE_EFFICIENT_LL_DECLS(BssLexerStateList, BssLexerState);
-
 void BssTokChunkListPushLast(BaseArena *arena, BssTokChunkList *l, BssTok tok);
 BssTokArray BssTokChunkListFlattenToArray(BaseArena *arena, BssTokChunkList *l);
 
-BssLexerState *bssLexerInitFromFile(BSSInterpretorState *iState, str8 filePath);
-BssLexerState *bssLexerInitFromBuffer(BSSInterpretorState *iState, U8Array buffer);
+bool bssLexerInitFromFile(struct BSSInterpretorState *iState, str8 filePath);
+bool bssLexerInitFromBuffer(struct BSSInterpretorState *iState, U8Array buffer);
 
-BssTokArray bssLexerLexWholeBuffer(BSSInterpretorState *iState, BssLexerState *lState);
+BssTokArray bssLexerLexWholeBuffer(struct BSSInterpretorState *iState);
 
-bool bssLexerAdvanceChar(BssLexerState *lState);
-u8 bssLexerPeekChar(BssLexerState *lState);
-u8 bssLexerPeekCharEx(BssLexerState *lState, u64 amount);
+bool bssLexerAdvanceChar(struct BSSInterpretorState *iState);
+u8 bssLexerPeekChar(struct BSSInterpretorState *iState);
+u8 bssLexerPeekCharEx(struct BSSInterpretorState *iState, u64 amount);
 
-BssTok bssLexerNextFromBuffer(BSSInterpretorState *iState, BssLexerState *lState);
-BssTok bssLexerNext(BssLexerState *lState);
-BssTok bssLexerPeekEx(BssLexerState *lState, u64 amount);
-BssTok bssLexerPeek(BssLexerState *lState);
+BssTok bssLexerNextFromBuffer(struct BSSInterpretorState *iState);
+BssTok bssLexerNext(struct BSSInterpretorState *iState);
+BssTok bssLexerPeekEx(struct BSSInterpretorState *iState, u64 amount);
+BssTok bssLexerPeek(struct BSSInterpretorState *iState);
 
-void bssLexerPrint(BSSInterpretorState *iState, BssLexerState *lState, char *fmt, ...);
-void bssLexerError(BSSInterpretorState *iState, BssLexerState *lState, char *fmt, ...);
+void bssLexerPrint(struct BSSInterpretorState *iState, char *fmt, ...);
+void bssLexerError(struct BSSInterpretorState *iState, char *fmt, ...);
 
 void bssLexerPrintTokenRange(BssTok start, BssTok end);
 #endif

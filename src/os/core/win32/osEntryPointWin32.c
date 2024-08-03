@@ -1,5 +1,5 @@
 #include "osCoreWin32.h"
-#include "log\log.h"
+#include "base\baseLog.h"
 
 typedef struct CmdLineHashMap CmdLineHashMap;
 void ProgramMain(CmdLineHashMap *);
@@ -21,6 +21,8 @@ inline LONG WINAPI BaseMainThreadExceptionHandler(EXCEPTION_POINTERS *exceptionI
         HANDLE process = GetCurrentProcess();
         HANDLE thread = GetCurrentThread();
         CONTEXT* context = exceptionInfo->ContextRecord;
+
+        logProgInfoFmt("=========== START OF STACK ===========");
 
         SymSetOptions(SYMOPT_EXACT_SYMBOLS | SYMOPT_FAIL_CRITICAL_ERRORS | SYMOPT_LOAD_LINES | SYMOPT_UNDNAME | SYMOPT_NO_PROMPTS);
         if(SymInitializeW(process, null, true))
@@ -92,7 +94,7 @@ inline LONG WINAPI BaseMainThreadExceptionHandler(EXCEPTION_POINTERS *exceptionI
                 }
             }
 
-            logProgInfoFmt("END OF STACK");
+            logProgInfoFmt("=========== END OF STACK ===========");
         }
 
 #ifdef BASE_USE_USER_DEFINED_EXCEPTION_HANDLER

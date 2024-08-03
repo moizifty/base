@@ -7,14 +7,14 @@
 #include "bssTypes.h"
 #include "bssScopes.h"
 
-void bssInterpError(BSSInterpretorState *iState, BssTok start, BssTok end, char *msg, ...);
+void bssInterpError(struct BSSInterpretorState *iState, BssTok start, BssTok end, char *msg, ...);
 void bssInterpPrint(char *msg, ...);
 
-void bssInterpWholeProject(BSSInterpretorState *iState, BssCheckerState *cState);
+void bssInterpWholeProject(struct BSSInterpretorState *iState);
 
-void bssInterpStmts(BSSInterpretorState *iState, BssCheckerState *cState, ASTStmtList stmts);
-void bssInterpStmt(BSSInterpretorState *iState, BssCheckerState *cState, ASTStmt *stmt);
-Str8List bssInterpProcessFormatString(BSSInterpretorState *iState, BssCheckerState *cState, ASTExpr *stringLit, str8 in);
-void bssInterpExpr(BSSInterpretorState *iState, BssCheckerState *cState, ASTExpr *expr);
+void bssInterpStmts(struct BSSInterpretorState *iState, ASTStmtList stmts);
+void bssInterpStmt(struct BSSInterpretorState *iState, ASTStmt *stmt);
+Str8List bssInterpProcessFormatString(struct BSSInterpretorState *iState, ASTExpr *stringLit, str8 in);
+void bssInterpExpr(struct BSSInterpretorState *iState, ASTExpr *expr);
 
 #endif

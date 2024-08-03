@@ -3,18 +3,7 @@
 
 #include "base\baseCore.h"
 #include "base\baseMemory.h"
-
-typedef struct BSSInterpretorState
-{
-    BaseArena *lexerArena;
-    BaseArena *parserArena;
-    BaseArena *checkerArena;
-    
-    struct BssLexerState *lState;
-    struct BssParserState *pState;
-    struct BssCheckerState *cState;
-}BSSInterpretorState;
-
+#include "base\baseStrings.h"
 
 typedef enum BssTokKind
 {
@@ -80,8 +69,56 @@ typedef struct BssTokChunkList
     u64 totalLen;
 }BssTokChunkList;
 
+typedef struct BssLexerState
+{
+    struct BssLexerState *next;
+    struct BssLexerState *prev;
+
+    str8 filePath;
+    U8Array buffer;
+    BssTokArray lexedBssToks;
+
+    BssTok tok;
+    u64 nextBssTokIndex;
+
+    u8 ch;
+    u64 line;
+    u64 col;
+    u8 *currLocInBuffer;
+}BssLexerState;
+
+typedef struct BssParserState
+{
+    struct ASTProject *proj;
+}BssParserState;
+
+typedef struct BssCheckerState
+{
+    struct BssScope *rootScope;
+    
+    struct BssType *runOutput;
+    struct BssType *projectType;
+}BssCheckerState;
+
+typedef struct BSSInterpretorState
+{
+    BaseArena *lexerArena;
+    BaseArena *parserArena;
+    BaseArena *checkerArena;
+    
+    BssLexerState lState;
+    BssParserState pState;
+    BssCheckerState cState;
+
+    Str8List buildFlags;
+}BSSInterpretorState;
+
+void bssInterpFile(BSSInterpretorState *iState, str8 path);
+void bssInterpBuffer(BSSInterpretorState *iState, U8Array buffer);
 
 i64 bssGetEscapeCharValue(str8 escapeCharString);
 str8 bssGetStr8RepFromTokLexeme(BaseArena *arena, BssTok tok);
 
+bool bssHasFlag(BSSInterpretorState *iState, str8 flag);
+void bssAddFlag(BSSInterpretorState *iState, str8 flag);
 #endif

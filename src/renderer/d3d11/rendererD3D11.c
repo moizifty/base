@@ -122,6 +122,7 @@ RendererWindowState *rendererAttachToWindow(RendererState *rs, BaseArena *arena,
     RendererWindowStatePlatformD3D11 *d3dWndState = baseArenaPush(arena, sizeof(RendererWindowStatePlatformD3D11));
     HWND wndHandle = (HWND) window._u64;
 
+    wndState->clearColor = Vec4f(0.5f, 0.5f, 0.5f, 1.0f);
     wndState->platformSpecific = (RendererWindowStatePlatform *) d3dWndState;
 
     RendererStateD3D11 *rsD3D = (RendererStateD3D11 *)rs;
@@ -268,7 +269,7 @@ void rendererWindowBegin(RendererState *rs, RendererWindowState *wndState, vec2i
     }
     wndState->lastResolution = resolution;
 
-    d3dRS->deviceContext->lpVtbl->ClearRenderTargetView(d3dRS->deviceContext, d3dWndState->framebufferRTV, Vec4f(0.5f, 0.5f, 0.5f, 1.0f).v);
+    d3dRS->deviceContext->lpVtbl->ClearRenderTargetView(d3dRS->deviceContext, d3dWndState->framebufferRTV, wndState->clearColor.v);
 }
 void rendererWindowEnd(RendererState *rs, RendererWindowState *wndState)
 {

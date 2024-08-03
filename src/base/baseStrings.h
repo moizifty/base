@@ -64,6 +64,8 @@ void Str8ListPushFirst(BaseArena *arena, Str8List *l, str8 value);
 void Str8ListPushInsert(BaseArena *arena, Str8List *l, Str8ListNode *prev, str8 value);
 void Str8ListPushLastFmt(BaseArena *arena, Str8List *l, const i8 *fmt, ...);
 
+void Str8ListPushListLast(BaseArena *arena, Str8List *l, Str8List* a);
+
 str8 Str8ListJoin(BaseArena *arena, Str8List *l, Str8ListJoinParams *optionals);
 ArrayView Str8ListFlattenToArray(BaseArena *arena, Str8List *l);
 

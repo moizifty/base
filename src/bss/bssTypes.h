@@ -58,12 +58,12 @@ typedef struct BssTypeTable
 }BssTypeTable;
 
 BssType *bssAllocType(BaseArena *arena, BssTypeKind kind);
-BssType *bssAllocTypeInt(BaseArena *arena, BssTypeTable *typeTable);
-BssType *bssAllocTypeBool(BaseArena *arena, BssTypeTable *typeTable);
-BssType *bssAllocTypeString(BaseArena *arena, BssTypeTable *typeTable);
-BssType *bssAllocTypeFunc(BaseArena *arena, BssTypeTable *typeTable, BssType *ret, struct BssScope *scope);
-BssType *bssAllocTypeArray(BaseArena *arena, BssTypeTable *typeTable, BssType *base);
-BssType *bssAllocTypeObj(BaseArena *arena, BssTypeTable *typeTable, struct BssScope *scope);
+BssType *bssAllocTypeInt(BaseArena *arena);
+BssType *bssAllocTypeBool(BaseArena *arena);
+BssType *bssAllocTypeString(BaseArena *arena);
+BssType *bssAllocTypeFunc(BaseArena *arena, BssType *ret, struct BssScope *scope);
+BssType *bssAllocTypeArray(BaseArena *arena, BssType *base);
+BssType *bssAllocTypeObj(BaseArena *arena, struct BssScope *scope);
 
 BssTypeObjMemb *bssAllocTypeObjMemb(BaseArena *arena, BssTok name, BssType *type, i64 index);
 

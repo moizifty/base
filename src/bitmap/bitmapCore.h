@@ -6,7 +6,7 @@
 #include "base\baseMemory.h"
 #include "base\baseThreads.h"
 #include "base\baseMath.h"
-#include "log\log.h"
+#include "base\baseLog.h"
 
 #include "bitmap\bitmapCoreTypes.h"
 #include "bitmap\bitmapDDS.h"

@@ -83,7 +83,7 @@ LRESULT OSGfxWin32WindowProc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
 
             result = 0;
         }break;
-
+        
         default:
         {
             result = DefWindowProc(wnd, msg, wParam, lParam);

@@ -8,48 +8,41 @@ BssType *bssAllocType(BaseArena *arena, BssTypeKind kind)
 
     return t;
 }
-BssType *bssAllocTypeInt(BaseArena *arena, BssTypeTable *typeTable)
+BssType *bssAllocTypeInt(BaseArena *arena)
 {
-    BASE_UNUSED_PARAM(typeTable);
-
     BssType *t = bssAllocType(arena, BSS_TYPE_INT);
 
     return t;
 }
-BssType *bssAllocTypeBool(BaseArena *arena, BssTypeTable *typeTable)
+BssType *bssAllocTypeBool(BaseArena *arena)
 {
-    BASE_UNUSED_PARAM(typeTable);
     BssType *t = bssAllocType(arena, BSS_TYPE_BOOL);
 
     return t;
 }
-BssType *bssAllocTypeString(BaseArena *arena, BssTypeTable *typeTable)
+BssType *bssAllocTypeString(BaseArena *arena)
 {
-    BASE_UNUSED_PARAM(typeTable);
     BssType *t = bssAllocType(arena, BSS_TYPE_STRING);
 
     return t;
 }
-BssType *bssAllocTypeFunc(BaseArena *arena, BssTypeTable *typeTable, BssType *ret, struct BssScope *scope)
+BssType *bssAllocTypeFunc(BaseArena *arena, BssType *ret, struct BssScope *scope)
 {
-    BASE_UNUSED_PARAM(typeTable);
     BssType *t = bssAllocType(arena, BSS_TYPE_FUNC);
     t->func.ret = ret;
     t->func.scope = scope;
 
     return t;
 }
-BssType *bssAllocTypeArray(BaseArena *arena, BssTypeTable *typeTable, BssType *base)
+BssType *bssAllocTypeArray(BaseArena *arena, BssType *base)
 {
-    BASE_UNUSED_PARAM(typeTable);
     BssType *t = bssAllocType(arena, BSS_TYPE_ARRAY);
     t->array.base = base;
 
     return t;
 }
-BssType *bssAllocTypeObj(BaseArena *arena, BssTypeTable *typeTable, struct BssScope *scope)
+BssType *bssAllocTypeObj(BaseArena *arena, struct BssScope *scope)
 {
-    BASE_UNUSED_PARAM(typeTable);
     BssType *t = bssAllocType(arena, BSS_TYPE_OBJ);
     t->obj.membScope = scope;
 

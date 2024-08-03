@@ -27,50 +27,50 @@ void bssInterpError(BSSInterpretorState *iState, BssTok start, BssTok end, char 
     bssLexerPrintTokenRange(start, end);
 }
 
-void bssInterpWholeProject(BSSInterpretorState *iState, BssCheckerState *cState)
+void bssInterpWholeProject(struct BSSInterpretorState *iState)
 {
-    bssInterpStmts(iState, cState, cState->proj->stmts);
+    bssInterpStmts(iState, iState->pState.proj->stmts);
 }
 
-void bssInterpStmts(BSSInterpretorState *iState, BssCheckerState *cState, ASTStmtList stmts)
+void bssInterpStmts(struct BSSInterpretorState *iState, ASTStmtList stmts)
 {
     BASE_LIST_FOREACH(ASTStmt, stmt, stmts)
     {
-        bssInterpStmt(iState, cState, stmt);
+        bssInterpStmt(iState, stmt);
     }
 }
-void bssInterpStmt(BSSInterpretorState *iState, BssCheckerState *cState, ASTStmt *stmt)
+void bssInterpStmt(struct BSSInterpretorState *iState, ASTStmt *stmt)
 {
     switch(stmt->kind)
     {
         case AST_STMT_EXPR:
         {
-            bssInterpExpr(iState, cState, stmt->expr);
+            bssInterpExpr(iState, stmt->expr);
         }break;
         case AST_STMT_BLOCK:
         {
-            bssInterpStmts(iState, cState, stmt->block->stmts);
+            bssInterpStmts(iState, stmt->block->stmts);
         }break;
         case AST_STMT_IF:
         {
-            bssInterpExpr(iState, cState, stmt->ifstmt.cond);
+            bssInterpExpr(iState, stmt->ifstmt.cond);
 
             bool cond = false;
             if(BSS_VALUE_TRYBOOL(stmt->ifstmt.cond->value, cond))
             {
                 if(cond)
                 {
-                    bssInterpStmts(iState, cState, stmt->ifstmt.then->stmts);
+                    bssInterpStmts(iState, stmt->ifstmt.then->stmts);
                 }
-                else
+                else if(stmt->ifstmt.elseblock != null)
                 {
-                    bssInterpStmts(iState, cState, stmt->ifstmt.elseblock->stmts);
+                    bssInterpStmts(iState, stmt->ifstmt.elseblock->stmts);
                 }
             }
         }break;
         case AST_STMT_FOR_LOOP:
         {
-            bssInterpExpr(iState, cState, stmt->forStmt.container);
+            bssInterpExpr(iState, stmt->forStmt.container);
 
             BssValue *cont = stmt->forStmt.container->value;
 
@@ -79,15 +79,15 @@ void bssInterpStmt(BSSInterpretorState *iState, BssCheckerState *cState, ASTStmt
             {
                 for(u64 i = 0; i < arr.len; i++)
                 {
-                    bssInterpStmts(iState, cState, stmt->forStmt.block->stmts);
+                    bssInterpStmts(iState, stmt->forStmt.block->stmts);
                 }
             }
             
         }break;
         case AST_STMT_ASSIGN:
         {
-            bssInterpExpr(iState, cState, stmt->assign.lhs);
-            bssInterpExpr(iState, cState, stmt->assign.rhs);
+            bssInterpExpr(iState, stmt->assign.lhs);
+            bssInterpExpr(iState, stmt->assign.rhs);
 
             if(stmt->assign.lhs->value != null && stmt->assign.rhs->value != null)
             {
@@ -104,7 +104,7 @@ void bssInterpStmt(BSSInterpretorState *iState, BssCheckerState *cState, ASTStmt
     }
 }
 
-Str8List bssInterpProcessFormatString(BSSInterpretorState *iState, BssCheckerState *cState, ASTExpr *stringLit, str8 in)
+Str8List bssInterpProcessFormatString(struct BSSInterpretorState *iState, ASTExpr *stringLit, str8 in)
 {
     Str8List out = {0};
     
@@ -138,24 +138,23 @@ Str8List bssInterpProcessFormatString(BSSInterpretorState *iState, BssCheckerSta
                     .checkerArena = iState->checkerArena,
                 };
 
-                BssLexerState *fmtLexer = bssLexerInitFromBuffer(&fmtIState, fmtBuffer);
-                bssLexerLexWholeBuffer(&fmtIState, fmtLexer);
+                bssLexerInitFromBuffer(&fmtIState, fmtBuffer);
+                fmtIState.lState.filePath = iState->lState.filePath;
 
-                BssParserState fmtParser = {.lexer = fmtLexer};
-                ASTExpr *expr = bssParserExpr(&fmtIState, &fmtParser);
+                bssLexerLexWholeBuffer(&fmtIState);
 
-                BssCheckerState fmtChecker = {0};
-                bssCheckerCheckExpr(&fmtIState, &fmtChecker, expr, expr->scope);
+                ASTExpr *expr = bssParserExpr(&fmtIState);
 
-                bssInterpExpr(iState, &fmtChecker, expr);
+                bssCheckerInit(&fmtIState);
+                bssCheckerCheckExpr(&fmtIState, expr, stringLit->scope);
+
+                bssInterpExpr(&fmtIState, expr);
 
                 BssValue *val = expr->value;
 
-                str8 valStr = Str8ListJoin(temp.arena, &val->str.val, null);
-
-                for(u64 i = 0; i < valStr.len; i++)
+                for(u64 c = 0; c < val->strRep.len; c++)
                 {
-                    U8ChunkListPushLast(temp.arena, &charList, valStr.data[i]);
+                    U8ChunkListPushLast(temp.arena, &charList, val->strRep.data[c]);
                 }
             }
             else if (in.data[i] == '{') // {{
@@ -180,10 +179,6 @@ Str8List bssInterpProcessFormatString(BSSInterpretorState *iState, BssCheckerSta
         final.len = flattend.len;
         
         Str8ListPushLast(iState->checkerArena, &out, final);
-
-        str8 joined = Str8ListJoin(iState->checkerArena, &out, null);
-
-        int a = 90;
     }
 
     baseTempEnd(temp);
@@ -191,7 +186,24 @@ Str8List bssInterpProcessFormatString(BSSInterpretorState *iState, BssCheckerSta
     return out;    
 }
 
-void bssInterpExpr(BSSInterpretorState *iState, BssCheckerState *cState, ASTExpr *expr)
+BssValueList BssValueListFromStr8List(BaseArena *arena, Str8List list)
+{
+    BssValueList ret = {0};
+
+    BASE_LIST_FOREACH(Str8ListNode, sN, list)
+    {
+        BssValue *value = baseArenaPushType(arena, BssValue);
+        value->hasBssValue = true;
+        value->type = bssAllocTypeString(arena);
+        Str8ListPushLast(arena, &value->str.val, sN->val);
+        value->strRep = sN->val;
+
+        BssValueListPushNodeLast(&ret, value);
+    }
+
+    return ret;
+}
+void bssInterpExpr(struct BSSInterpretorState *iState, ASTExpr *expr)
 {
     switch(expr->kind)
     {
@@ -201,12 +213,14 @@ void bssInterpExpr(BSSInterpretorState *iState, BssCheckerState *cState, ASTExpr
             {
                 case BSS_TYPE_INT:
                 {
-                    i64 i = atoll(expr->lit.lexeme.data);
+                    i64 i = atoll((i8*)expr->lit.lexeme.data);
 
                     expr->value = baseArenaPushType(iState->checkerArena, BssValue);
                     expr->value->type = expr->checkType;
                     expr->value->hasBssValue = true;
                     expr->value->integer.val = i;
+
+                    expr->value->strRep = expr->lit.lexeme;
                 }break;
 
                 case BSS_TYPE_BOOL:
@@ -221,6 +235,8 @@ void bssInterpExpr(BSSInterpretorState *iState, BssCheckerState *cState, ASTExpr
                     expr->value->type = expr->checkType;
                     expr->value->hasBssValue = true;
                     expr->value->boolean.val = value;
+
+                    expr->value->strRep = expr->lit.lexeme;
                 }break;
 
                 case BSS_TYPE_STRING:
@@ -231,13 +247,15 @@ void bssInterpExpr(BSSInterpretorState *iState, BssCheckerState *cState, ASTExpr
 
                     if(expr->lit.isFmtStr)
                     {
-                        list = bssInterpProcessFormatString(iState, cState, expr, str);
+                        list = bssInterpProcessFormatString(iState, expr, str);
                     }
                     
                     expr->value = baseArenaPushType(iState->checkerArena, BssValue);
                     expr->value->type = expr->checkType;
                     expr->value->hasBssValue = true;
                     expr->value->str.val = list;
+                    expr->value->strRep = Str8ListJoin(iState->checkerArena, &list, null);
+
                 }break;
             }break;
         }break;
@@ -254,7 +272,7 @@ void bssInterpExpr(BSSInterpretorState *iState, BssCheckerState *cState, ASTExpr
         }break;
         case AST_EXPR_MEMBER_ACCESS:
         {
-            bssInterpExpr(iState, cState, expr->membAccess.lhs);
+            bssInterpExpr(iState, expr->membAccess.lhs);
 
             BssValueObjMemb *memb = null;
             BASE_LIST_FOREACH(BssValueObjMemb, m, expr->membAccess.lhs->value->obj.val)
@@ -280,8 +298,8 @@ void bssInterpExpr(BSSInterpretorState *iState, BssCheckerState *cState, ASTExpr
         }break;
         case AST_EXPR_INDEX_ACCESS:
         {
-            bssInterpExpr(iState, cState, expr->index.lhs);
-            bssInterpExpr(iState, cState, expr->index.indexExpr);
+            bssInterpExpr(iState, expr->index.lhs);
+            bssInterpExpr(iState, expr->index.indexExpr);
 
 
             u64 index = 0;
@@ -316,7 +334,7 @@ void bssInterpExpr(BSSInterpretorState *iState, BssCheckerState *cState, ASTExpr
             {
                 BASE_LIST_FOREACH(ASTNamedExpr, ne, expr->compoundLit.membs)
                 {
-                    bssInterpExpr(iState, cState, ne->exprLhs);
+                    bssInterpExpr(iState, ne->exprLhs);
 
                     // todo: fix eerror, since ne->exprLhs->value might be a value from identifier
                     // that means that the value in the array will be the same pointer as the value for the identifier,
@@ -329,7 +347,7 @@ void bssInterpExpr(BSSInterpretorState *iState, BssCheckerState *cState, ASTExpr
             {
                 BASE_LIST_FOREACH(ASTNamedExpr, ne, expr->compoundLit.membs)
                 {
-                    bssInterpExpr(iState, cState, ne->exprRhs);
+                    bssInterpExpr(iState, ne->exprRhs);
 
                     BssValueObjMemb *memb = baseArenaPushType(iState->checkerArena, BssValueObjMemb);
                     memb->name = ne->exprLhs->iden.lexeme;
@@ -346,14 +364,15 @@ void bssInterpExpr(BSSInterpretorState *iState, BssCheckerState *cState, ASTExpr
             }
 
             expr->value = value;
+
         }break;
         case AST_EXPR_FUNC_CALL:
         {
-            bssInterpExpr(iState, cState, expr->funcCall.func);
+            bssInterpExpr(iState, expr->funcCall.func);
 
             BASE_LIST_FOREACH(ASTNamedExpr, ne, expr->funcCall.args)
             {
-                bssInterpExpr(iState, cState, ne->exprLhs);
+                bssInterpExpr(iState, ne->exprLhs);
             }
 
             str8 funcName = expr->funcCall.func->iden.lexeme;
@@ -365,13 +384,188 @@ void bssInterpExpr(BSSInterpretorState *iState, BssCheckerState *cState, ASTExpr
 
                 baseColPrintf("%S", joined);
             }
+            else if (baseStringsStrEquals(funcName, STR8_LIT("getfiles"), 0))
+            {
+                str8 path = expr->funcCall.args.first->exprLhs->value->strRep;
+                str8 pattern = expr->funcCall.args.first->next->exprLhs->value->strRep;
+                bool recursive = expr->funcCall.args.first->next->next->exprLhs->value->boolean.val;
+
+                Str8List paths = OSGetFilePaths(iState->checkerArena, path, pattern, recursive);
+
+                if(!BASE_ANY(paths))
+                {
+                    bssInterpError(iState, 
+                                    expr->startTok,
+                                    expr->endTok,
+                                    "No files found in directory '%S', with pattern '%S'.\n", path, pattern);
+                }
+
+                BssValue *val = baseArenaPushType(iState->checkerArena, BssValue);
+                val->hasBssValue = true;
+                val->type = expr->checkType;
+                val->arr.val = BssValueListFromStr8List(iState->checkerArena, paths);
+                val->strRep = Str8ListJoin(iState->checkerArena, &paths, &(Str8ListJoinParams){.pre = STR8_LIT("["), .sep = STR8_LIT(","), .post = STR8_LIT("]")});
+
+                expr->value = val;
+            }
+            else if (baseStringsStrEquals(funcName, STR8_LIT("quoteit"), 0))
+            {
+                BssValue *arrVal = expr->funcCall.args.first->exprLhs->value;
+
+                Str8List list = {0};
+
+                BASE_LIST_FOREACH(BssValue, v, arrVal->arr.val)
+                {
+                    Str8ListPushLastFmt(iState->checkerArena, &list, "\"%S\"", v->strRep);
+                }
+
+                BssValue *val = baseArenaPushType(iState->checkerArena, BssValue);
+                val->hasBssValue = true;
+                val->type = expr->checkType;
+                val->arr.val = BssValueListFromStr8List(iState->checkerArena, list);
+                val->strRep = Str8ListJoin(iState->checkerArena, &list, &(Str8ListJoinParams){.pre = STR8_LIT("["), .sep = STR8_LIT(","), .post = STR8_LIT("]")});
+
+                expr->value = val;
+            }
+            else if (baseStringsStrEquals(funcName, STR8_LIT("join"), 0))
+            {
+                BssValue *arrVal = expr->funcCall.args.first->exprLhs->value;
+                str8 sep = expr->funcCall.args.first->next->exprLhs->value->strRep;
+
+                Str8List list = {0};
+
+                BASE_LIST_FOREACH(BssValue, v, arrVal->arr.val)
+                {
+                    Str8ListPushLast(iState->checkerArena, &list, v->strRep);
+                }
+
+                BssValue *val = baseArenaPushType(iState->checkerArena, BssValue);
+                val->hasBssValue = true;
+                val->type = expr->checkType;
+
+                val->strRep = Str8ListJoin(iState->checkerArena, &list, &(Str8ListJoinParams){.sep = sep});
+                Str8ListPushLast(iState->checkerArena, &val->str.val, val->strRep);
+
+                expr->value = val;
+            }
+            else if (baseStringsStrEquals(funcName, STR8_LIT("hasflag"), 0))
+            {
+                str8 flag = expr->funcCall.args.first->exprLhs->value->strRep;
+
+                BssValue *val = baseArenaPushType(iState->checkerArena, BssValue);
+                val->hasBssValue = true;
+                val->type = expr->checkType;
+                val->boolean.val = bssHasFlag(iState, flag);
+                val->strRep = (val->boolean.val) ? STR8_LIT("true") : STR8_LIT("false");
+
+                expr->value = val;
+            }
+            else if (baseStringsStrEquals(funcName, STR8_LIT("addflag"), 0))
+            {
+                str8 flag = expr->funcCall.args.first->exprLhs->value->strRep;
+                bssAddFlag(iState, flag);
+
+                BssValue *val = baseArenaPushType(iState->checkerArena, BssValue);
+                val->hasBssValue = true;
+                val->type = expr->checkType;
+                val->boolean.val = false;
+                val->strRep = STR8_LIT("false");
+
+                expr->value = val;
+            }
+            else if (baseStringsStrEquals(funcName, STR8_LIT("getenv"), 0))
+            {
+                str8 env = expr->funcCall.args.first->exprLhs->value->strRep;
+                str8 envVal = OSGetEnvironmentVar(iState->checkerArena, env);
+
+                BssValue *val = baseArenaPushType(iState->checkerArena, BssValue);
+                val->hasBssValue = true;
+                val->type = expr->checkType;
+                Str8ListPushLast(iState->checkerArena, &val->str.val, envVal);
+                val->strRep = envVal;
+
+                expr->value = val;
+            }
+            
             else
             {
                 bssInterpError(iState, expr->startTok, expr->endTok, "Unimplemented function.\n");
             }
         }break;
-        case AST_EXPR_BINARY:
         case AST_EXPR_RUN:
+        {
+            bssInterpExpr(iState, expr->run.expr);
+
+            str8 runString = expr->run.expr->value->strRep;
+            str8 command = baseStringsPushStr8Fmt(iState->checkerArena, "cmd.exe /q /k \"@echo off && %S\"", runString);
+
+            str8 out = {0}, err = {0};
+            OSRunProcessEx(iState->checkerArena, STR8_LIT(""), command, null, &out, &err);
+
+            BssValue *val = baseArenaPushType(iState->checkerArena, BssValue);
+            val->hasBssValue = true;
+            val->type = expr->checkType;
+            
+            {
+                BssValueObjMemb *stdoutMemb = baseArenaPushType(iState->checkerArena, BssValueObjMemb);
+                stdoutMemb->name = STR8_LIT("stdout");
+                stdoutMemb->val = baseArenaPushType(iState->checkerArena, BssValue);
+                stdoutMemb->val->type = val->type->obj.membScope->table.first->type;
+                stdoutMemb->val->hasBssValue = true;
+                Str8ListPushLast(iState->checkerArena, &stdoutMemb->val->str.val, out);
+
+                stdoutMemb->val->strRep = out;
+
+                BssValueObjMembListPushNodeLast(&val->obj.val, stdoutMemb);
+            }
+
+            {
+                BssValueObjMemb *stderrMemb = baseArenaPushType(iState->checkerArena, BssValueObjMemb);
+                stderrMemb->name = STR8_LIT("stderr");
+                stderrMemb->val = baseArenaPushType(iState->checkerArena, BssValue);
+                stderrMemb->val->type = val->type->obj.membScope->table.first->next->type;
+                stderrMemb->val->hasBssValue = true;
+                Str8ListPushLast(iState->checkerArena, &stderrMemb->val->str.val, err);
+
+                stderrMemb->val->strRep = err;
+
+                BssValueObjMembListPushNodeLast(&val->obj.val, stderrMemb);
+            }
+
+            expr->value = val;
+        }break;
+        case AST_EXPR_BINARY:
+        {
+            bssInterpExpr(iState, expr->binaryOp.lhs);
+            bssInterpExpr(iState, expr->binaryOp.rhs);
+
+            if(bssIsTypeArray(expr->binaryOp.lhs->checkType) && bssIsTypeArray(expr->binaryOp.rhs->checkType))
+            {
+                bssInterpError(iState, expr->startTok, expr->endTok, "Unrecognised expr.\n");
+            }
+            else if (bssIsTypeArray(expr->binaryOp.lhs->checkType) || bssIsTypeArray(expr->binaryOp.rhs->checkType))
+            {
+                bssInterpError(iState, expr->startTok, expr->endTok, "Unrecognised expr.\n");
+            }
+            else
+            {
+                if (bssIsTypeString(expr->binaryOp.lhs->checkType) && bssIsTypeString(expr->binaryOp.rhs->checkType))
+                {
+                    BssValue *val = baseArenaPushType(iState->checkerArena, BssValue);
+                    val->hasBssValue = true;
+                    val->type = expr->checkType;
+                    Str8ListPushLast(iState->checkerArena, &val->str.val, expr->binaryOp.lhs->value->strRep);
+                    Str8ListPushLast(iState->checkerArena, &val->str.val, expr->binaryOp.rhs->value->strRep);
+
+                    val->strRep = Str8ListJoin(iState->checkerArena, &val->str.val, null);
+                    expr->value = val;
+                }
+                else
+                {
+                    bssInterpError(iState, expr->startTok, expr->endTok, "Unrecognised expr.\n");
+                }
+            }
+        }break;
         default:
         {
             bssInterpError(iState, expr->startTok, expr->endTok, "Unrecognised expr.\n");

@@ -49,7 +49,6 @@ typedef enum OSFileCreationKind
 typedef enum OSFileFindType
 {
     OS_FILEFIND_NONE,
-    OS_FILEFIND_TYPE_TOP_LEVEL_DIR,
 }OSFileFindType;
 
 typedef u64 OSFileAttributeFlags;
@@ -70,7 +69,7 @@ typedef struct OSFileFindIter
 
 typedef struct OSFileInfo
 {
-    str8 path;
+    str8 name;
     OSFileAttributeFlags attrs;
 }OSFileInfo;
 
@@ -80,7 +79,7 @@ typedef struct OSExceptionInfo
     u32 _placeholder;
 }OSExceptionInfo;
 
-#ifdef OS_WINDOWS
+#ifdef OS_WIN32
 #include "win32\osCoreWin32.h"
 #else
 #error Platform not defined
@@ -116,6 +115,8 @@ OSFileFindIter *OSFindFileBegin(struct BaseArena *arena, str8 path, OSFileFindOp
 bool OSFindFileNext(struct BaseArena *arena, OSFileFindIter *iter, OSFileInfo *out);
 void OSFindFileEnd(OSFileFindIter *iter);
 
+Str8List OSGetFilePaths(BaseArena *arena, str8 dir, str8 pattern, bool recursive);
+
 // process
 str8 OSGetProgramPath(BaseArena *arena);
 str8 OSGetProgramDirectory(BaseArena *arena);
@@ -125,6 +126,9 @@ bool OSRunProcessEx(struct BaseArena *arena, str8 app, str8 args, void *peb, str
 // Date and time
 DateTime OSGetSytemTime(void);
 DateTime OSGetLocalTime(void);
+
+//env
+str8 OSGetEnvironmentVar(BaseArena *arena, str8 var);
 
 // other
 range2i OSClientRectFromWindow(OSHandle handle);

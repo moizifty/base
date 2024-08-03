@@ -9,7 +9,7 @@
 #include "..\base\base.c"
 #include "..\os\os.c"
 #include "..\renderer\renderer.c"
-#include "..\log\log.c"
+#include "..\base\baseLog.c"
 #include "..\compression\compression.c"
 #include "..\bitmap\bitmap.c"
 
@@ -20,19 +20,19 @@ BASE_CREATE_LL_DECLS_DEFS(IntList, int);
 
 void printFiles(BaseArena *arena, str8 path)
 {
-	OSFileInfo fileInfo = {0};
-	OSFileFindIter *iter = OSFindFileBegin(arena, path, &(OSFileFindOptionalParams){.type = OS_FILEFIND_TYPE_TOP_LEVEL_DIR});
-	for(;OSFindFileNext(arena, iter, &fileInfo);)
-	{
-		if (fileInfo.attrs & OS_FILEATTR_DIR)
-		{
-			printFiles(arena, fileInfo.path);
-		}
-		else
-		{
-			baseColPrintf("%S\n", fileInfo.path);
-		}
-	}
+	// OSFileInfo fileInfo = {0};
+	// OSFileFindIter *iter = OSFindFileBegin(arena, path, &(OSFileFindOptionalParams){.type = OS_FILEFIND_TYPE_TOP_LEVEL_DIR});
+	// for(;OSFindFileNext(arena, iter, &fileInfo);)
+	// {
+	// 	if (fileInfo.attrs & OS_FILEATTR_DIR)
+	// 	{
+	// 		printFiles(arena, fileInfo.path);
+	// 	}
+	// 	else
+	// 	{
+	// 		baseColPrintf("%S\n", fileInfo.path);
+	// 	}
+	// }
 }
 
 void ProgramMain(CmdLineHashMap *cmdline)
@@ -40,15 +40,7 @@ void ProgramMain(CmdLineHashMap *cmdline)
 	BaseArena *generalArena = baseArenaAlloc(BASE_GIGABYTES(2));
 	
 	BSSInterpretorState bs = {.lexerArena = generalArena, .parserArena = generalArena, .checkerArena = generalArena};
-	BssLexerState *ls = bssLexerInitFromFile(&bs, STR8_LIT("C:\\Users\\moizi\\OneDrive\\Documents\\Programming\\C\\base\\src\\bss\\tests\\test.bss"));
-	BssTokArray toks = bssLexerLexWholeBuffer(&bs, ls);
-
-	BssParserState s = {.lexer = ls};
-    ASTProject *proj = bssParserProject(&bs, &s);
-
-	BssCheckerState *cs = bssCheckerInitFromProject(&bs, proj);
-	bssCheckerCheckWholeProject(&bs, cs);
-	bssInterpWholeProject(&bs, cs);
+	bssInterpFile(&bs, STR8_LIT("C:\\Users\\moizi\\OneDrive\\Documents\\Programming\\C\\base\\src\\bss\\tests\\test.bss"));
 	
 	OSGfxState *state = OSGfxInit(generalArena);
 	OSHandle window = OSGfxWindowOpen(STR8_LIT("Test"), Vec2i(-1, -1), Vec2i(-1, -1));

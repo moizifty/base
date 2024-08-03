@@ -1,7 +1,9 @@
 print("~nBuilding {"#"}~n~n");
-
+onedrivefolder = getenv("onedrive");
+baselib = "{onedrivefolder}\Documents\Programming\C\base\src";
+print(baselib);
 this = {
-    src = quoteit(getfiles("#\src\**\*.c")),
+    src = quoteit({"{cwd}\..\bssEntryPoint.c"}),
     objs = {
         ""
     },
@@ -10,24 +12,28 @@ this = {
     },
 };
 
-exePath = "#\builds\main.exe";
+exePath = "{cwd}\..\builds\bss.exe";
 
-if hasflag("-build")
+//if hasflag("-build")
 {
     compiler = "cl";
 
-    includeArg = "/I" + "src";
+    includeArg = join(
+    {
+        "/I{cwd}\..\",
+        "/I{cwd}\..\..\",
+    }, " ");
+
     outputName = "/Fe~"{exePath}~"";
-    objFolder = "/Fo~"{"#\builds/"}~"";
-    
-    command = "{compiler} /Zi {includeArg} src\tests\main.c {outputName} {objFolder} /Wall /wd4062 /wd4063 /wd4061 /wd4255 /wd4201 /wd4774 /wd4668 /wd4464 /wd5045 /wd4820 /DBUILD_CONSOLE_APP ";
+    objFolder = "/Fo~"{"{cwd}\..\builds"}~"";
+    src = join(this.src, " ");
+
+    command = "{compiler} /Zi {includeArg} {src} {outputName} {objFolder} /Wall /wd4062 /wd4063 /wd4061 /wd4255 /wd4201 /wd4774 /wd4668 /wd4464 /wd5045 /wd4820 /DBUILD_CONSOLE_APP ";
     output = run command;
 
-    // for some BS reason msvc c compiler dumps errors in the stdout not stderr?
-    print("{output}~n");
-
-    deleteObjsCommand = run "del ~"{"#\builds\*.obj"}~"";
-    print("{deleteObjsCommand}");
+    print("{command}~n");
+    print("{output.stdout}~n");
+    print("{output.stderr}~n");
 }
 
 if hasflag("-test")

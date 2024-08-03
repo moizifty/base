@@ -30,6 +30,14 @@ void U8ChunkListPushLast(BaseArena *arena, U8ChunkList *l, u8 u)
     l->last->chunk.len += 1;
     l->totalLen += 1;
 }
+void U8ChunkListPushStr8Last(BaseArena *arena, U8ChunkList *l, str8 str)
+{
+    for(u64 i = 0; i < str.len; i++)
+    {
+        U8ChunkListPushLast(arena, l, str.data[i]);
+    }
+}
+
 U8Array U8ChunkListFlattenToArray(BaseArena *arena, U8ChunkList *l)
 {
     U8Array flattened = {0};

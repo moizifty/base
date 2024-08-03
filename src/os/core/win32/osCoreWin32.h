@@ -1,4 +1,5 @@
 #pragma comment(lib, "shell32.lib")
+#pragma comment(lib, "shlwapi.lib")
 
 #ifndef OS_CORE_WIN32_H
 #define OS_CORE_WIN32_H
@@ -10,6 +11,7 @@
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <memoryapi.h>
+#include <Shlwapi.h>
 
 #include "base\baseCoreTypes.h"
 
@@ -19,7 +21,6 @@ typedef struct OSFindFileIterWin32
 {
     WIN32_FIND_DATAA findData;
     HANDLE handle;
-    str8 originalPath;
     bool firstWasReturned;
 
     struct OSFileFindOptionalParams optParams;
