@@ -57,6 +57,44 @@ enum
     OS_FILEATTR_DIR = (1<<0),
 };
 
+typedef enum OSKey
+{
+    OS_KEY_NULL,
+    
+    OS_KEY_A,
+    OS_KEY_B,
+    OS_KEY_C,
+    OS_KEY_D,
+    OS_KEY_E,
+    OS_KEY_F,
+    OS_KEY_G,
+    OS_KEY_H,
+    OS_KEY_I,
+    OS_KEY_J,
+    OS_KEY_K,
+    OS_KEY_L,
+    OS_KEY_M,
+    OS_KEY_N,
+    OS_KEY_O,
+    OS_KEY_P,
+    OS_KEY_Q,
+    OS_KEY_R,
+    OS_KEY_S,
+    OS_KEY_T,
+    OS_KEY_U,
+    OS_KEY_V,
+    OS_KEY_W,
+    OS_KEY_X,
+    OS_KEY_Y,
+    OS_KEY_Z,
+    OS_KEY_COUNT,
+}OSKey;
+
+typedef struct OSKeyState
+{
+    bool pressed;
+}OSKeyState;
+
 typedef struct OSFileFindOptionalParams
 {
     OSFileFindType type;
@@ -131,7 +169,11 @@ DateTime OSGetLocalTime(void);
 str8 OSGetEnvironmentVar(BaseArena *arena, str8 var);
 
 // other
+vec2i OSScreenCoordToClientCoord(OSHandle wndHandle, vec2i screen);
 range2i OSClientRectFromWindow(OSHandle handle);
+vec2i OSGetCursorScreenCoordPos();
+vec2i OSGetCursorClientCoordPos(OSHandle wndHandle);
 
 global OSState *gOSState;
+
 #endif

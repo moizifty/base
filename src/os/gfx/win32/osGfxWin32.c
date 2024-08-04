@@ -7,6 +7,11 @@
 threadlocal BaseArena *gOSWin32TLEventsArena = null;
 threadlocal OSEventList gOSWin32TLEvents = {0};
 
+global OSKey gOSWin32VKToOSKeyTable[256];
+
+global OSKeyState gOSKeyStates[OS_KEY_COUNT];
+global OSKeyState gOSPrevKeyStates[OS_KEY_COUNT];
+
 OSGfxState *OSGfxInitEx(BaseArena *arena, void *extra)
 {
     UNREFERENCED_PARAMETER(extra);
@@ -69,6 +74,46 @@ OSEventList OSGfxProcessEvents(BaseArena *arena)
     return gOSWin32TLEvents;
 }
 
+bool OSGfxProcessInputEvents(BaseArena *arena)
+{
+    BASE_UNUSED_PARAM(arena);
+
+    for(u64 i = 0; i < BASE_ARRAY_SIZE(gOSKeyStates); i++)
+    {
+        gOSPrevKeyStates[i] = gOSKeyStates[i];
+    }
+
+    BASE_LIST_FOREACH(OSEvent, event, gOSWin32TLEvents)
+    {
+        switch(event->kind)
+        {
+            case OS_EVENT_WINDOW_CLOSE:
+            {
+                return true;
+            }break;
+
+            case OS_EVENT_WINDOW_LOST_FOCUS:
+            {
+                // if the window loses focus, it loses input focus too
+                // so we have to reset the keystates
+
+                BASE_MEMSET(gOSKeyStates, 0, sizeof(gOSKeyStates));
+                BaseListNodeRemove(gOSWin32TLEvents, event);
+            }break;
+
+            case OS_EVENT_KEY_PRESS: 
+            case OS_EVENT_KEY_RELEASE:
+            {
+                gOSKeyStates[event->key].pressed = (event->kind == OS_EVENT_KEY_PRESS) ? true : false;
+
+                BaseListNodeRemove(gOSWin32TLEvents, event);
+            }break;
+        }
+    }
+
+    return false;
+}
+
 LRESULT OSGfxWin32WindowProc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     OSEvent *event = null;
@@ -84,6 +129,38 @@ LRESULT OSGfxWin32WindowProc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
             result = 0;
         }break;
         
+        case WM_KILLFOCUS:
+        {
+            event = baseArenaPush(gOSWin32TLEventsArena, sizeof(OSEvent));
+            event->kind = OS_EVENT_WINDOW_LOST_FOCUS;
+
+            result = 0;
+        }break;
+
+        case WM_KEYUP:
+        case WM_KEYDOWN:
+        {
+            bool wasDown = (lParam & (1 << 30));
+            bool isUp = (lParam & (1 << 31));
+            
+            // dont allow repeat events to be spammed
+            if (!wasDown || isUp)
+            {
+                OSKey key = OS_KEY_NULL;
+
+                if (wParam < BASE_ARRAY_SIZE(gOSWin32VKToOSKeyTable))
+                {
+                    key = gOSWin32VKToOSKeyTable[wParam];
+                }
+
+                event = baseArenaPush(gOSWin32TLEventsArena, sizeof(OSEvent));
+                event->kind = (isUp) ? OS_EVENT_KEY_RELEASE : OS_EVENT_KEY_PRESS;
+                event->key = key;
+            }
+            
+            result = 0;
+        }break;
+
         default:
         {
             result = DefWindowProc(wnd, msg, wParam, lParam);

@@ -74,10 +74,17 @@
 ((CheckNull(f)) ? ((f) = (l) = (n), (n)->prev = (n)->next = null) \
 : ((CheckNull(p)) ? ((n)->next = (f), (n)->prev = null, (f)->prev = (n), (f) = (n)) \
 : ((!CheckNull((p)->next)) ? (p)->next->prev = (n) : 0), ((n)->next = (p)->next, (n)->prev = (p), (p)->next = (n), (((p) == (l)) ? (l) = (n) : 0))))
+#define BaseDllRemoveEx(f,l,n, prev, next) (((f)==(n))?\
+((f)=(f)->next, (CheckNull(f) ? (SetNull(l)) : SetNull((f)->prev))):\
+((l)==(n))?\
+((l)=(l)->prev, (CheckNull(l) ? (SetNull(f)) : SetNull((l)->next))):\
+((CheckNull((n)->next) ? (0) : ((n)->next->prev=(n)->prev)),\
+(CheckNull((n)->prev) ? (0) : ((n)->prev->next=(n)->next))))
 
 #define BaseDllNodeInsert(f, l, p, n)   BaseDllNodeInsertEx(f, l, p, n, prev, next)
 #define BaseDllNodePushLast(f, l, n)    BaseDllNodeInsertEx(f, l, l, n, prev, next)
 #define BaseDllNodePushFirst(f, l, n)   BaseDllNodeInsertEx(l, f, f, n, next, prev)
+#define BaseDllRemove(f,l,n)            BaseDllRemoveEx(f,l,n, prev,next)
 
 #define BaseListNodePushLastEx(list, n, prev, next)   (BaseDllNodeInsertEx((list).first, (list).last, (list).last, n, prev, next), (list).len++)
 #define BasePtrListNodePushLastEx(list, n, prev, next)   (BaseListNodePushLastEx(*list, n, prev, next))
@@ -88,6 +95,9 @@
 #define BaseListNodeInsertEx(list, p, n, prev, next)   (BaseDllNodeInsertEx((list).first, (list).last, p, n, prev, next), (list).len++)
 #define BasePtrListNodeInsertEx(list, p, n, prev, next)   (BaseListNodeInsertEx(*(list), p, n, prev, next))
 
+#define BaseListNodeRemoveEx(list, n, prev, next)   (BaseDllRemoveEx((list).first, (list).last, n, prev, next), (list).len--)
+#define BasePtrListNodeRemoveEx(list, n, prev, next)   (BaseDllRemoveEx(*(list), n, prev, next))
+
 #define BaseListNodePushLast(list, n)   (BaseListNodePushLastEx((list), (n), prev, next))
 #define BasePtrListNodePushLast(list, n)   (BasePtrListNodePushLastEx((list), (n), prev, next))
 
@@ -97,6 +107,8 @@
 #define BaseListNodeInsert(list, p, n)   (BaseListNodeInsertEx((list), p, n, prev, next))
 #define BasePtrListNodeInsert(list, p, n)   (BasePtrListNodeInsertEx((list), p, n, prev, next))
 
+#define BaseListNodeRemove(list, n)   (BaseListNodeRemoveEx((list), n, prev, next))
+#define BasePtrListNodeRemove(list, n)   (BasePtrListNodeRemoveEx((list), n, prev, next))
 
 #define BASE_ANY_PTR(pL)     (((pL) != NULL) && (pL)->len != 0)
 #define BASE_ANY(L)     ((L).len != 0)

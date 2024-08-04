@@ -43,6 +43,6 @@
         "xlocnum": "c",
         "xloctime": "c",
         "xmemory": "c",
-        "xstddef": "c"
+        "xstddef": "c",
     }
 }

@@ -7,6 +7,65 @@
 #include "..\..\..\base\baseThreads.h"
 #include "base\baseLog.h"
 
+global OSKey gOSWin32VKToOSKeyTable[256] = 
+{
+    ['A'] = OS_KEY_A,
+    ['B'] = OS_KEY_B,
+    ['C'] = OS_KEY_C,
+    ['D'] = OS_KEY_D,
+    ['E'] = OS_KEY_E,
+    ['F'] = OS_KEY_F,
+    ['G'] = OS_KEY_G,
+    ['H'] = OS_KEY_H,
+    ['I'] = OS_KEY_I,
+    ['J'] = OS_KEY_J,
+    ['K'] = OS_KEY_K,
+    ['L'] = OS_KEY_L,
+    ['M'] = OS_KEY_M,
+    ['N'] = OS_KEY_N,
+    ['O'] = OS_KEY_O,
+    ['P'] = OS_KEY_P,
+    ['Q'] = OS_KEY_Q,
+    ['R'] = OS_KEY_R,
+    ['S'] = OS_KEY_S,
+    ['T'] = OS_KEY_T,
+    ['U'] = OS_KEY_U,
+    ['V'] = OS_KEY_V,
+    ['W'] = OS_KEY_W,
+    ['X'] = OS_KEY_X,
+    ['Y'] = OS_KEY_Y,
+    ['Z'] = OS_KEY_Z,
+};
+
+u64 gOSWin32OSKeyToVKTable[OS_KEY_COUNT] = 
+{
+    [OS_KEY_A] = 'A',
+    [OS_KEY_B] = 'B',
+    [OS_KEY_C] = 'C',
+    [OS_KEY_D] = 'D',
+    [OS_KEY_E] = 'E',
+    [OS_KEY_F] = 'F',
+    [OS_KEY_G] = 'G',
+    [OS_KEY_H] = 'H',
+    [OS_KEY_I] = 'I',
+    [OS_KEY_J] = 'J',
+    [OS_KEY_K] = 'K',
+    [OS_KEY_L] = 'L',
+    [OS_KEY_M] = 'M',
+    [OS_KEY_N] = 'N',
+    [OS_KEY_O] = 'O',
+    [OS_KEY_P] = 'P',
+    [OS_KEY_Q] = 'Q',
+    [OS_KEY_R] = 'R',
+    [OS_KEY_S] = 'S',
+    [OS_KEY_T] = 'T',
+    [OS_KEY_U] = 'U',
+    [OS_KEY_V] = 'V',
+    [OS_KEY_W] = 'W',
+    [OS_KEY_X] = 'X',
+    [OS_KEY_Y] = 'Y',
+    [OS_KEY_Z] = 'Z',
+};
 OSState *OSInit(BaseArena *arena)
 {
     if (gOSState == null)
@@ -591,6 +650,14 @@ str8 OSGetEnvironmentVar(BaseArena *arena, str8 var)
 }
 
 //other
+vec2i OSScreenCoordToClientCoord(OSHandle wndHandle, vec2i screen)
+{
+    HWND wnd = (HWND)wndHandle._u64;
+    POINT p = {.x = (LONG)screen.x, .y = (LONG)screen.y};
+    ScreenToClient(wnd, &p);
+
+    return Vec2i(p.x, p.y);
+}
 range2i OSClientRectFromWindow(OSHandle handle)
 {
     HWND wnd = (HWND)handle._u64;
@@ -602,4 +669,17 @@ range2i OSClientRectFromWindow(OSHandle handle)
         .topleft = Vec2i(r.left, r.top),
         .bottomright = Vec2i(r.right, r.bottom),
     };
+}
+
+vec2i OSGetCursorScreenCoordPos()
+{
+    POINT p;
+    GetCursorPos(&p);
+    
+    return Vec2i(p.x, p.y);
+}
+vec2i OSGetCursorClientCoordPos(OSHandle wndHandle)
+{
+    vec2i v = OSGetCursorScreenCoordPos();
+    return OSScreenCoordToClientCoord(wndHandle, v);
 }

@@ -20,6 +20,9 @@ typedef struct OSGfxState
 typedef enum OSEventKind
 {
     OS_EVENT_WINDOW_CLOSE,
+    OS_EVENT_WINDOW_LOST_FOCUS,
+    OS_EVENT_KEY_PRESS,
+    OS_EVENT_KEY_RELEASE,
     OS_EVENT_COUNT,
 }OSEventKind;
 
@@ -29,6 +32,11 @@ typedef struct OSEvent
     struct OSEvent *prev;
 
     OSEventKind kind;
+    
+    union
+    {
+        OSKey key;
+    };
 }OSEvent;
 
 typedef struct OSEventList
@@ -44,4 +52,10 @@ OSHandle OSGfxWindowOpen(str8 title, vec2i size, vec2i pos);
 void OSGfxWindowFirstPaint(OSHandle wnd);
 
 OSEventList OSGfxProcessEvents(BaseArena *arena);
+bool OSGfxProcessInputEvents(BaseArena *arena);
+
+// inputs
+bool OSIsKeyHeld(OSKey key);
+bool OSIsKeyPressed(OSKey key);
+bool OSIsKeyReleased(OSKey key);
 #endif
