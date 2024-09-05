@@ -19,6 +19,8 @@
 #define BASE_ARRAY_SIZE(ARR)  ((sizeof(ARR)) / (sizeof((ARR[0]))))
 #define BASE_MAX(A, B)  (((A) > (B)) ? (A) : (B))
 
+#define BASE_CLAMP(V, MIN, MAX)  (((V) <= (MIN)) ? (MIN) : ((V) >= MAX) ? (MAX) : (V))
+
 #define BASE_UNUSED_PARAM(P)	((void)(P))
 
 // Bitwise

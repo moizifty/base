@@ -1,7 +1,9 @@
+#include "baseCore.h"
+#include "baseLog.h"
 #include "baseMemory.h"
 #include "baseThreads.h"
 
-threadlocal BaseThreadCtx *tl_ctx;
+threadlocal BaseThreadCtx *tlThreadCtx;
 
 BaseThreadCtx baseThreadsCreateCtx(void)
 {
@@ -15,11 +17,11 @@ BaseThreadCtx baseThreadsCreateCtx(void)
 }
 BaseThreadCtx *baseThreadsGetCtx(void)
 {
-    return tl_ctx;
+    return tlThreadCtx;
 }
 void baseThreadsSetCtx(BaseThreadCtx *ctx)
 {
-    tl_ctx = ctx;
+    tlThreadCtx = ctx;
 }
 
 BaseArenaTemp baseTempBegin(BaseArena **conflictsToCheck, u64 count)
@@ -53,4 +55,29 @@ BaseArenaTemp baseTempBegin(BaseArena **conflictsToCheck, u64 count)
 void baseTempEnd(BaseArenaTemp temp)
 {
     baseArenaTempEnd(temp);
+}
+
+void baseThreadsSetName(str8 name)
+{
+    BaseThreadCtx *threadCtx = baseThreadsGetCtx();
+    u64 nameLen = BASE_CLAMP(name.len, 0, BASE_ARRAY_SIZE(threadCtx->threadNameBuffer));
+    BASE_MEMCPY(threadCtx->threadNameBuffer, name.data, nameLen);
+    threadCtx->threadNameLen = nameLen;
+}
+str8 baseThreadsGetName(void)
+{
+    BaseThreadCtx *threadCtx = baseThreadsGetCtx();
+    return (str8){.data = threadCtx->threadNameBuffer, .len = threadCtx->threadNameLen};
+}
+
+void baseThreadsSetLog(Log *log)
+{
+    BaseThreadCtx *threadCtx = baseThreadsGetCtx();
+    threadCtx->threadLog = log;
+}
+Log *baseThreadsGetLog(void)
+{
+    BaseThreadCtx *threadCtx = baseThreadsGetCtx();
+
+    return threadCtx->threadLog;
 }

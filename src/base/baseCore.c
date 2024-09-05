@@ -73,7 +73,8 @@ void BaseMainThreadEntry(ProgramMainFunc programMain, i64 argc, i8 **argv)
     BaseThreadCtx ctx = baseThreadsCreateCtx();
     baseThreadsSetCtx(&ctx);
 
-    OSSetThreadName(OSGetCurrentThread(), STR8_LIT("Main Thread"));
+    baseThreadsSetName(STR8_LIT("Main Thread"));
+    OSSetThreadDebuggerName(OSGetCurrentThread(), STR8_LIT("Main Thread"));
 
     Str8List argsList = {0};
     CmdLineHashMap cmdLineMap = {0};

@@ -12,6 +12,8 @@ typedef struct BaseThreadCtx
 
     u8 threadNameBuffer[64];
     u64 threadNameLen;
+
+    struct Log *threadLog;
 }BaseThreadCtx;
 
 BaseThreadCtx baseThreadsCreateCtx(void);
@@ -21,4 +23,9 @@ void baseThreadsSetCtx(BaseThreadCtx *ctx);
 BaseArenaTemp baseTempBegin(BaseArena **conflictsToCheck, u64 count);
 void baseTempEnd(BaseArenaTemp temp);
 
+void baseThreadsSetName(str8 name);
+str8 baseThreadsGetName(void);
+
+void baseThreadsSetLog(struct Log *log);
+struct Log *baseThreadsGetLog(void);
 #endif

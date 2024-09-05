@@ -176,8 +176,8 @@ vec2i OSGetCursorClientCoordPos(OSHandle wndHandle);
 
 //threading
 OSHandle OSGetCurrentThread();
-void OSSetThreadName(OSHandle thread, str8 name);
-str8 OSGetThreadName(OSHandle thread);
+void OSSetThreadDebuggerName(OSHandle thread, str8 name);
+str8 OSGetThreadDebuggerName(OSHandle thread);
 
 global OSState *gOSState;
 

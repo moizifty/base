@@ -690,7 +690,10 @@ OSHandle OSGetCurrentThread()
 
     return handle;
 }
-void OSSetThreadName(OSHandle thread, str8 name)
+
+// this will not set the threadname on the threads context
+// use the function in basethreads for that
+void OSSetThreadDebuggerName(OSHandle thread, str8 name)
 {
     HANDLE threadHandle = (HANDLE)thread._u64;
 
