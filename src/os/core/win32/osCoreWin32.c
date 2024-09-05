@@ -683,3 +683,22 @@ vec2i OSGetCursorClientCoordPos(OSHandle wndHandle)
     vec2i v = OSGetCursorScreenCoordPos();
     return OSScreenCoordToClientCoord(wndHandle, v);
 }
+
+OSHandle OSGetCurrentThread()
+{
+    OSHandle handle = {._u64 = (u64)GetCurrentThread()};
+
+    return handle;
+}
+void OSSetThreadName(OSHandle thread, str8 name)
+{
+    HANDLE threadHandle = (HANDLE)thread._u64;
+
+    BaseArenaTemp temp = baseTempBegin(null, 0);
+    {
+        str16 name16 = baseStr16FromFromStr8(temp.arena, name);
+        SetThreadDescription(threadHandle, name16.data);
+    }
+
+    baseTempEnd(temp);
+}

@@ -174,6 +174,11 @@ range2i OSClientRectFromWindow(OSHandle handle);
 vec2i OSGetCursorScreenCoordPos();
 vec2i OSGetCursorClientCoordPos(OSHandle wndHandle);
 
+//threading
+OSHandle OSGetCurrentThread();
+void OSSetThreadName(OSHandle thread, str8 name);
+str8 OSGetThreadName(OSHandle thread);
+
 global OSState *gOSState;
 
 #endif

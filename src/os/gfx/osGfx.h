@@ -55,7 +55,7 @@ OSEventList OSGfxProcessEvents(BaseArena *arena);
 bool OSGfxProcessInputEvents(BaseArena *arena);
 
 // inputs
-bool OSIsKeyHeld(OSKey key);
-bool OSIsKeyPressed(OSKey key);
-bool OSIsKeyReleased(OSKey key);
+bool OSGfxIsKeyHeld(OSKey key);
+bool OSGfxIsKeyPressed(OSKey key);
+bool OSGfxIsKeyReleased(OSKey key);
 #endif

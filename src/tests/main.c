@@ -9,7 +9,6 @@
 #include "..\base\base.c"
 #include "..\os\os.c"
 #include "..\renderer\renderer.c"
-#include "..\base\baseLog.c"
 #include "..\compression\compression.c"
 #include "..\bitmap\bitmap.c"
 

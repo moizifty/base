@@ -9,8 +9,8 @@ threadlocal OSEventList gOSWin32TLEvents = {0};
 
 global OSKey gOSWin32VKToOSKeyTable[256];
 
-global OSKeyState gOSKeyStates[OS_KEY_COUNT];
-global OSKeyState gOSPrevKeyStates[OS_KEY_COUNT];
+global OSKeyState gOSGfxFrameKeyStates[OS_KEY_COUNT];
+global OSKeyState gOSGfxPrevFrameKeyStates[OS_KEY_COUNT];
 
 OSGfxState *OSGfxInitEx(BaseArena *arena, void *extra)
 {
@@ -78,9 +78,9 @@ bool OSGfxProcessInputEvents(BaseArena *arena)
 {
     BASE_UNUSED_PARAM(arena);
 
-    for(u64 i = 0; i < BASE_ARRAY_SIZE(gOSKeyStates); i++)
+    for(u64 i = 0; i < BASE_ARRAY_SIZE(gOSGfxFrameKeyStates); i++)
     {
-        gOSPrevKeyStates[i] = gOSKeyStates[i];
+        gOSGfxPrevFrameKeyStates[i] = gOSGfxFrameKeyStates[i];
     }
 
     BASE_LIST_FOREACH(OSEvent, event, gOSWin32TLEvents)
@@ -97,14 +97,14 @@ bool OSGfxProcessInputEvents(BaseArena *arena)
                 // if the window loses focus, it loses input focus too
                 // so we have to reset the keystates
 
-                BASE_MEMSET(gOSKeyStates, 0, sizeof(gOSKeyStates));
+                BASE_MEMSET(gOSGfxFrameKeyStates, 0, sizeof(gOSGfxFrameKeyStates));
                 BaseListNodeRemove(gOSWin32TLEvents, event);
             }break;
 
             case OS_EVENT_KEY_PRESS: 
             case OS_EVENT_KEY_RELEASE:
             {
-                gOSKeyStates[event->key].pressed = (event->kind == OS_EVENT_KEY_PRESS) ? true : false;
+                gOSGfxFrameKeyStates[event->key].pressed = (event->kind == OS_EVENT_KEY_PRESS) ? true : false;
 
                 BaseListNodeRemove(gOSWin32TLEvents, event);
             }break;

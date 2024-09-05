@@ -6,18 +6,18 @@
 #error Platform not defined
 #endif
 
-global OSKeyState gOSKeyStates[OS_KEY_COUNT] = {0};
-global OSKeyState gOSPrevKeyStates[OS_KEY_COUNT] = {0};
+global OSKeyState gOSGfxFrameKeyStates[OS_KEY_COUNT] = {0};
+global OSKeyState gOSGfxPrevFrameKeyStates[OS_KEY_COUNT] = {0};
 
-bool OSIsKeyHeld(OSKey key)
+bool OSGfxIsKeyHeld(OSKey key)
 {
-    return gOSKeyStates[key].pressed;
+    return gOSGfxFrameKeyStates[key].pressed;
 }
-bool OSIsKeyPressed(OSKey key)
+bool OSGfxIsKeyPressed(OSKey key)
 {
-    return !gOSPrevKeyStates[key].pressed && gOSKeyStates[key].pressed;
+    return !gOSGfxPrevFrameKeyStates[key].pressed && gOSGfxFrameKeyStates[key].pressed;
 }
-bool OSIsKeyReleased(OSKey key)
+bool OSGfxIsKeyReleased(OSKey key)
 {
-    return gOSPrevKeyStates[key].pressed && !gOSKeyStates[key].pressed;
+    return gOSGfxPrevFrameKeyStates[key].pressed && !gOSGfxFrameKeyStates[key].pressed;
 }

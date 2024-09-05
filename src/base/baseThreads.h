@@ -9,6 +9,9 @@
 typedef struct BaseThreadCtx
 {
     BaseArena *scratchArenas[BASE_THREADS_NUM_ARENAS];
+
+    u8 threadNameBuffer[64];
+    u64 threadNameLen;
 }BaseThreadCtx;
 
 BaseThreadCtx baseThreadsCreateCtx(void);
