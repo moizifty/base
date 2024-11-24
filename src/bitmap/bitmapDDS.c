@@ -99,7 +99,7 @@ DDSUncompressedData bitmapDDSUncompress(BaseArena *arena, DDSCompressedData inpu
     {
         default:
         {
-            logProgErrorFmt("The dds file contains an unsupported compression method.");
+            logThreadErrorFmt("The dds file contains an unsupported compression method.");
             return uncompressed;
         }break;
 
@@ -290,7 +290,7 @@ Bitmap bitmapFromDDSRaw(BaseArena *arena, u8 *rawBytes, u64 byteLen)
 
                 if(bm.fmt == BITMAP_FORMAT_UNKNOWN)
                 {
-                    logProgErrorFmt("bitmap format is unknown, something went wrong");
+                    logThreadErrorFmt("bitmap format is unknown, something went wrong");
                     return (Bitmap){0};
                 }
 
@@ -322,13 +322,13 @@ Bitmap bitmapFromDDSRaw(BaseArena *arena, u8 *rawBytes, u64 byteLen)
                 }
                 else
                 {
-                    logProgErrorFmt("The dds file is compressed but is missing the flag DDSD_LINEARSIZE, something is wrong with its contents.");
+                    logThreadErrorFmt("The dds file is compressed but is missing the flag DDSD_LINEARSIZE, something is wrong with its contents.");
                     return (Bitmap){0};
                 }
             }
             else
             {
-                logProgErrorFmt("Unable to determine bitcount from dds file. Maybe it is set up incorrectly.");
+                logThreadErrorFmt("Unable to determine bitcount from dds file. Maybe it is set up incorrectly.");
                 return (Bitmap){0};
             }
         }
@@ -349,7 +349,7 @@ Bitmap bitmapFromDDSPath(BaseArena *arena, str8 file)
             bm = bitmapFromDDSRaw(arena, fileBytes.data, fileBytes.len);
             if (bm.pixels == null)
             {
-                logProgErrorFmt("Failed to parse '%S'", file);
+                logThreadErrorFmt("Failed to parse '%S'", file);
             }
         }
     }

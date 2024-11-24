@@ -541,7 +541,30 @@ void bssInterpExpr(struct BSSInterpretorState *iState, ASTExpr *expr)
 
             if(bssIsTypeArray(expr->binaryOp.lhs->checkType) && bssIsTypeArray(expr->binaryOp.rhs->checkType))
             {
-                bssInterpError(iState, expr->startTok, expr->endTok, "Unrecognised expr.\n");
+                BssValue *val = baseArenaPushType(iState->checkerArena, BssValue);
+                val->hasBssValue = true;
+                val->type = expr->checkType;
+
+                BssValueList vals = {0};
+                BASE_LIST_FOREACH(BssValue, v, expr->binaryOp.lhs->value->arr.val)
+                {
+                    BssValue *vcopy = baseArenaPushType(iState->checkerArena, BssValue);
+                    *vcopy= *v;
+
+                    BssValueListPushNodeLast(&vals, vcopy);
+                }
+                BASE_LIST_FOREACH(BssValue, v, expr->binaryOp.rhs->value->arr.val)
+                {
+                    BssValue *vcopy = baseArenaPushType(iState->checkerArena, BssValue);
+                    *vcopy= *v;
+
+                    BssValueListPushNodeLast(&vals, vcopy);
+                }
+
+                baseColPrintf("{r}%lld\n", vals.len);
+                val->arr.val = vals;
+
+                expr->value = val;
             }
             else if (bssIsTypeArray(expr->binaryOp.lhs->checkType) || bssIsTypeArray(expr->binaryOp.rhs->checkType))
             {

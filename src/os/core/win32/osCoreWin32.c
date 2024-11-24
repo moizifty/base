@@ -79,11 +79,11 @@ OSState *OSInit(BaseArena *arena)
             // OSGetProcessPath, where it finds the path of any process
             // and if passed null it does this process.
             .binaryPath = OSGetProgramPath(arena),
-            .logArena = baseArenaAlloc(BASE_GIGABYTES(2)),
             .logDirPath = OSGetProgramLogsDirectory(arena),
+            //.logArena = baseArenaAlloc(BASE_GIGABYTES(2)),
         };
 
-        gOSState->thisProcState.processLog = logCreate(arena);
+        //gOSState->thisProcState.processLog = logCreate(arena);
     }
     
     return gOSState;
@@ -630,6 +630,14 @@ DateTime OSGetLocalTime(void)
         .sec = (u8)sysTimeWin32.wSecond,
         .milli = (u16)sysTimeWin32.wMilliseconds,
     };
+}
+
+u64 OSGetPerformanceCounter(void)
+{
+    u64 counter = 0;
+    QueryPerformanceCounter((LARGE_INTEGER *)&counter);
+    
+    return counter;
 }
 
 //env

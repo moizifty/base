@@ -46,7 +46,6 @@ typedef struct LogEntryChunkList
 
 typedef struct Log
 {
-    OSHandle logHandle;
     LogEntryChunkList entries;
 }Log;
 
@@ -60,24 +59,26 @@ str8 LogEntryChunkListJoin(BaseArena *arena, LogEntryChunkList *l);
 LogEntryArray LogEntryChunkListFlattenToArray(BaseArena *arena, LogEntryChunkList *l);
 
 Log *logCreate(BaseArena *arena);
-str8 logFlush(Log *log);
-void logClose(Log *log);
 void logClear(Log *log);
 
+str8 logOutputToFile(BaseArena *arena, Log *log, str8 path);
 void logOutputToConsole(Log *log);
 
-void logPrintFmtV(Log *log, LogSeverityKind severity, char *fmt, va_list va);
-void logPrintFmt(Log *log, LogSeverityKind severity, char *fmt, ...);
-void logErrorFmt(Log *log, char *fmt, ...);
-void logWarningFmt(Log *log, char *fmt, ...);
-void logInfoFmt(Log *log, char *fmt, ...);
-void logDebugFmt(Log *log, char *fmt, ...);
+void logPrintFmtV(BaseArena *arena, Log *log, LogSeverityKind severity, bool outputToConsole, char *fmt, va_list va);
+void logPrintFmt(BaseArena *arena, Log *log, LogSeverityKind severity, char *fmt, ...);
+void logErrorFmt(BaseArena *arena, Log *log, char *fmt, ...);
+void logWarningFmt(BaseArena *arena, Log *log, char *fmt, ...);
+void logInfoFmt(BaseArena *arena, Log *log, char *fmt, ...);
+void logDebugFmt(BaseArena *arena, Log *log, char *fmt, ...);
 
-void logProgPrintFmtV(LogSeverityKind severity, char *fmt, va_list va);
-void logProgPrintFmt(LogSeverityKind severity, char *fmt, ...);
-void logProgErrorFmt(char *fmt, ...);
-void logProgWarningFmt(char *fmt, ...);
-void logProgInfoFmt(char *fmt, ...);
-void logProgDebugFmt(char *fmt, ...);
+str8 logThreadOutputToFile(void);
+void logThreadOutputToConsole(void);
+
+void logThreadPrintFmtV(LogSeverityKind severity, char *fmt, va_list va);
+void logThreadPrintFmt(LogSeverityKind severity, char *fmt, ...);
+void logThreadErrorFmt(char *fmt, ...);
+void logThreadWarningFmt(char *fmt, ...);
+void logThreadInfoFmt(char *fmt, ...);
+void logThreadDebugFmt(char *fmt, ...);
 
 #endif

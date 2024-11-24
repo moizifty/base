@@ -76,7 +76,7 @@ Bitmap bitmapFromPath(BaseArena *arena, str8 file)
             case BITMAP_FILE_KIND_COUNT:
             default:
             {
-                logProgErrorFmt("Unregognised image file format '%S'", file);
+                logThreadErrorFmt("Unregognised image file format '%S'", file);
             }break;
         }
     }

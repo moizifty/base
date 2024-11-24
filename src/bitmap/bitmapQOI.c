@@ -232,7 +232,7 @@ Bitmap bitmapFromQOIPath(BaseArena *arena, str8 file)
             bm = bitmapFromQOIRaw(arena, fileBytes.data, fileBytes.len);
             if (bm.pixels == null)
             {
-                logProgErrorFmt("Failed to parse '%S'", file);
+                logThreadErrorFmt("Failed to parse '%S'", file);
             }
         }
     }

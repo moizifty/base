@@ -9,7 +9,7 @@ IDXGIAdapter *rendererD3D11FindBestAdapter(void)
 
     if (HRFAILURE(hr))
     {
-        logProgErrorFmt("Failed to create dxgi factory, error '%ld'\n", (long)hr);
+        logThreadErrorFmt("Failed to create dxgi factory, error '%ld'\n", (long)hr);
         return null;
     }
 
@@ -21,7 +21,7 @@ IDXGIAdapter *rendererD3D11FindBestAdapter(void)
 
         if(HRFAILURE(hr))
         {
-            logProgErrorFmt("Failed to get description while enumerating adapters, error '%ld'\n", (long)hr);
+            logThreadErrorFmt("Failed to get description while enumerating adapters, error '%ld'\n", (long)hr);
             return null;
         }
 
@@ -73,7 +73,7 @@ RendererState *rendererInit(BaseArena *arena, OSGfxState *gfxState)
     
     if (HRFAILURE(hr))
     {
-        logProgErrorFmt("{r}Failed to create d3d11 device, error: %ld\n", hr);
+        logThreadErrorFmt("{r}Failed to create d3d11 device, error: %ld\n", hr);
         return null;
     }
 
@@ -84,7 +84,7 @@ RendererState *rendererInit(BaseArena *arena, OSGfxState *gfxState)
 
         if (state->debug == null)
         {
-            logProgWarningFmt("{b}Failed to get info queue interface from device, hr: %ld\n", hr);
+            logThreadWarningFmt("{b}Failed to get info queue interface from device, hr: %ld\n", hr);
             return null;
         }
     }
@@ -100,7 +100,7 @@ RendererState *rendererInit(BaseArena *arena, OSGfxState *gfxState)
         }
         else
         {
-            logProgErrorFmt("{b}Failed to get info queue interface from device, hr: %ld\n", hr);
+            logThreadErrorFmt("{b}Failed to get info queue interface from device, hr: %ld\n", hr);
             return null;
         }
     }
@@ -110,7 +110,7 @@ RendererState *rendererInit(BaseArena *arena, OSGfxState *gfxState)
         adapter->lpVtbl->GetParent(adapter, &IID_IDXGIFactory2, &state->factory2);
     }
 
-    logProgInfoFmt("Successfully initialized renderer - D3D11");
+    logThreadInfoFmt("Successfully initialized renderer - D3D11");
     adapter->lpVtbl->Release(adapter);
 
     return (RendererState *) state;
@@ -153,18 +153,18 @@ RendererWindowState *rendererAttachToWindow(RendererState *rs, BaseArena *arena,
 
     if(HRFAILURE(hr))
     {
-        logProgErrorFmt("Failed to create swap chain, error %ld. \n", hr);
+        logThreadErrorFmt("Failed to create swap chain, error %ld. \n", hr);
         return null;
     }
 
     hr = d3dWndState->swapChain->lpVtbl->GetBuffer(d3dWndState->swapChain, 0, &IID_ID3D11Texture2D, &d3dWndState->framebuffer);
     if(HRFAILURE(hr))
     {
-        logProgErrorFmt("Failed to get swap chain frame buffer. \n");
+        logThreadErrorFmt("Failed to get swap chain frame buffer. \n");
         return null;
     }
 
-    logProgInfoFmt("Successfully attached renderer to window with handle '%llu' - D3D11", (u64)wndHandle);
+    logThreadInfoFmt("Successfully attached renderer to window with handle '%llu' - D3D11", (u64)wndHandle);
     deviceBase->lpVtbl->Release(deviceBase);
     return wndState;
 }
@@ -194,7 +194,7 @@ void rendererWindowResizeBuffers(RendererState *rs, RendererWindowState *wndStat
 
     if(HRFAILURE(hr))
     {
-        logProgErrorFmt("Failed to resize swapchain buffers to (%lld x %lld).", newResolution.w, newResolution.h);
+        logThreadErrorFmt("Failed to resize swapchain buffers to (%lld x %lld).", newResolution.w, newResolution.h);
         return;
     }
 
@@ -203,7 +203,7 @@ void rendererWindowResizeBuffers(RendererState *rs, RendererWindowState *wndStat
 
     if(HRFAILURE(hr))
     {
-        logProgErrorFmt("Failed to get framebuffer from swapchain");
+        logThreadErrorFmt("Failed to get framebuffer from swapchain");
         return;
     }
 
@@ -233,27 +233,27 @@ void rendererWindowResizeBuffers(RendererState *rs, RendererWindowState *wndStat
 
     if(HRFAILURE(hr))
     {
-        logProgErrorFmt("Failed to create depth buffer texture");
+        logThreadErrorFmt("Failed to create depth buffer texture");
         return;
     }
 
     hr = d3dRS->device->lpVtbl->CreateDepthStencilView(d3dRS->device, (ID3D11Resource *)d3dWndState->depthBuffer, null, &d3dWndState->depthBufferDSV);
     if(HRFAILURE(hr))
     {
-        logProgErrorFmt("Failed to create depth buffer view");
+        logThreadErrorFmt("Failed to create depth buffer view");
         return;
     }
 
     hr = d3dRS->device->lpVtbl->CreateRenderTargetView(d3dRS->device, (ID3D11Resource *)d3dWndState->framebuffer, null, &d3dWndState->framebufferRTV);
     if(HRFAILURE(hr))
     {
-        logProgErrorFmt("Failed to create render target view for framebuffer.");
+        logThreadErrorFmt("Failed to create render target view for framebuffer.");
         return;
     }
 
     d3dRS->deviceContext->lpVtbl->OMSetRenderTargets(d3dRS->deviceContext, 1, &d3dWndState->framebufferRTV, d3dWndState->depthBufferDSV);
 
-    logProgInfoFmt("Successfully resized swapchain buffers to (%lld x %lld).", newResolution.w, newResolution.h);
+    logThreadInfoFmt("Successfully resized swapchain buffers to (%lld x %lld).", newResolution.w, newResolution.h);
 }
 void rendererWindowBegin(RendererState *rs, RendererWindowState *wndState, vec2i resolution)
 {
@@ -282,16 +282,16 @@ void rendererWindowEnd(RendererState *rs, RendererWindowState *wndState)
 
 void rendererOutputFinalDebugReport(BaseArena *arena, RendererState *rs)
 {
-    logProgInfoFmt("Printing renderer final debug report.");
+    logThreadInfoFmt("Printing renderer final debug report.");
 
     RendererStateD3D11 *d3dRS = (RendererStateD3D11 *) rs;
     ID3D11InfoQueue *infoQueue = d3dRS->infoQueue;
 
-    logProgInfoFmt("Reporting All Live Device Objects");
+    logThreadInfoFmt("Reporting All Live Device Objects");
     HRESULT hr = d3dRS->debug->lpVtbl->ReportLiveDeviceObjects(d3dRS->debug, D3D11_RLDO_IGNORE_INTERNAL | D3D11_RLDO_DETAIL);
     if(HRFAILURE(hr))
     {
-        logProgErrorFmt("Failed to report live device objects, error: %d", hr);
+        logThreadErrorFmt("Failed to report live device objects, error: %d", hr);
         return;
     }
 
@@ -303,7 +303,7 @@ void rendererOutputFinalDebugReport(BaseArena *arena, RendererState *rs)
         hr = infoQueue->lpVtbl->GetMessage(infoQueue, i, null, &messageByteLength);
         if(HRFAILURE(hr))
         {
-            logProgErrorFmt("Failed to get size for message from infoqueue at index '%llu', error code '%d' please debug the program.", i, hr);
+            logThreadErrorFmt("Failed to get size for message from infoqueue at index '%llu', error code '%d' please debug the program.", i, hr);
             return;
         }
 
@@ -311,7 +311,7 @@ void rendererOutputFinalDebugReport(BaseArena *arena, RendererState *rs)
         hr = infoQueue->lpVtbl->GetMessage(infoQueue, i, message, &messageByteLength);
         if(HRFAILURE(hr))
         {
-            logProgErrorFmt("Failed to message from infoqueue at index '%llu', error code '%d' please debug the program.", i, hr);
+            logThreadErrorFmt("Failed to message from infoqueue at index '%llu', error code '%d' please debug the program.", i, hr);
             return;
         }
 
@@ -322,16 +322,16 @@ void rendererOutputFinalDebugReport(BaseArena *arena, RendererState *rs)
             case D3D11_MESSAGE_SEVERITY_MESSAGE:
             case D3D11_MESSAGE_SEVERITY_INFO:
             {
-                logProgInfoFmt("%S", msg);
+                logThreadInfoFmt("%S", msg);
             }break;
             case D3D11_MESSAGE_SEVERITY_CORRUPTION:
             case D3D11_MESSAGE_SEVERITY_ERROR:
             {
-                logProgErrorFmt("%S", msg);
+                logThreadErrorFmt("%S", msg);
             }break;
             case D3D11_MESSAGE_SEVERITY_WARNING:
             {
-                logProgWarningFmt("%S", msg);
+                logThreadWarningFmt("%S", msg);
             }break;
         }
     }

@@ -11,6 +11,8 @@
 #define STR16(WCSTRING) (baseStr16((u16*)(WCSTRING), baseStr16DataLen(WCSTRING)))
 #define STR16_LIT(STR) (baseStr16((u16*)(STR), BASE_ARRAY_SIZE(STR)))
 
+#define STR8_EMPTY (STR8_LIT(""))
+
 typedef struct BaseStringBuilder
 {
     u8* data;

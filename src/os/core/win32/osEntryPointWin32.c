@@ -14,7 +14,7 @@ void ProgramMain(CmdLineHashMap *);
 #include <DbgHelp.h>
 inline LONG WINAPI BaseMainThreadExceptionHandler(EXCEPTION_POINTERS *exceptionInfo)
 {
-    logProgErrorFmt("Program encountered an exception(0x%x).", exceptionInfo->ExceptionRecord->ExceptionCode);
+    logThreadErrorFmt("Program encountered an exception(0x%x).", exceptionInfo->ExceptionRecord->ExceptionCode);
 
     BaseArenaTemp temp = baseTempBegin(null, 0);
     {
@@ -22,7 +22,7 @@ inline LONG WINAPI BaseMainThreadExceptionHandler(EXCEPTION_POINTERS *exceptionI
         HANDLE thread = GetCurrentThread();
         CONTEXT* context = exceptionInfo->ContextRecord;
 
-        logProgInfoFmt("=========== START OF STACK ===========");
+        logThreadInfoFmt("=========== START OF STACK ===========");
 
         SymSetOptions(SYMOPT_EXACT_SYMBOLS | SYMOPT_FAIL_CRITICAL_ERRORS | SYMOPT_LOAD_LINES | SYMOPT_UNDNAME | SYMOPT_NO_PROMPTS);
         if(SymInitializeW(process, null, true))
@@ -40,7 +40,7 @@ inline LONG WINAPI BaseMainThreadExceptionHandler(EXCEPTION_POINTERS *exceptionI
                 const u64 maxStackFrames = 32;
                 if(i >= maxStackFrames)
                 {
-                    logProgInfoFmt("...");
+                    logThreadInfoFmt("...");
                     break;
                 }
 
@@ -73,7 +73,7 @@ inline LONG WINAPI BaseMainThreadExceptionHandler(EXCEPTION_POINTERS *exceptionI
                         {
                             str16 filename = baseStr16(line.FileName, wcslen(line.FileName));
                             str8 filename8 = baseStr8FromFromStr16(temp.arena, filename);
-                            logProgErrorFmt("%S +%d, '%S' line %d", name8, displacement, filename8, line.LineNumber);
+                            logThreadErrorFmt("%S +%d, '%S' line %d", name8, displacement, filename8, line.LineNumber);
                         }
                         
                     }
@@ -84,7 +84,7 @@ inline LONG WINAPI BaseMainThreadExceptionHandler(EXCEPTION_POINTERS *exceptionI
                         if(SymGetModuleInfoW64(process, frame.AddrPC.Offset, &module))
                         {
                             str16 name = baseStr16(module.ModuleName,wcslen(module.ModuleName));
-                            logProgInfoFmt("%S", baseStr8FromFromStr16(temp.arena, name));
+                            logThreadInfoFmt("%S", baseStr8FromFromStr16(temp.arena, name));
                         }
                     }
                 }
@@ -94,7 +94,7 @@ inline LONG WINAPI BaseMainThreadExceptionHandler(EXCEPTION_POINTERS *exceptionI
                 }
             }
 
-            logProgInfoFmt("=========== END OF STACK ===========");
+            logThreadInfoFmt("=========== END OF STACK ===========");
         }
 
 #ifdef BASE_USE_USER_DEFINED_EXCEPTION_HANDLER
@@ -108,7 +108,7 @@ inline LONG WINAPI BaseMainThreadExceptionHandler(EXCEPTION_POINTERS *exceptionI
         BaseUserDefinedExceptionHandler(ex);
 #endif
 
-        str8 logContent8 = logFlush(OSGetState()->thisProcState.processLog);
+        str8 logContent8 = logThreadOutputToFile();
         str16 logContent = baseStr16FromFromStr8(temp.arena, logContent8);
         
         TASKDIALOGCONFIG dialog = {0};
@@ -133,8 +133,13 @@ inline LONG WINAPI BaseMainThreadExceptionHandler(EXCEPTION_POINTERS *exceptionI
 #if !defined(BUILD_NOCONSOLE_APP)
 int main(int argc, char **argv)
 {
+    QueryPerformanceFrequency((LARGE_INTEGER*)&gOSPerformanceFreq);
+    
 #ifdef BASE_USE_EXCEPTION_HANDLER
     SetUnhandledExceptionFilter(BaseMainThreadExceptionHandler);
+#endif
+#ifdef OS_NET_H
+    OSNetInit();
 #endif
     BaseMainThreadEntry(ProgramMain, (u64)argc, argv);
     return 0;
@@ -142,8 +147,14 @@ int main(int argc, char **argv)
 #else
 int WinMain(HINSTANCE instance, HINSTANCE prev_instance, LPSTR lp_cmd_line, int n_show_cmd)
 {
+    
+    QueryPerformanceFrequency((LARGE_INTEGER*)&gOSPerformanceFreq);
+
 #ifdef BASE_USE_EXCEPTION_HANDLER
     SetUnhandledExceptionFilter(BaseMainThreadExceptionHandler);
+#endif
+#ifdef OS_NET_H
+    OSNetInit();
 #endif
     BaseMainThreadEntry(ProgramMain, (u64)__argc, __argv);
     return 0;

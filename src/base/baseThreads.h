@@ -13,6 +13,7 @@ typedef struct BaseThreadCtx
     u8 threadNameBuffer[64];
     u64 threadNameLen;
 
+    BaseArena *threadLogArena;
     struct Log *threadLog;
 }BaseThreadCtx;
 

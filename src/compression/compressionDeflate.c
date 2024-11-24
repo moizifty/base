@@ -143,7 +143,7 @@ u64 compressionDeflateDecodeHuffmanBlock(BaseBitstream *stream, CompressionDefla
         }
         else
         {
-            logProgErrorFmt("Encountered invalid decoded huffman code '%llu'", c);
+            logThreadErrorFmt("Encountered invalid decoded huffman code '%llu'", c);
         }
     }
 
@@ -295,7 +295,7 @@ CompressionDeflateUncompressedOutput compressionDeflateUncompress(BaseBitstream 
 
             default:
             {
-                logProgErrorFmt("Error, deflate, unregognised compression type '%d'", compressionType);
+                logThreadErrorFmt("Error, deflate, unregognised compression type '%d'", compressionType);
             }break;
         }
     }while(!finalBlock);

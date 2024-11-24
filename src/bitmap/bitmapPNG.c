@@ -97,7 +97,7 @@ PNGCollectIDATChunksData bitmapPNGCollectIDATChunks(BaseArena *arena, u8 *currBy
             {
                 if (!(currChunk.chunkName[0] & 0b100000))
                 {
-                    logProgErrorFmt("Decoder does not handler chunk type '%S'", baseStr8(currChunk.chunkName, 4));
+                    logThreadErrorFmt("Decoder does not handler chunk type '%S'", baseStr8(currChunk.chunkName, 4));
                     return (PNGCollectIDATChunksData){0};
                 }
             }break;
@@ -303,7 +303,7 @@ Bitmap bitmapFromPNGPath(BaseArena *arena, str8 file)
             bm = bitmapFromPNGRaw(arena, fileBytes.data, fileBytes.len);
             if (bm.pixels == null)
             {
-                logProgErrorFmt("Failed to parse '%S'", file);
+                logThreadErrorFmt("Failed to parse '%S'", file);
             }
         }
     }

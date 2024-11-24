@@ -16,5 +16,6 @@
 
 #include "core\osCore.h"
 #include "gfx\osGfx.h"
+#include "net\osNet.h"
 
 #endif

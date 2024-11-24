@@ -37,6 +37,22 @@ void printFiles(BaseArena *arena, str8 path)
 void ProgramMain(CmdLineHashMap *cmdline)
 {
 	BaseArena *generalArena = baseArenaAlloc(BASE_GIGABYTES(2));
+
+	OSNetAddrList localIps = OSNetGetLocalIpAddress(generalArena, OS_NET_ADDR_EITHER);
+
+	BASE_LIST_FOREACH(OSNetAddr, node, localIps)
+	{
+		str8 s = OSNetAddrToStr8(generalArena, *node);
+
+		baseColPrintf("%S\n", s);
+	}
+
+	OSHandle socket = OSNetSocketCreate(OS_NET_ADDR_IPV4, OS_NET_SOCK_DATAGRAM, OS_NET_PROTOCOL_UDP);
+	OSNetAddrInfoList addrs = OSNetGetAddrInfo(generalArena, STR8_LIT("0.0.0.0"), STR8_LIT("6970"), &(OSNetAddrInfo){.protoKind = OS_NET_PROTOCOL_UDP, .sockKind = OS_NET_SOCK_DATAGRAM});
+
+	bool result = OSNetSocketBind(socket, addrs.first->addr);
+
+	OSNetSocketClose(socket);
 	
 	BSSInterpretorState bs = {.lexerArena = generalArena, .parserArena = generalArena, .checkerArena = generalArena};
 	bssInterpFile(&bs, STR8_LIT("C:\\Users\\moizi\\OneDrive\\Documents\\Programming\\C\\base\\src\\bss\\tests\\test.bss"));

@@ -90,7 +90,7 @@ void BaseMainThreadEntry(ProgramMainFunc programMain, i64 argc, i8 **argv)
 
     programMain(&cmdLineMap);
 
-    logClose(OSGetState()->thisProcState.processLog);
+    logThreadOutputToFile();
 }
 
 i64 baseColFprintf(FILE *fp, const char *fmt, ...)
@@ -291,4 +291,41 @@ u8* baseMemcpyBigEndian(void *dst, void* src, u64 size)
     }
 
     return dst;
+}
+i16 baseConvertToBigEndianI16(i16 num)
+{
+    return (num << 8) | (num >> 8);
+}
+i16 baseConvertToLittleEndianI16(i16 num)
+{
+    return (num >> 8) | (num << 8);
+}
+i32 baseConvertToBigEndianI32(i32 num)
+{
+    i8 *bytes = (i8*)&num;
+    return (bytes[3] << 24) | (bytes[2] << 16) | (bytes[1] << 8) | bytes[0];
+}
+i32 baseConvertToLittleEndianI32(i32 num)
+{
+    i8 *bytes = (i8*)&num;
+    return (bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3];
+}
+
+u16 baseConvertToBigEndianU16(u16 num)
+{
+    return (num << 8) | (num >> 8);
+}
+u16 baseConvertToLittleEndianU16(u16 num)
+{
+    return (num >> 8) | (num << 8);
+}
+u32 baseConvertToBigEndianU32(u32 num)
+{
+    u8 *bytes = (u8*)&num;
+    return (bytes[3] << 24) | (bytes[2] << 16) | (bytes[1] << 8) | bytes[0];
+}
+u32 baseConvertToLittleEndianU32(u32 num)
+{
+    u8 *bytes = (u8*)&num;
+    return (bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3];
 }

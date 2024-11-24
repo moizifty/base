@@ -107,181 +107,236 @@ LogEntryArray LogEntryChunkListFlattenToArray(BaseArena *arena, LogEntryChunkLis
     return flattened;
 }
 
-CRITICAL_SECTION sec;
 Log *logCreate(BaseArena *arena)
 {
     Log *l = baseArenaPush(arena, sizeof(Log));
 
-    BaseArena *logArena = OSGetState()->thisProcState.logArena;
-    str8 logDir = OSGetState()->thisProcState.logDirPath;
-    str8 logPath = STR8_LIT("");
-    Str8List logPathList = {0};
-
-    Str8ListPushLastFmt(logArena, &logPathList, "%S\\log.txt", logDir);
-
-    logPath = Str8ListJoin(logArena, &logPathList, null);
-
-    l->logHandle = OSFileOpen(logPath, 
-                                true, 
-                                OS_FILEACCESS_READ | OS_FILEACCESS_WRITE,
-                                OOS_FILECREATION_CREATE_OVERRITE);
-
     return l;
    
-}
-str8 logFlush(Log *log)
-{
-    BaseArena *logArena = OSGetState()->thisProcState.logArena;
-    str8 logMsgAll = LogEntryChunkListJoin(logArena, &log->entries);
-    OSFileWrite(log->logHandle, logMsgAll.data, logMsgAll.len);
-
-    return logMsgAll;
-}
-void logClose(Log *log)
-{
-    logFlush(log);
-    OSFileClose(log->logHandle);
 }
 void logClear(Log *log)
 {
     BASE_UNUSED_PARAM(log);
 }
 
+str8 logOutputToFile(BaseArena *arena, Log *log, str8 path)
+{
+    str8 logMsgAll = LogEntryChunkListJoin(arena, &log->entries);
+
+    OSHandle logHandle = OSFileOpen(path, 
+                              true, 
+                              OS_FILEACCESS_READ | OS_FILEACCESS_WRITE,
+                              OOS_FILECREATION_CREATE_OVERRITE);
+
+    OSFileWrite(logHandle, logMsgAll.data, logMsgAll.len);
+
+    return logMsgAll;
+}
 void logOutputToConsole(Log *log)
 {
-    BaseArena *logArena = OSGetState()->thisProcState.logArena;
-    BASE_LIST_FOREACH(LogEntryChunkNode, chunk, log->entries)
+    BaseArenaTemp temp =  baseTempBegin(null, 0);
     {
-        for(u64 i = 0; i < chunk->chunk.len; i++)
+        BASE_LIST_FOREACH(LogEntryChunkNode, chunk, log->entries)
         {
-            LogEntry entry = chunk->chunk.data[i];
-            str8 msgFmt = logFormatLogEntryMsg(logArena, entry);
-            switch(entry.severity)
+            for(u64 i = 0; i < chunk->chunk.len; i++)
             {
-                case LOG_SEVERITY_WARNING:
+                LogEntry entry = chunk->chunk.data[i];
+                str8 msgFmt = logFormatLogEntryMsg(temp.arena, entry);
+                switch(entry.severity)
                 {
-                    baseColPrintf("{o}%S\n", msgFmt);
-                }break;
+                    case LOG_SEVERITY_WARNING:
+                    {
+                        baseColPrintf("{o}%S\n", msgFmt);
+                    }break;
 
-                case LOG_SEVERITY_DEBUG:
-                {
-                    baseColPrintf("{g}%S\n", msgFmt);
-                }break;
+                    case LOG_SEVERITY_DEBUG:
+                    {
+                        baseColPrintf("{g}%S\n", msgFmt);
+                    }break;
 
-                case LOG_SEVERITY_INFO:
-                {
-                    baseColPrintf("{b}%S\n", msgFmt);
-                }break;
+                    case LOG_SEVERITY_INFO:
+                    {
+                        baseColPrintf("{b}%S\n", msgFmt);
+                    }break;
 
-                case LOG_SEVERITY_ERROR:
-                {
-                    baseColPrintf("{r}%S\n", msgFmt);
-                }break;
+                    case LOG_SEVERITY_ERROR:
+                    {
+                        baseColPrintf("{r}%S\n", msgFmt);
+                    }break;
+                }
             }
         }
     }
 }
 
-void logPrintFmtV(Log *log, LogSeverityKind severity, char *fmt, va_list va)
+void logPrintFmtV(BaseArena *arena, Log *log, LogSeverityKind severity, bool outputToConsole, char *fmt, va_list va)
 {
-    BaseArena *logArena = OSGetState()->thisProcState.logArena;
-
-    str8 s = baseStringsPushStr8FmtV(logArena, fmt, va);
+    str8 s = baseStringsPushStr8FmtV(arena, fmt, va);
     LogEntry entry = {.msg = s, .severity = severity, .time = OSGetLocalTime()};
-    LogEntryChunkListPush(logArena, &log->entries, entry);
+    LogEntryChunkListPush(arena, &log->entries, entry);
+
+    if (outputToConsole)
+    {
+        if (severity == LOG_SEVERITY_ERROR) baseColEPrintf("%S\n", s);
+        else baseColPrintf("%S\n", s);
+    }
 }
-void logPrintFmt(Log *log, LogSeverityKind severity, char *fmt, ...)
+void logPrintFmt(BaseArena *arena, Log *log, LogSeverityKind severity, char *fmt, ...)
 {
     va_list list;
     va_start(list, fmt);
 
-    logPrintFmtV(log, severity, fmt, list);
+    logPrintFmtV(arena, log, severity, false, fmt, list);
 
     va_end(list);
 }
-void logErrorFmt(Log *log, char *fmt, ...)
+void logErrorFmt(BaseArena *arena, Log *log, char *fmt, ...)
 {
     va_list list;
     va_start(list, fmt);
 
-    logPrintFmtV(log, LOG_SEVERITY_ERROR, fmt, list);
+    logPrintFmtV(arena, log, LOG_SEVERITY_ERROR, false, fmt, list);
 
     va_end(list);
 }
-void logWarningFmt(Log *log, char *fmt, ...)
+void logWarningFmt(BaseArena *arena, Log *log, char *fmt, ...)
 {
     va_list list;
     va_start(list, fmt);
 
-    logPrintFmtV(log, LOG_SEVERITY_WARNING, fmt, list);
+    logPrintFmtV(arena, log, LOG_SEVERITY_WARNING, false, fmt, list);
 
     va_end(list);
 }
-void logInfoFmt(Log *log, char *fmt, ...)
+void logInfoFmt(BaseArena *arena, Log *log, char *fmt, ...)
 {
     va_list list;
     va_start(list, fmt);
 
-    logPrintFmtV(log, LOG_SEVERITY_INFO, fmt, list);
+    logPrintFmtV(arena, log, LOG_SEVERITY_INFO, false, fmt, list);
 
     va_end(list);
 }
-void logDebugFmt(Log *log, char *fmt, ...)
+void logDebugFmt(BaseArena *arena, Log *log, char *fmt, ...)
 {
     va_list list;
     va_start(list, fmt);
 
-    logPrintFmtV(log, LOG_SEVERITY_DEBUG, fmt, list);
+    logPrintFmtV(arena, log, LOG_SEVERITY_DEBUG, false, fmt, list);
 
     va_end(list);
 }
 
-void logProgPrintFmtV(LogSeverityKind severity, char *fmt, va_list va)
+str8 logThreadOutputToFile(void)
 {
-    logPrintFmtV(OSGetState()->thisProcState.processLog, severity, fmt, va);
+    BaseThreadCtx *threadCtx = baseThreadsGetCtx();
+
+    str8 logDir = OSGetState()->thisProcState.logDirPath;
+    str8 logPath = baseStringsPushStr8Fmt(threadCtx->threadLogArena, "%S\\[%S]_log.txt", logDir, baseThreadsGetName());
+
+    return logOutputToFile(threadCtx->threadLogArena, threadCtx->threadLog, logPath);
 }
-void logProgPrintFmt(LogSeverityKind severity, char *fmt, ...)
+void logThreadOutputToConsole(void)
 {
+    BaseThreadCtx *threadCtx = baseThreadsGetCtx();
+
+    logOutputToConsole(threadCtx->threadLog);
+}
+
+void logThreadPrintFmtV(LogSeverityKind severity, char *fmt, va_list va)
+{
+    BaseThreadCtx *threadCtx = baseThreadsGetCtx();
+
+#if defined(BASE_LOG_OUTPUT_TO_CONSOLE)
+    bool outputToConsole = true;
+#else
+    bool outputToConsole = false;
+#endif
+
+    logPrintFmtV(threadCtx->threadLogArena, threadCtx->threadLog, severity, outputToConsole, fmt, va);
+}
+void logThreadPrintFmt(LogSeverityKind severity, char *fmt, ...)
+{
+    BaseThreadCtx *threadCtx = baseThreadsGetCtx();
+
     va_list list;
     va_start(list, fmt);
 
-    logPrintFmtV(OSGetState()->thisProcState.processLog, severity, fmt, list);
+#ifdef BASE_LOG_OUTPUT_TO_CONSOLE
+    bool outputToConsole = true;
+#else
+    bool outputToConsole = false;
+#endif
+
+    logPrintFmtV(threadCtx->threadLogArena, threadCtx->threadLog, severity, outputToConsole, fmt, list);
 
     va_end(list);
 }
-void logProgErrorFmt(char *fmt, ...)
+void logThreadErrorFmt(char *fmt, ...)
 {
+    BaseThreadCtx *threadCtx = baseThreadsGetCtx();
+
     va_list list;
     va_start(list, fmt);
 
-    logPrintFmtV(OSGetState()->thisProcState.processLog, LOG_SEVERITY_ERROR, fmt, list);
+#ifdef BASE_LOG_OUTPUT_TO_CONSOLE
+    bool outputToConsole = true;
+#else
+    bool outputToConsole = false;
+#endif
+
+    logPrintFmtV(threadCtx->threadLogArena, threadCtx->threadLog, LOG_SEVERITY_ERROR, outputToConsole, fmt, list);
 
     va_end(list);
 }
-void logProgWarningFmt(char *fmt, ...)
+void logThreadWarningFmt(char *fmt, ...)
 {
+    BaseThreadCtx *threadCtx = baseThreadsGetCtx();
+
     va_list list;
     va_start(list, fmt);
 
-    logPrintFmtV(OSGetState()->thisProcState.processLog, LOG_SEVERITY_WARNING, fmt, list);
+#ifdef BASE_LOG_OUTPUT_TO_CONSOLE
+    bool outputToConsole = true;
+#else
+    bool outputToConsole = false;
+#endif
+
+    logPrintFmtV(threadCtx->threadLogArena, threadCtx->threadLog, LOG_SEVERITY_WARNING, outputToConsole, fmt, list);
 
     va_end(list);
 }
-void logProgInfoFmt(char *fmt, ...)
+void logThreadInfoFmt(char *fmt, ...)
 {
+    BaseThreadCtx *threadCtx = baseThreadsGetCtx();
+
     va_list list;
     va_start(list, fmt);
 
-    logPrintFmtV(OSGetState()->thisProcState.processLog, LOG_SEVERITY_INFO, fmt, list);
+#ifdef BASE_LOG_OUTPUT_TO_CONSOLE
+    bool outputToConsole = true;
+#else
+    bool outputToConsole = false;
+#endif
+
+    logPrintFmtV(threadCtx->threadLogArena, threadCtx->threadLog, LOG_SEVERITY_INFO, outputToConsole, fmt, list);
 
     va_end(list);
 }
-void logProgDebugFmt(char *fmt, ...)
+void logThreadDebugFmt(char *fmt, ...)
 {
+    BaseThreadCtx *threadCtx = baseThreadsGetCtx();
+
     va_list list;
     va_start(list, fmt);
 
-    logPrintFmtV(OSGetState()->thisProcState.processLog, LOG_SEVERITY_DEBUG, fmt, list);
+#ifdef BASE_LOG_OUTPUT_TO_CONSOLE
+    bool outputToConsole = true;
+#else
+    bool outputToConsole = false;
+#endif
+
+    logPrintFmtV(threadCtx->threadLogArena, threadCtx->threadLog, LOG_SEVERITY_DEBUG, outputToConsole, fmt, list);
 
     va_end(list);
 }

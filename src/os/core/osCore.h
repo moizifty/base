@@ -11,8 +11,8 @@ typedef struct OSProcessState
     str8 binaryPath;
     str8 logDirPath;
 
-    BaseArena *logArena;
-    struct Log *processLog;
+    // BaseArena *logArena;
+    // struct Log *processLog;
 }OSProcessState;
 
 typedef struct OSStatePlatform
@@ -30,6 +30,8 @@ typedef struct OSState
 typedef struct OSHandle
 {
     u64 _u64;
+    struct OSHandle *next;
+    struct OSHandle *prev;
 }OSHandle;
 
 typedef enum OSFileAccessFlags
@@ -126,6 +128,8 @@ typedef struct OSExceptionInfo
 OSState *OSInit(BaseArena *arena);
 OSState *OSGetState(void);
 
+bool OSHandleEquals(OSHandle a, OSHandle b);
+
 void* OSReserveMemory(u64 size);
 void OSCommitMemory(void *ptr, u64 size);
 void OSDecommitMemory(void *ptr, u64 size);
@@ -165,6 +169,10 @@ bool OSRunProcessEx(struct BaseArena *arena, str8 app, str8 args, void *peb, str
 DateTime OSGetSytemTime(void);
 DateTime OSGetLocalTime(void);
 
+u64 OSGetPerformanceCounter(void);
+u64 OSGetPerformanceFrequency(void);
+
+f64 OSConvertPerformanceCounterToMillisecondsF64(u64 counter);
 //env
 str8 OSGetEnvironmentVar(BaseArena *arena, str8 var);
 
@@ -179,6 +187,9 @@ OSHandle OSGetCurrentThread();
 void OSSetThreadDebuggerName(OSHandle thread, str8 name);
 str8 OSGetThreadDebuggerName(OSHandle thread);
 
+BASE_CREATE_EFFICIENT_LL_DECLS(OSHandleList, OSHandle);
+
+global u64 gOSPerformanceFreq;
 global OSState *gOSState;
 
 #endif

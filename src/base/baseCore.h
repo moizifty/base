@@ -114,9 +114,10 @@
 
 #define BASE_ANY_PTR(pL)     (((pL) != NULL) && (pL)->len != 0)
 #define BASE_ANY(L)     ((L).len != 0)
+#define BASE_NULL_OR_EMPTY(L) (((L).data == null) || !BASE_ANY(L))
 
 #define BASE_PTR_LL_FIRST(pLL, DEFVAL)     (BASE_ANY_PTR(pLL) ? (pLL)->first->val : DEFVAL)
-#define BASE_LL_FIRST(LL, DEFVAL)          (BASE_ANY(pLB) ? (pLB).first->val : DEFVAL)
+#define BASE_LL_FIRST(LL, DEFVAL)          (BASE_ANY(LL) ? (LL).first->val : DEFVAL)
 
 #define BASE_PTR_LL_LAST(pLL, DEFVAL)      (BASE_ANY_PTR(pLL) ? (pLL)->last->val : DEFVAL)
 #define BASE_LL_LAST(LL, DEFVAL)           (BASE_ANY(pLB) ? (pLB).last->val : DEFVAL)
@@ -271,6 +272,7 @@ BASE_CREATE_ARRAY_VIEW_DEFS(NAME, ELEM)
 
 BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(U8Array, u8);
 
+
 #define BASE_U8CHUNKLIST_DEFAULT_CAP	128
 typedef struct U8ChunkListNode
 {
@@ -315,4 +317,14 @@ i64 baseBinDigitToInt(int ch);
 i64 baseCStyleIntLiteralToInt(str8 str);
 
 u8* baseMemcpyBigEndian(void *dst, void* src, u64 size);
+i16 baseConvertToBigEndianI16(i16 num);
+i16 baseConvertToLittleEndianI16(i16 num);
+i32 baseConvertToBigEndianI32(i32 num);
+i32 baseConvertToLittleEndianI32(i32 num);
+
+u16 baseConvertToBigEndianU16(u16 num);
+u16 baseConvertToLittleEndianU16(u16 num);
+u32 baseConvertToBigEndianU32(u32 num);
+u32 baseConvertToLittleEndianU32(u32 num);
+
 #endif
