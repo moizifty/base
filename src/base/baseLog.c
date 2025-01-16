@@ -126,7 +126,7 @@ str8 logOutputToFile(BaseArena *arena, Log *log, str8 path)
     OSHandle logHandle = OSFileOpen(path, 
                               true, 
                               OS_FILEACCESS_READ | OS_FILEACCESS_WRITE,
-                              OOS_FILECREATION_CREATE_OVERRITE);
+                              OS_FILECREATION_CREATE_OVERRITE);
 
     OSFileWrite(logHandle, logMsgAll.data, logMsgAll.len);
 

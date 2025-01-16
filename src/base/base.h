@@ -12,5 +12,7 @@
 #include "baseMath.h"
 #include "baseBitstream.h"
 #include "baseLog.h"
+#include "baseUri.h"
+#include "baseCLexer.h"
 
 #endif

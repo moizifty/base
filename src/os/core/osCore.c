@@ -29,3 +29,15 @@ f64 OSConvertPerformanceCounterToMillisecondsF64(u64 counter)
 {
     return (counter * 1000.0) / (f64)gOSPerformanceFreq;
 }
+
+bool OSFileWriteAll(str8 path, U8Array bytes, bool createLeadingDir, bool overwrite)
+{
+    OSHandle handle = OSFileOpen(path, createLeadingDir, OS_FILEACCESS_WRITE, (overwrite) ? OS_FILECREATION_CREATE_OVERRITE : OS_FILECREATION_CREATE_NEW);
+    OSFileWrite(handle, bytes.data, bytes.len);
+
+    return true;
+}
+bool OSFileWriteAllStr8(str8 path, str8 str, bool createLeadingDir, bool overwrite)
+{
+    return OSFileWriteAll(path, (U8Array){.data = str.data, .len = str.len}, createLeadingDir, overwrite);
+}

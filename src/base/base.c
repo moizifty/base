@@ -10,5 +10,7 @@
 #include "baseMath.c"
 #include "baseBitstream.c"
 #include "baseLog.c"
+#include "baseUri.c"
+#include "baseCLexer.c"
 
 #endif

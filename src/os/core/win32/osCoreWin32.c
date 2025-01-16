@@ -160,7 +160,7 @@ OSHandle OSFileOpen(str8 path, bool createLeadingDir, OSFileAccessFlags accessFl
     switch(creationKind)
     {
         case OS_FILECREATION_CREATE_NEW: creation = CREATE_NEW; break;
-        case OOS_FILECREATION_CREATE_OVERRITE: creation = CREATE_ALWAYS; break;
+        case OS_FILECREATION_CREATE_OVERRITE: creation = CREATE_ALWAYS; break;
         case OS_FILECREATION_OPEN_ALWAYS: creation = OPEN_ALWAYS; break;
         case OS_FILECREATION_OPEN_EXISTING: creation = OPEN_EXISTING; break;
     }
@@ -188,6 +188,16 @@ void OSFileWriteStr8(OSHandle fileHandle, str8 str)
 {
     OSFileWrite(fileHandle, str.data, str.len);
 }
+void OSFileWriteU32(OSHandle fileHandle, u32 n)
+{
+    OSFileWrite(fileHandle, (u8*)&n, sizeof(n));
+}
+void OSFileWriteU64(OSHandle fileHandle, u64 n)
+{
+    OSFileWrite(fileHandle, (u8*)&n, sizeof(n));
+}
+
+
 void OSFileWriteFmt(OSHandle fileHandle, char *fmt, ...)
 {
     va_list va;

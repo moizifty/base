@@ -87,6 +87,8 @@ typedef struct ASTStmt
 
             ASTExpr *container;
             ASTBlock *block;
+
+            struct BssSymTableSlotEntry *itEntry;
         }forStmt;
 
         ASTBlock *block;

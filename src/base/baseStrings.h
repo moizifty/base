@@ -58,6 +58,12 @@ enum
     STR_MATCHFLAGS_FIND_LAST         = (1<<3),
 };
 
+typedef u64 StrSplitFlags;
+enum
+{
+    STR_SPLITFLAGS_DISCARD_EMPTY = (1 << 0),
+};
+
 void Str8ListPushNodeLast(Str8List *l, Str8ListNode *node);
 void Str8ListPushNodeFirst(Str8List *l, Str8ListNode *node);
 void Str8ListInsertNode(Str8List *l, Str8ListNode *prev, Str8ListNode *node);
@@ -89,8 +95,12 @@ bool baseStringsStrContains(str8 a, u8 ch);
 str8 baseStringsStrSubStr8(str8 str, u64 start, u64 end);
 u64 baseStringsStrFindSubStr8(str8 haystack, str8 needle, u64 start_pos, StrMatchFlags flags);
 str8 baseStringsStrReplace(BaseArena *arena, str8 str, u8 old, u8 new);
+bool baseStringsStrStartsWith(str8 str, str8 startsWith, StrMatchFlags flags);
 bool baseStringsStrEndsWith(str8 str, str8 endsWith, StrMatchFlags flags);
+str8 baseStringsStrSkip(str8 str, u64 amount);
+Str8List baseStringsStr8Split(BaseArena *arena, str8 str, str8 splitWith, StrMatchFlags matchFlags, StrSplitFlags splitFlags);
 
+str8 baseStringsStrChopPast(str8 str, str8 past, StrMatchFlags flags);
 str8 baseStringsStrChopPastLastSlash(str8 str);
 
 // string builder
@@ -121,4 +131,6 @@ u32 Utf8FromCodepoint(u32 codepoint, u8 outBuf[4]);
 str8 baseStr8FromFromStr16(BaseArena *arena, str16 str);
 str16 baseStr16FromFromStr8(BaseArena *arena, str8 str);
 
+u64 baseU64FromStr8(str8 str);
+i64 baseI64FromStr8(str8 str);
 #endif

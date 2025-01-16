@@ -77,8 +77,9 @@ void bssInterpStmt(struct BSSInterpretorState *iState, ASTStmt *stmt)
             BssValueList arr = {0};
             if(BSS_VALUE_TRYARRAY(cont, arr))
             {
-                for(u64 i = 0; i < arr.len; i++)
+                BASE_LIST_FOREACH(BssValue, v, cont->arr.val)
                 {
+                    stmt->forStmt.itEntry->value = v;
                     bssInterpStmts(iState, stmt->forStmt.block->stmts);
                 }
             }

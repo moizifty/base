@@ -394,6 +394,8 @@ void bssCheckerCheckStmt(struct BSSInterpretorState *iState, ASTStmt *stmt, BssS
                     entry->type = container->checkType->array.base;
 
                     bssScopeAddEntry(s, entry);
+
+                    stmt->forStmt.itEntry = entry;
                 }
                 else
                 {

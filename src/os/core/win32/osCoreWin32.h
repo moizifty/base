@@ -1,5 +1,8 @@
 #pragma comment(lib, "shell32.lib")
 #pragma comment(lib, "shlwapi.lib")
+#pragma comment(lib, "user32.lib")
+#pragma comment(lib, "gdi32.lib")
+#pragma comment(lib, "kernel32.lib")
 
 #ifndef OS_CORE_WIN32_H
 #define OS_CORE_WIN32_H

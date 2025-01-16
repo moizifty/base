@@ -10,11 +10,12 @@ this = {
     },
 };
 
-exePath = "{cwd}\builds\main.exe";
 
 if hasflag("build")
 {
     compiler = "cl";
+
+    exePath = "{cwd}\builds\main.exe";
 
     includeArg = "/I" + "src";
     outputName = "/Fe~"{exePath}~"";
@@ -29,10 +30,24 @@ if hasflag("build")
     deleteObjsCommand = run "del ~"{"{cwd}\builds\*.obj"}~"";
     print("{deleteObjsCommand}");
 }
-
-if hasflag("test")
+if (hasflag("metagen"))
 {
-    print("{(run "~"{exePath}~"").out}");
+    compiler = "cl";
+
+    exePath = "{cwd}\builds\metagen.exe";
+
+    includeArg = "/I" + "src";
+    outputName = "/Fe~"{exePath}~"";
+    objFolder = "/Fo~"{"{cwd}\builds/"}~"";
+    
+    command = "{compiler} /Zi {includeArg} src\metagen\metagenEntryPoint.c {outputName} {objFolder} /Wall /wd4062 /wd4063 /wd4061 /wd4255 /wd4201 /wd4774 /wd4668 /wd4464 /wd5045 /wd4820 /DBUILD_CONSOLE_APP ";
+    output = run command;
+
+    print("{output.stdout}~n");
+    print("{output.stderr}~n");
+
+    deleteObjsCommand = run "del ~"{"{cwd}\builds\*.obj"}~"";
+    print("{deleteObjsCommand}");
 }
 
 print("~nFinished Building {cwd}~n");

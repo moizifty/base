@@ -290,6 +290,17 @@ str8 baseStringsStrReplace(BaseArena *arena, str8 str, u8 old, u8 new)
 
     return ret;
 }
+bool baseStringsStrStartsWith(str8 str, str8 startsWith, StrMatchFlags flags)
+{
+    if(str.len < startsWith.len)
+    {
+        return false;
+    }
+
+    str8 a = {.data = str.data, .len = startsWith.len};
+
+    return baseStringsStrEquals(a, startsWith, flags);
+}
 bool baseStringsStrEndsWith(str8 str, str8 endsWith, StrMatchFlags flags)
 {
     if(str.len < endsWith.len)
@@ -301,19 +312,109 @@ bool baseStringsStrEndsWith(str8 str, str8 endsWith, StrMatchFlags flags)
 
     return baseStringsStrEquals(a, endsWith, flags);
 }
-
-str8 baseStringsStrChopPastLastSlash(str8 str)
+str8 baseStringsStrSkip(str8 str, u64 amount)
 {
-    u64 lastSlashIndex = baseStringsStrFindSubStr8(str,
-                                                   STR8_LIT("/"),
-                                                   0, 
-                                                   STR_MATCHFLAGS_SLASH_INSENSITIVE | STR_MATCHFLAGS_FIND_LAST);
-    if (lastSlashIndex < str.len)
+    str8 a = str;
+
+    if (!BASE_NULL_OR_EMPTY(a))
     {
-        str.len = lastSlashIndex;
+        if (a.len >= amount)
+        {
+            a.data += amount;
+            a.len -= amount;
+        }
+    }
+
+    return a;
+}
+Str8List baseStringsStr8Split(BaseArena *arena, str8 str, str8 splitWith, StrMatchFlags matchFlags, StrSplitFlags splitFlags)
+{
+    Str8List ret = {0};
+
+    u64 lastIndex = 0;
+    str8 remainingStr = str;
+
+    while(lastIndex < remainingStr.len)
+    {
+        u64 swIndex = baseStringsStrFindSubStr8(remainingStr, splitWith, 0, matchFlags);
+        if (swIndex == remainingStr.len)
+        {
+            break;
+        }
+
+        str8 before =
+        {
+            .data = remainingStr.data,
+            .len = swIndex,
+        };
+
+        if (BASE_ANY(before) || !(splitFlags & STR_SPLITFLAGS_DISCARD_EMPTY))
+        {
+            Str8ListPushLast(arena, &ret, baseStringsPushStr8Copy(arena, before));
+        }
+
+
+        remainingStr.data += swIndex + splitWith.len;
+        remainingStr.len -= (splitWith.len + swIndex);
+    }
+
+    if (BASE_ANY(remainingStr) || !(splitFlags & STR_SPLITFLAGS_DISCARD_EMPTY))
+    {
+        Str8ListPushLast(arena, &ret, baseStringsPushStr8Copy(arena, remainingStr));
+
+    }
+    
+    return ret;
+}
+str8 baseStringsStrTrimStart(str8 str)
+{
+    str8 a = str;
+    if (!BASE_NULL_OR_EMPTY(a))
+    {
+        while ((a.len > 0) && (a.data[0] == ' ' || a.data[0] == '\t' || a.data[0] == '\r' || a.data[0] == '\n' || a.data[0] == '\f'))
+        {
+            a.data++;
+            a.len--;
+        }
+    }
+
+    return a;
+}
+str8 baseStringsStrTrimEnd(str8 str)
+{
+    str8 a = str;
+    if (!BASE_NULL_OR_EMPTY(a))
+    {
+        while ((a.len > 0) && (a.data[a.len - 1] == ' ' || a.data[a.len - 1] == '\t' || a.data[a.len - 1] == '\r' || a.data[a.len - 1] == '\n' || a.data[a.len - 1] == '\f'))
+        {
+            a.len--;
+        }
+    }
+
+    return a;
+}
+str8 baseStringsStrTrim(str8 str)
+{
+    return baseStringsStrTrimEnd(baseStringsStrTrimStart(str));
+}
+
+str8 baseStringsStrChopPast(str8 str, str8 past, StrMatchFlags flags)
+{
+    u64 lastIndex = baseStringsStrFindSubStr8(str,
+                                              past,
+                                              0, 
+                                              flags);
+    if (lastIndex < str.len)
+    {
+        str.len = lastIndex;
     }
 
     return str;
+}
+
+str8 baseStringsStrChopPastLastSlash(str8 str)
+{
+    return baseStringsStrChopPast(str, STR8_LIT("/"), STR_MATCHFLAGS_SLASH_INSENSITIVE|STR_MATCHFLAGS_FIND_LAST);
 }
 
 BaseStringBuilder baseStringsCreateSB(BaseArena *arena, u64 cap)
@@ -583,3 +684,54 @@ str16 baseStr16FromFromStr8(BaseArena *arena, str8 str)
     return outStr;
 }
 
+
+u64 baseU64FromStr8(str8 str)
+{
+    u64 num = 0;
+    if (!BASE_NULL_OR_EMPTY(str))
+    {
+        if((str.data[0] == '0') && (str.data[1] == 'x'))
+        {
+            //hex number
+            str = baseStringsStrSkip(str, 2);
+
+            for(u64 i = 0; i < str.len; i++)
+            {
+                num = (num * 16) + (u8)baseCharHexDigitToU8(str.data[i]);
+            }
+        }
+        else if((str.data[0] == '0') && (str.data[1] == 'b'))
+        {
+            //binary number
+            str = baseStringsStrSkip(str, 2);
+
+            for(u64 i = 0; i < str.len; i++)
+            {
+                num = (num * 2) + (u8)baseCharBinDigitToU8(str.data[i]);
+            }
+        }
+        else
+        {
+            for(u64 i = 0; i < str.len; i++)
+            {
+                num = (num * 10) + (u8)baseCharDigitToU8(str.data[i]);
+            }
+        }
+    }
+
+    return num;
+}
+
+i64 baseI64FromStr8(str8 str)
+{
+    i8 sign = 1;
+    i64 num = 0;
+    if (!BASE_NULL_OR_EMPTY(str))
+    {
+        if (str.data[0] == '-') sign = -1;
+
+        num = (i64)baseU64FromStr8(str);
+    }
+
+    return num * sign;
+}

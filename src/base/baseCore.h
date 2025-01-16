@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
 #include "baseCoreTypes.h"
 #include "thirdparty\ts_stb_sprintf.h"
@@ -41,6 +42,13 @@
 
 #define baseColPrintf(FMT,...) (baseColFprintf(stdout, FMT, ##__VA_ARGS__))
 #define baseColEPrintf(FMT,...) (baseColFprintf((stderr), (FMT), ##__VA_ARGS__))
+#define basePrintf baseColPrintf
+#define baseEPrintf baseColEPrintf
+
+// idk other stuff
+#define BASE_ISALPHA(c) isalpha((int)(c))
+#define BASE_ISDIGIT(c) isdigit((int)(c))
+#define BASE_ISHEXDIGIT(c) isxdigit((int)(c))
 
 // memory
 #define BASE_MEMCPY memcpy
@@ -312,9 +320,9 @@ void BaseMainThreadEntry(ProgramMainFunc programMain, i64 argc, i8 **argv);
 
 i64 baseColFprintf(FILE *fp, const char *fmt, ...);
 
-i64 baseHexDigitToInt(int ch);
-i64 baseBinDigitToInt(int ch);
-i64 baseCStyleIntLiteralToInt(str8 str);
+i8 baseCharHexDigitToU8(u8 ch);
+i8 baseCharBinDigitToU8(u8 ch);
+i8 baseCharDigitToU8(u8 ch);
 
 u8* baseMemcpyBigEndian(void *dst, void* src, u64 size);
 i16 baseConvertToBigEndianI16(i16 num);

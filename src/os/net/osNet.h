@@ -15,6 +15,9 @@
 #error Platform not defined
 #endif
 
+#define OS_NET_RECIEVE_ALL_BUFFER_SIZE 256
+#define OS_NET_SEND_ALL_BUFFER_SIZE 256
+
 typedef enum OSNetAddrKind
 {
     OS_NET_ADDR_EITHER,
@@ -46,12 +49,16 @@ typedef enum OSNetProtocolKind
 typedef enum OSNetSocketOptionLevel
 {
     OS_NET_SOCK_OPTION_IPV4,
+    OS_NET_SOCK_OPTION_TCP,
+    OS_NET_SOCK_OPTION_SOCKET,
     // THERES MORE but only this is needed rn for my needs
 }OSNetSocketOptionLevel;
 
 typedef enum OSNetSocketOptionName
 {
     OS_NET_SOCK_OPTION_IPV4__IP_HEADER_INCLUDE, // IP_HDRINCL
+    OS_NET_SOCK_OPTION_TCP__MAX_SEGMENT_SIZE, // TCP_MAXSEG
+    OS_NET_SOCK_OPTION_SOCKET__MAX_SEND_BUFFER_SIZE, // SO_SNDBUF
     // THERES MORE but only this is needed rn for my needs
 }OSNetSocketOptionName;
 
@@ -127,7 +134,6 @@ typedef struct OSNetIPHeader
     u32 sender;          // Source IP address
     u32 dest;          // Destination IP address
 }OSNetIPHeader;
-
 typedef struct OSNetICMPCommonHeader
 {
     u8 type;
@@ -141,7 +147,6 @@ typedef struct OSNetICMPEcho
     u16 id;
     u16 seq;
 }OSNetICMPEcho;
-
 #pragma pack(pop)
 
 BASE_CREATE_EFFICIENT_LL_DECLS(OSNetAddrInfoList, OSNetAddrInfo);
@@ -158,6 +163,7 @@ OSNetAddrInfoList OSNetGetAddrInfo(BaseArena *arena, str8 addr, str8 port, OSNet
 str8 OSNetAddrToStr8(BaseArena *arena, OSNetAddr addr);
 OSNetAddr OSNetStr8ToAddr(str8 addr, OSNetAddrKind kind);
 
+OSNetAddr OSNetGetLocalIpAddressForDest(OSNetAddr dest);
 OSNetAddrList OSNetGetLocalIpAddress(BaseArena *arena, OSNetAddrKind preference);
 OSNetAddr OSNetGetPublicIpAddress(void);
 
@@ -165,6 +171,7 @@ OSHandle OSNetSocketCreate(OSNetAddrKind family, OSNetSocketKind socketKind, OSN
 OSHandle OSNetSocketCreateFromAddrInfo(OSNetAddrInfo *info);
 OSHandleList OSNetSocketCreateFromAddr(BaseArena *arena, str8 addr, str8 port, OSNetAddrInfo *hint);
 
+bool OSNetSocketGetOptions(OSHandle socketHandle, OSNetSocketOptionLevel level, OSNetSocketOptionName name, void *value, u64 *valueLen);
 bool OSNetSocketSetOptions(OSHandle socketHandle, OSNetSocketOptionLevel level, OSNetSocketOptionName name, void *value, u64 valueLen);
 bool OSNetSocketBind(OSHandle socketHandle, OSNetAddr bindingAddr);
 bool OSNetSocketListen(OSHandle socketHandle);
@@ -173,8 +180,11 @@ bool OSNetSocketConnect(OSHandle socketHandle, OSNetAddr connectTo);
 
 i64 OSNetSocketSendTo(OSHandle socketHandle, U8Array buf, OSNetAddr to);
 i64 OSNetSocketRecieveFrom(OSHandle socketHandle, U8Array *outBuf, OSNetAddr *recievedFrom);
+
+i64 OSNetSocketSendAll(OSHandle socketHandle, U8Array buf);
 i64 OSNetSocketSend(OSHandle socketHandle, U8Array buf);
 i64 OSNetSocketRecieve(OSHandle socketHandle, U8Array *outBuf);
+U8ChunkList OSNetSocketRecieveAll(BaseArena *arena, OSHandle socketHandle);
 
 bool OSNetSocketClose(OSHandle socketHandle);
 

@@ -131,6 +131,8 @@ enum OSNetSocketOptionLevel OSNetWin32OptionLevelToSocketOptionLevel(int level)
     switch (level)
     {
         case IPPROTO_IP: return OS_NET_SOCK_OPTION_IPV4;
+        case IPPROTO_TCP: return OS_NET_SOCK_OPTION_TCP;
+        case SOL_SOCKET: return OS_NET_SOCK_OPTION_SOCKET;
         default:
         {
             logThreadErrorFmt("Unregognised socket optional level.\n");
@@ -143,6 +145,8 @@ int OSNetSocketOptionLevelToWin32OptionLevel(enum OSNetSocketOptionLevel level)
     switch (level)
     {
         case OS_NET_SOCK_OPTION_IPV4: return IPPROTO_IP;
+        case OS_NET_SOCK_OPTION_TCP: return IPPROTO_TCP;
+        case OS_NET_SOCK_OPTION_SOCKET: return SOL_SOCKET;
         default:
         {
             logThreadErrorFmt("Unregognised socket optional level.\n");
@@ -155,6 +159,8 @@ enum OSNetSocketOptionName OSNetWin32OptionNameToSocketOptionName(int name)
     switch (name)
     {
         case IP_HDRINCL: return OS_NET_SOCK_OPTION_IPV4__IP_HEADER_INCLUDE;
+        case TCP_MAXSEG: return OS_NET_SOCK_OPTION_TCP__MAX_SEGMENT_SIZE;
+        case SO_SNDBUF: return OS_NET_SOCK_OPTION_SOCKET__MAX_SEND_BUFFER_SIZE;
         default:
         {
             logThreadErrorFmt("Unregognised socket optional name.\n");
@@ -167,6 +173,8 @@ int OSNetSocketOptionNameToWin32OptionName(enum OSNetSocketOptionName name)
     switch (name)
     {
         case OS_NET_SOCK_OPTION_IPV4__IP_HEADER_INCLUDE: return IP_HDRINCL;
+        case OS_NET_SOCK_OPTION_TCP__MAX_SEGMENT_SIZE: return TCP_MAXSEG;
+        case OS_NET_SOCK_OPTION_SOCKET__MAX_SEND_BUFFER_SIZE: return SO_SNDBUF;
         default:
         {
             logThreadErrorFmt("Unregognised socket optional name.\n");
@@ -289,6 +297,23 @@ OSNetAddr OSNetStr8ToAddr(str8 addr, OSNetAddrKind kind)
     return ret;
 }
 
+OSNetAddr OSNetGetLocalIpAddressForDest(OSNetAddr dest)
+{
+    OSNetAddr bestSrc = {0};
+    SOCKADDR_STORAGE win32Dest = {0};
+    OSNetAddrToWin32SOCKADDR(dest, &win32Dest);
+
+    MIB_IPFORWARD_ROW2 bestRoute = {0};
+    SOCKADDR_STORAGE win32BestSrc = {0};
+    DWORD result = GetBestRoute2(null, 0, null, (SOCKADDR_INET*)&win32Dest, 0, &bestRoute, (SOCKADDR_INET*)&win32BestSrc);
+
+    if (result == NO_ERROR)
+    {
+        OSNetWin32SOCKADDRToAddr(&win32BestSrc, &bestSrc);
+    }
+
+    return bestSrc;
+}
 OSNetAddrList OSNetGetLocalIpAddress(BaseArena *arena, OSNetAddrKind preference)
 {
     OSNetAddrList addrList = {0};
@@ -417,6 +442,17 @@ OSHandleList OSNetSocketCreateFromAddr(BaseArena *arena, str8 addr, str8 port, O
 
     return handles;
 }
+bool OSNetSocketGetOptions(OSHandle socketHandle, OSNetSocketOptionLevel level, OSNetSocketOptionName name, void *value, u64 *valueLen)
+{
+    int win32Level = OSNetSocketOptionLevelToWin32OptionLevel(level);
+    int win32Name = OSNetSocketOptionNameToWin32OptionName(name);
+
+    int len = (int)*valueLen;
+    bool result = getsockopt((SOCKET)socketHandle._u64, win32Level, win32Name, value, &len) != SOCKET_ERROR;
+
+    *valueLen = (i64)len;
+    return result;
+}
 bool OSNetSocketSetOptions(OSHandle socketHandle, OSNetSocketOptionLevel level, OSNetSocketOptionName name, void *value, u64 valueLen)
 {
     int win32Level = OSNetSocketOptionLevelToWin32OptionLevel(level);
@@ -489,45 +525,6 @@ bool OSNetSocketClose(OSHandle socketHandle)
 
     return success;
 }
-// i64 OSNetSocketPollArray(OSNetPollDataArray* socketsToPoll, i64 timeoutMS)
-// {
-//     i64 count = 0;
-//     BaseArenaTemp temp = baseTempBegin(null, 0);
-//     {
-//         WSAPOLLFD *pollData = baseArenaPushArray(temp.arena, WSAPOLLFD, socketsToPoll->len);
-//         for (u64 i = 0; i < socketsToPoll->len; i++)
-//         {
-//             OSNetPollData socketToPoll = socketsToPoll->data[i];
-//             pollData[i].fd = (SOCKET)socketToPoll.socketHandle._u64;
-
-//             if (socketToPoll.requestFlags & OS_NET_POLL_REQ_RECIEVE_FLAG) pollData[i].events |= POLLIN;
-//             if (socketToPoll.requestFlags & OS_NET_POLL_REQ_SEND_FLAG) pollData[i].events |= POLLOUT;
-
-//             if (socketToPoll.readyFlags & OS_NET_POLL_READY_RECIEVE_FLAG) pollData[i].revents |= POLLIN;
-//             if (socketToPoll.readyFlags & OS_NET_POLL_READY_SEND_FLAG) pollData[i].revents |= POLLOUT;
-//         }
-
-//         count = WSAPoll(pollData, (ULONG)socketsToPoll->len, (INT)timeoutMS);
-//         if (count > 0)
-//         {
-//             for (u64 i = 0; i < socketsToPoll->len; i++)
-//             {
-//                 if (pollData[i].revents & POLLIN)
-//                 {
-//                     socketsToPoll->data[i].readyFlags |= OS_NET_POLL_READY_RECIEVE_FLAG;
-//                 }
-
-//                 if (pollData[i].revents & POLLOUT)
-//                 {
-//                     socketsToPoll->data[i].readyFlags |= OS_NET_POLL_READY_SEND_FLAG;
-//                 }
-//             }
-//         }
-//     }
-//     baseTempEnd(temp);
-
-//     return count;
-// }
 i64 OSNetSocketPollList(OSNetPollDataList socketsToPoll, i64 timeoutMS)
 {
     i64 count = 0;

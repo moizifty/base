@@ -4,6 +4,19 @@
 #include "base\baseCoreTypes.h"
 #include "base\baseMath.h"
 
+#ifndef baseArenaReserveImpl
+#define baseArenaReserveImpl OSReserveMemory
+#endif
+#ifndef baseArenaCommitImpl
+#define baseArenaCommitImpl OSCommitMemory
+#endif
+#ifndef baseArenaDecommitImpl
+#define baseArenaDecommitImpl OSDecommitMemory
+#endif
+#ifndef baseArenaFreeImpl
+#define baseArenaFreeImpl OSFreeMemory
+#endif
+
 #define LOG_FOLDER_NAME STR8_LIT("logs")
 
 typedef struct OSProcessState
@@ -43,7 +56,7 @@ typedef enum OSFileAccessFlags
 typedef enum OSFileCreationKind
 {
     OS_FILECREATION_CREATE_NEW,
-    OOS_FILECREATION_CREATE_OVERRITE,
+    OS_FILECREATION_CREATE_OVERRITE,
     OS_FILECREATION_OPEN_EXISTING,
     OS_FILECREATION_OPEN_ALWAYS,
 }OSFileCreationKind;
@@ -141,8 +154,14 @@ void OSEnableVirtualTerminalSequenceProcessing(void);
 OSHandle OSFileOpen(str8 path, bool createLeadingDir, OSFileAccessFlags accessFlags, OSFileCreationKind creationKind);
 void OSFileWrite(OSHandle fileHandle, u8 *bytes, u64 numBytes);
 void OSFileWriteStr8(OSHandle fileHandle, str8 str);
+void OSFileWriteU32(OSHandle fileHandle, u32 n);
+void OSFileWriteU64(OSHandle fileHandle, u64 n);
 void OSFileWriteFmt(OSHandle fileHandle, char *fmt, ...);
+
 U8Array OSFileReadAll(struct BaseArena *arena, str8 path);
+bool OSFileWriteAll(str8 path, U8Array bytes, bool createLeadingDir, bool overwrite);
+bool OSFileWriteAllStr8(str8 path, str8 str, bool createLeadingDir, bool overwrite);
+
 void OSFileClose(OSHandle handle);
 
 bool OSPathExists(str8 path);

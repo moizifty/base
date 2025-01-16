@@ -215,7 +215,7 @@ i64 baseColFprintf(FILE *fp, const char *fmt, ...)
     return res;
 }
 
-i64 baseHexDigitToInt(int ch)
+i8 baseCharHexDigitToU8(u8 ch)
 {
     if((ch >= '0') && (ch <= '9'))
     {
@@ -229,15 +229,11 @@ i64 baseHexDigitToInt(int ch)
     {
         return 10 + (ch - 'A');
     }
-    else
-    {
-        baseColEPrintf("{ur} Unexpected Hex digit '%c'", ch);
-    }
 
-    return 0;
+    return -1;
 }
 
-i64 baseBinDigitToInt(int ch)
+i8 baseCharBinDigitToU8(u8 ch)
 {
     switch(ch)
     {
@@ -248,39 +244,9 @@ i64 baseBinDigitToInt(int ch)
     return -1;
 }
 
-i64 baseCStyleIntLiteralToInt(str8 str)
+i8 baseCharDigitToU8(u8 ch)
 {
-    if((str.data[0] == '0') && (str.data[1] == 'x'))
-    {
-        //hex number
-        int64_t num = 0;
-        i8 *numStr = (i8 *) str.data + 2;
-
-        while(*numStr != '\0')
-        {
-            num = (num * 16) + baseHexDigitToInt(*numStr);
-
-            numStr++;
-        }
-
-        return num;
-    }
-    else if((str.data[0] == '0') && (str.data[1] == 'b'))
-    {
-        //binary number
-        int64_t num = 0;
-        i8 *numStr = (i8 *) str.data + 2;
-
-        while(*numStr != '\0')
-        {
-            num = (num * 2) + baseBinDigitToInt(*numStr);
-
-            numStr++;
-        }
-
-        return num;
-    }
-    else return atoll((i8 *)str.data);
+    return ch - '0';
 }
 
 u8* baseMemcpyBigEndian(void *dst, void* src, u64 size)
