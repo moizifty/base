@@ -10,6 +10,8 @@
 #include "thirdparty\ts_stb_sprintf.h"
 
 // General
+
+#define BASE_OFFSETOF(s, memb) ((u64)(&(((s *)0)->memb)))
 #define BASE_BYTES(NUM) ((u64)(NUM))
 #define BASE_KILOBYTES(NUM) ((u64)(BASE_BYTES(NUM)) * 1024u)
 #define BASE_MEGABYTES(NUM) ((u64)(BASE_KILOBYTES(NUM)) * 1024u)

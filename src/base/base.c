@@ -12,5 +12,6 @@
 #include "baseLog.c"
 #include "baseUri.c"
 #include "baseCLexer.c"
+#include "baseMetagen.c"
 
 #endif

@@ -7,6 +7,11 @@ str8 gBaseCTokLexemeTable[] =
     [CTOK_END_INPUT] = STR8_LIT_COMP_CONST("END OF INPUT"),
 };
 
+CTokArray CTokArraySkip(CTokArray arr, u64 amount)
+{
+    return (arr.len > 0) ? (CTokArray){.data = arr.data + amount, .len = arr.len - amount} : arr;
+}
+
 i64 baseCLexerGetEscapeCharValue(str8 escapeCharString)
 {
      if(escapeCharString.data[0] != '\\')

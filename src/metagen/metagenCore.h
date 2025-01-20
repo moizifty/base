@@ -14,15 +14,10 @@
 typedef enum MetagenCmdKind
 {
     METAGEN_CMD_GEN_TABLE,
+    METAGEN_CMD_INTROSPECT,
     METAGEN_CMD_EMBED_FILE,
     METAGEN_CMD_COUNT,
 }MetagenCmdKind;
-
-str8 gMetagenCmdKindStr8Table[METAGEN_CMD_COUNT] = 
-{
-    [METAGEN_CMD_GEN_TABLE] = STR8_LIT_COMP_CONST("metagen_gentable"),
-    [METAGEN_CMD_EMBED_FILE] = STR8_LIT_COMP_CONST("metagen_embedfile"),
-};
 
 typedef struct MetagenOutput
 {
@@ -30,6 +25,7 @@ typedef struct MetagenOutput
     {
         Str8List typedefs;
         Str8List tables;
+        Str8List defines;
         Str8List embeds;
         str8 path;
     }header;
@@ -42,7 +38,56 @@ typedef struct MetagenOutput
     }impl;
 }MetagenOutput;
 
+typedef struct MetagenCStructMemb
+{
+    str8 name;
+    str8 type;
+
+    u8 isPointer : 1;
+    u8 isArray : 1; 
+
+    u64 arrayLength;
+    
+    struct MetagenCStructMemb* next;
+    struct MetagenCStructMemb* prev;
+}MetagenCStructMemb;
+
+BASE_CREATE_EFFICIENT_LL_DECLS(MetagenCStructMembList, MetagenCStructMemb);
+
+typedef struct MetagenCStruct
+{
+    str8 name;
+    MetagenCStructMembList membs;
+
+    u64 tokensAdvanced;
+}MetagenCStruct;
+
+typedef struct MetagenTypeDictSlotEntry
+{
+    str8 name;
+
+    struct MetagenTypeDictSlotEntry *next;
+    struct MetagenTypeDictSlotEntry *prev;
+}MetagenTypeDictSlotEntry;
+
+BASE_CREATE_EFFICIENT_LL_DECLS(MetagenTypeDictSlot, MetagenTypeDictSlotEntry);
+BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(MetagenTypeDictSlotArray, MetagenTypeDictSlot);
+
+typedef struct MetagenTypeDict
+{
+    MetagenTypeDictSlotArray slots;
+
+    u64 len;
+}MetagenTypeDict;
+
+extern str8 gMetagenCmdKindStr8Table[METAGEN_CMD_COUNT];
+extern MetagenTypeDict gMetagenTypeDict;
+
+void metagenInit(BaseArena *arena);
+bool metagenTypeDictAddType(BaseArena *arena, MetagenTypeDict *dict, str8 type);
 bool metagenHandleEmbedFile(BaseArena *arena, MetagenOutput *output, CTokArray nextToks);
+bool metagenHandleIntrospect(BaseArena *arena, MetagenOutput *output, CTokArray nextToks);
+
 Str8List metagenFindFilesToProcess(BaseArena *arena, str8 path);
 
 #endif

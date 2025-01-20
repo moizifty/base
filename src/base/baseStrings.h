@@ -3,6 +3,7 @@
 
 #include <stdarg.h>
 #include "baseCoreTypes.h"
+#include "baseMetagen.h"
 
 #define STR8(CSTRING) (baseStr8((u8*)(CSTRING), strlen(CSTRING)))
 #define STR8_LIT(BYTES) (baseStr8((u8*)(BYTES), ((sizeof(BYTES)) - 1)))

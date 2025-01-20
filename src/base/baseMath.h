@@ -7,6 +7,7 @@
 // eg: Mv, where M is a matrix and v is a column vector.
 #include <math.h>
 #include "baseCore.h"
+#include "baseMetagen.h"
 
 #define BASE_PI (3.14159265358979323846)
 
@@ -85,6 +86,7 @@
 
 #define Range3f(X, Y)    ((rangef){(X), (Y)})
 
+metagen_introspect()
 typedef struct vec2f
 {
     union
@@ -154,6 +156,7 @@ typedef struct vec2i8
     };   
 }vec2i8;
 
+metagen_introspect()
 typedef struct vec3f
 {
     union
@@ -450,6 +453,8 @@ typedef struct range2i
 }range2i;
 
 // 3-dimension range
+
+metagen_introspect()
 typedef struct range3f
 {
     union
@@ -631,4 +636,5 @@ quatf quatfRotateZXY(quatf q, f32 radX, f32 radY, f32 radZ);
 vec3f quatfRotateAxisVec3f(vec3f v, vec3f axis, f32 rad);
 vec3f quatfRotateYXZVec3f(vec3f v, f32 radX, f32 radY, f32 radZ);
 vec3f quatfRotateZXYVec3f(vec3f v, f32 radX, f32 radY, f32 radZ);
+
 #endif

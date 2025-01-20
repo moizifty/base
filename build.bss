@@ -30,11 +30,12 @@ if hasflag("build")
     deleteObjsCommand = run "del ~"{"{cwd}\builds\*.obj"}~"";
     print("{deleteObjsCommand}");
 }
+
 if (hasflag("metagen"))
 {
     compiler = "cl";
 
-    exePath = "{cwd}\builds\metagen.exe";
+    exePath = "{cwd}\src\metagen\builds\metagen.exe";
 
     includeArg = "/I" + "src";
     outputName = "/Fe~"{exePath}~"";

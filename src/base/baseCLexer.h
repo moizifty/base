@@ -74,6 +74,8 @@ typedef struct CLexerState
     u8 *currLocInBuffer;
 }CLexerState;
 
+CTokArray CTokArraySkip(CTokArray arr, u64 amount);
+
 i64 baseCLexerGetEscapeCharValue(str8 escapeCharString);
 str8 baseCLexerGetStr8RepFromTokLexeme(BaseArena *arena, CTok tok);
 
