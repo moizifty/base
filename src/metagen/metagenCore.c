@@ -5,6 +5,7 @@
 extern str8 gMetagenCmdKindStr8Table[METAGEN_CMD_COUNT] = 
 {
     [METAGEN_CMD_GEN_TABLE] = STR8_LIT_COMP_CONST("metagen_gentable"),
+    [METAGEN_CMD_GEN_PRINT_STRUCT_MEMB] = STR8_LIT_COMP_CONST("metagen_genprintstructmemb"),
     [METAGEN_CMD_INTROSPECT] = STR8_LIT_COMP_CONST("metagen_introspect"),
     [METAGEN_CMD_EMBED_FILE] = STR8_LIT_COMP_CONST("metagen_embedfile"),
 };
@@ -41,8 +42,9 @@ bool metagenTypeDictAddType(BaseArena *arena, MetagenTypeDict *dict, str8 type)
     {
         found = baseArenaPushType(arena, MetagenTypeDictSlotEntry);
         found->name = type;
-        MetagenTypeDictSlotPushNodeLast(&dict->slots.data[hash % dict->slots.len], found);
-        dict->len++;
+
+        BaseListNodePushLastEx(dict->slots.data[hash % dict->slots.len], found, hashPrev, hashNext);
+        BaseListNodePushLast(*dict, found);
     }
 
     return existed;
@@ -320,12 +322,7 @@ bool metagenHandleIntrospect(BaseArena *arena, MetagenOutput *output, CTokArray 
         {
             MetagenCStruct parsedStruct = metagenParseCStruct(arena, nextToks);
 
-            bool preexisting = metagenTypeDictAddType(arena, &gMetagenTypeDict, parsedStruct.name);
-            if (!preexisting)
-            {
-                Str8ListPushLastFmt(arena, &output->header.defines, "#define METAGEN_TYPE_%S (METAGEN_TYPE_CUSTOM_BEGIN + %lld)\n", parsedStruct.name, gMetagenTypeDict.len - 1);
-            }
-
+            metagenTypeDictAddType(arena, &gMetagenTypeDict, parsedStruct.name);
             Str8ListPushLastFmt(arena, &output->header.tables, "extern MetagenStructMembArray g%SMembDefsTable;\n", parsedStruct.name);
             Str8ListPushLastFmt(arena, &output->impl.tables, "extern MetagenStructMembArray g%SMembDefsTable=\n", parsedStruct.name);
             Str8ListPushLastFmt(arena, &output->impl.tables, "{\n");
@@ -334,7 +331,7 @@ bool metagenHandleIntrospect(BaseArena *arena, MetagenOutput *output, CTokArray 
 
             BASE_LIST_FOREACH(MetagenCStructMemb, membNode, parsedStruct.membs)
             {
-                Str8ListPushLastFmt(arena, &output->impl.tables, "\t\t\t{.name = STR8_LIT_COMP_CONST(\"%S\"), .type = METAGEN_TYPE_%S, .offset = BASE_OFFSETOF(%S, %S),", membNode->name, membNode->type, parsedStruct.name, membNode->name);
+                Str8ListPushLastFmt(arena, &output->impl.tables, "\t\t\t{.name = STR8_LIT_COMP_CONST(\"%S\"), .type = METAGEN_TYPE_%S, .size = sizeof(((%S*)(0))->%S), .offset = BASE_OFFSETOF(%S, %S),", membNode->name, membNode->type, parsedStruct.name, membNode->name, parsedStruct.name, membNode->name);
                 if (membNode->isArray)
                 {
                     Str8ListPushLastFmt(arena, &output->impl.tables, ".isArray = true, .arrayLen = %lld,", membNode->arrayLength);

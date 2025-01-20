@@ -14,6 +14,7 @@
 typedef enum MetagenCmdKind
 {
     METAGEN_CMD_GEN_TABLE,
+    METAGEN_CMD_GEN_PRINT_STRUCT_MEMB,
     METAGEN_CMD_INTROSPECT,
     METAGEN_CMD_EMBED_FILE,
     METAGEN_CMD_COUNT,
@@ -66,6 +67,9 @@ typedef struct MetagenTypeDictSlotEntry
 {
     str8 name;
 
+    struct MetagenTypeDictSlotEntry *hashNext;
+    struct MetagenTypeDictSlotEntry *hashPrev;
+
     struct MetagenTypeDictSlotEntry *next;
     struct MetagenTypeDictSlotEntry *prev;
 }MetagenTypeDictSlotEntry;
@@ -76,6 +80,9 @@ BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(MetagenTypeDictSlotArray, MetagenTypeDictSlot)
 typedef struct MetagenTypeDict
 {
     MetagenTypeDictSlotArray slots;
+
+    struct MetagenTypeDictSlotEntry *first;
+    struct MetagenTypeDictSlotEntry *last;
 
     u64 len;
 }MetagenTypeDict;

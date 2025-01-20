@@ -7,6 +7,8 @@
 
 #include "baseCtxCrack.h"
 
+#define metagen_introspect(...)
+
 #define null NULL
 
 #if COMPILER_MSVC
@@ -57,6 +59,7 @@ typedef struct str32
     u64 len;
 }str32;
 
+metagen_introspect()
 typedef struct DateTime
 {
     u16 year;

@@ -15,13 +15,19 @@ void ProgramMain(CmdLineHashMap *opts)
         baseEPrintf("{r}Expected only one input, either a file or a directory to recusively collect files.\n");
         return;
     }
-
+    
     BaseArena *arena = baseArenaAllocDefault();
 
     metagenInit(arena);
 
     str8 inputPath = opts->originalInputs.first->val;
     Str8List paths = metagenFindFilesToProcess(arena, inputPath);
+
+    str8 baseFolder = OSGetProgramDirectory(arena);
+    baseFolder = baseStringsStrChopPastLastSlash(baseStringsStrChopPastLastSlash(baseFolder));
+    baseFolder = baseStringsPushStr8Fmt(arena, "%S\\base\\", baseFolder);
+
+    DateTime currentTime = OSGetLocalTime();
 
     BASE_LIST_FOREACH(Str8ListNode, pathNode, paths)
     {
@@ -57,7 +63,6 @@ void ProgramMain(CmdLineHashMap *opts)
 
             prevTok = tok;
         }
-        DateTime currentTime = OSGetLocalTime();
 
         if (BASE_ANY(output.header.embeds) || 
             BASE_ANY(output.header.defines) ||
@@ -70,9 +75,9 @@ void ProgramMain(CmdLineHashMap *opts)
             OSFileWriteFmt(outputFile, "/* Input: %S\n", path);
             OSFileWriteFmt(outputFile, "/* Date-Time: %d/%d/%d - %02d:%02d\n", currentTime.day, currentTime.month, currentTime.year, currentTime.hour, currentTime.min);
             OSFileWriteFmt(outputFile, "/**********************************************************************/\n\n");
-            OSFileWriteFmt(outputFile, "#include \"base\\baseCore.h\"\n\n");
-            OSFileWriteFmt(outputFile, "#include \"base\\baseStrings.h\"\n\n");
-            OSFileWriteFmt(outputFile, "#include \"base\\baseMetagen.h\"\n\n");
+            //OSFileWriteFmt(outputFile, "#include \"base\\baseCore.h\"\n\n");
+            //OSFileWriteFmt(outputFile, "#include \"base\\baseStrings.h\"\n\n");
+            //OSFileWriteFmt(outputFile, "#include \"base\\baseMetagen.h\"\n\n");
 
             BASE_LIST_FOREACH(Str8ListNode, node, output.header.defines)
             {
@@ -116,6 +121,34 @@ void ProgramMain(CmdLineHashMap *opts)
 
             OSFileClose(outputFile);
         }
+    }
+    if (BASE_ANY(gMetagenTypeDict))
+    {
+        str8 commonMetagenPath = baseStringsPushStr8Fmt(arena, "%S\\baseMetagenCommon.gen.h", baseFolder);
+        OSHandle outputFile = OSFileOpen(commonMetagenPath, false, OS_FILEACCESS_WRITE, OS_FILECREATION_CREATE_OVERRITE);
+        OSFileWriteFmt(outputFile, "/**********************************************************************/\n");
+        OSFileWriteFmt(outputFile, "/* GENERATED FILE\n");
+        OSFileWriteFmt(outputFile, "/* Date-Time: %d/%d/%d - %02d:%02d\n", currentTime.day, currentTime.month, currentTime.year, currentTime.hour, currentTime.min);
+        OSFileWriteFmt(outputFile, "/**********************************************************************/\n\n");
+
+        BASE_LIST_FOREACH(MetagenTypeDictSlotEntry, entryNode, gMetagenTypeDict)
+        {
+            OSFileWriteFmt(outputFile, "extern MetagenStructMembArray g%SMembDefsTable;\n", entryNode->name);
+        }
+
+        u64 i = 0;
+        BASE_LIST_FOREACH_INDEX(MetagenTypeDictSlotEntry, entryNode, gMetagenTypeDict, i)
+        {
+            OSFileWriteFmt(outputFile, "#define METAGEN_TYPE_%S (METAGEN_TYPE_CUSTOM_BEGIN + %lld)\n", entryNode->name, i);
+        }
+
+        OSFileWriteFmt(outputFile, "#define METAGEN_PRINT_MEMB_CUSTOM \\\n");
+        BASE_LIST_FOREACH(MetagenTypeDictSlotEntry, entryNode, gMetagenTypeDict)
+        {
+            OSFileWriteFmt(outputFile, "         case METAGEN_TYPE_%S: basePrintStruct(((u8*)(member) + (size*i)), g%SMembDefsTable); break;\\\n", entryNode->name, entryNode->name, entryNode->name);
+        }
+
+        OSFileClose(outputFile);
     }
 
     basePrintf("{g}Metagen Finished!");

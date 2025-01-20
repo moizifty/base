@@ -637,4 +637,6 @@ vec3f quatfRotateAxisVec3f(vec3f v, vec3f axis, f32 rad);
 vec3f quatfRotateYXZVec3f(vec3f v, f32 radX, f32 radY, f32 radZ);
 vec3f quatfRotateZXYVec3f(vec3f v, f32 radX, f32 radY, f32 radZ);
 
+#include "baseMath.gen.h"
+
 #endif

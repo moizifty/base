@@ -2,9 +2,11 @@
 #define BASE_METAGEN_H
 
 #include "base\baseCore.h"
+
 // metagen commands
 #define metagen_gentable(...)
 #define metagen_introspect(...)
+#define metagen_genprintstructmemb(...)
 #define metagen_embedfile(name, path, mode)
 
 typedef enum MetagenTypeKind
@@ -32,6 +34,7 @@ typedef struct MetagenStructMemb
     str8 name;
     MetagenTypeKind type;
 
+    u64 size;
     u64 offset;
     u64 isPointer : 1;
     u64 isArray : 1;
@@ -42,4 +45,7 @@ typedef struct MetagenStructMemb
 BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(MetagenStructMembArray, MetagenStructMemb);
 
 void basePrintStruct(void *data, MetagenStructMembArray membs);
+
+#include "base\baseMetagenCommon.gen.h"
+
 #endif

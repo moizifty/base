@@ -14,4 +14,6 @@
 #include "baseCLexer.c"
 #include "baseMetagen.c"
 
+#include "baseCoreTypes.gen.c"
+
 #endif

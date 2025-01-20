@@ -46,6 +46,7 @@
         "xstddef": "c",
         "cstddef": "c",
         "sstream": "c",
-        "xtree": "c"
+        "xtree": "c",
+        "initializer_list": "c"
     }
 }

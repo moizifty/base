@@ -1,8 +1,12 @@
 #include "base\baseMetagen.h"
+#include "base\baseMetagenCommon.gen.h"
+
+metagen_genprintstructmemb()
 
 void basePrintStructMember(void *member, MetagenStructMemb memb)
 {
     u64 count = memb.isArray ? memb.arrayLen : 1;
+    u64 size = memb.size / count;
 
     basePrintf("%S: ", memb.name);
     if (memb.isArray)
@@ -28,6 +32,8 @@ void basePrintStructMember(void *member, MetagenStructMemb memb)
             case METAGEN_TYPE_f64: basePrintf("%f",*((f64*)(member) + i)); break;
             case METAGEN_TYPE_str8: basePrintf("%S", *((str8*)(member) + i)); break;
             case METAGEN_TYPE_bool: basePrintf("%d", *((bool*)(member) + i)); break;
+
+            METAGEN_PRINT_MEMB_CUSTOM
         }
         
         if (i < count - 1)
@@ -41,7 +47,6 @@ void basePrintStructMember(void *member, MetagenStructMemb memb)
         basePrintf("]");
     }
 }
-
 void basePrintStruct(void *data, MetagenStructMembArray membs)
 {
     basePrintf("{{");
