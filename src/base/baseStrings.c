@@ -62,6 +62,19 @@ void Str8ListPushListLast(BaseArena *arena, Str8List *l, Str8List* a)
     }
 }
 
+u64 Str8ListFindFirst(Str8List *l, str8 needle, StrMatchFlags flags)
+{
+    u64 index = 0;
+    BASE_PTR_LIST_FOREACH_INDEX(Str8ListNode, node, l, index)
+    {
+        if (baseStringsStrEquals(node->val, needle, flags))
+        {
+            break;
+        }
+    }
+
+    return index;
+}
 str8 Str8ListJoin(BaseArena *arena, Str8List *l, Str8ListJoinParams *optionals)
 {
     Str8ListJoinParams params = {0};
@@ -415,6 +428,27 @@ str8 baseStringsStrChopPast(str8 str, str8 past, StrMatchFlags flags)
 str8 baseStringsStrChopPastLastSlash(str8 str)
 {
     return baseStringsStrChopPast(str, STR8_LIT("/"), STR_MATCHFLAGS_SLASH_INSENSITIVE|STR_MATCHFLAGS_FIND_LAST);
+}
+
+str8 baseStringsStr8Lower(BaseArena *arena, str8 str)
+{
+    str8 ret = {0};
+    ret.len = str.len;
+    ret.data = baseArenaPushArray(arena, u8, ret.len);
+
+    for(u64 i = 0; i < ret.len; i++)
+    {
+        if (BASE_ISALPHA(str.data[i]) && str.data[i] <= 'Z')
+        {
+            ret.data[i] = 'a' + (str.data[i] - 'A');
+        }
+        else
+        {
+            ret.data[i] = str.data[i];
+        }
+    }
+
+    return ret;
 }
 
 BaseStringBuilder baseStringsCreateSB(BaseArena *arena, u64 cap)

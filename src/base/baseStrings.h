@@ -75,6 +75,7 @@ void Str8ListPushLastFmt(BaseArena *arena, Str8List *l, const i8 *fmt, ...);
 
 void Str8ListPushListLast(BaseArena *arena, Str8List *l, Str8List* a);
 
+u64 Str8ListFindFirst(Str8List *l, str8 needle, StrMatchFlags flags);
 str8 Str8ListJoin(BaseArena *arena, Str8List *l, Str8ListJoinParams *optionals);
 ArrayView Str8ListFlattenToArray(BaseArena *arena, Str8List *l);
 
@@ -100,6 +101,8 @@ bool baseStringsStrStartsWith(str8 str, str8 startsWith, StrMatchFlags flags);
 bool baseStringsStrEndsWith(str8 str, str8 endsWith, StrMatchFlags flags);
 str8 baseStringsStrSkip(str8 str, u64 amount);
 Str8List baseStringsStr8Split(BaseArena *arena, str8 str, str8 splitWith, StrMatchFlags matchFlags, StrSplitFlags splitFlags);
+
+str8 baseStringsStr8Lower(BaseArena *arena, str8 str);
 
 str8 baseStringsStrChopPast(str8 str, str8 past, StrMatchFlags flags);
 str8 baseStringsStrChopPastLastSlash(str8 str);

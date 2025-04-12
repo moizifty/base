@@ -1,7 +1,7 @@
 /**********************************************************************/
 /* GENERATED FILE
 /* Input: src\base\baseMath.h
-/* Date-Time: 20/1/2025 - 14:21
+/* Date-Time: 22/1/2025 - 16:04
 /**********************************************************************/
 
 #include "baseMath.gen.h"
@@ -22,19 +22,13 @@ extern MetagenStructMembArray gvec2fMembDefsTable=
 };
 extern MetagenStructMembArray gvec3fMembDefsTable=
 {
-	.data=(MetagenStructMemb[9])
+	.data=(MetagenStructMemb[3])
 		{
-			{.name = STR8_LIT_COMP_CONST("v"), .type = METAGEN_TYPE_f32, .size = sizeof(((vec3f*)(0))->v), .offset = BASE_OFFSETOF(vec3f, v),.isArray = true, .arrayLen = 3,},
 			{.name = STR8_LIT_COMP_CONST("x"), .type = METAGEN_TYPE_f32, .size = sizeof(((vec3f*)(0))->x), .offset = BASE_OFFSETOF(vec3f, x),},
 			{.name = STR8_LIT_COMP_CONST("y"), .type = METAGEN_TYPE_f32, .size = sizeof(((vec3f*)(0))->y), .offset = BASE_OFFSETOF(vec3f, y),},
 			{.name = STR8_LIT_COMP_CONST("z"), .type = METAGEN_TYPE_f32, .size = sizeof(((vec3f*)(0))->z), .offset = BASE_OFFSETOF(vec3f, z),},
-			{.name = STR8_LIT_COMP_CONST("r"), .type = METAGEN_TYPE_f32, .size = sizeof(((vec3f*)(0))->r), .offset = BASE_OFFSETOF(vec3f, r),},
-			{.name = STR8_LIT_COMP_CONST("g"), .type = METAGEN_TYPE_f32, .size = sizeof(((vec3f*)(0))->g), .offset = BASE_OFFSETOF(vec3f, g),},
-			{.name = STR8_LIT_COMP_CONST("b"), .type = METAGEN_TYPE_f32, .size = sizeof(((vec3f*)(0))->b), .offset = BASE_OFFSETOF(vec3f, b),},
-			{.name = STR8_LIT_COMP_CONST("xy"), .type = METAGEN_TYPE_vec2f, .size = sizeof(((vec3f*)(0))->xy), .offset = BASE_OFFSETOF(vec3f, xy),},
-			{.name = STR8_LIT_COMP_CONST("_z"), .type = METAGEN_TYPE_f32, .size = sizeof(((vec3f*)(0))->_z), .offset = BASE_OFFSETOF(vec3f, _z),},
 		},
-	.len=9
+	.len=3
 };
 extern MetagenStructMembArray grange3fMembDefsTable=
 {

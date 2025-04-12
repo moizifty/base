@@ -156,24 +156,27 @@ typedef struct vec2i8
     };   
 }vec2i8;
 
-metagen_introspect()
+metagen_introspect(only: "x", "y", "z")
 typedef struct vec3f
 {
     union
     {
         f32 v[3];
+
         struct
         {
             f32 x;
             f32 y;
             f32 z;
         };
+
         struct
         {
             f32 r;
             f32 g;
             f32 b;
         };
+
         struct
         {
             vec2f xy;

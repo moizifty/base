@@ -6,6 +6,7 @@
 // metagen commands
 #define metagen_gentable(...)
 #define metagen_introspect(...)
+#define metagen_introspectexclude(...)
 #define metagen_genprintstructmemb(...)
 #define metagen_embedfile(name, path, mode)
 
