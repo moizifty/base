@@ -7,6 +7,7 @@ extern str8 gMetagenCmdKindStr8Table[METAGEN_CMD_COUNT] =
     [METAGEN_CMD_GEN_TABLE] = STR8_LIT_COMP_CONST("metagen_gentable"),
     [METAGEN_CMD_GEN_PRINT_STRUCT_MEMB] = STR8_LIT_COMP_CONST("metagen_genprintstructmemb"),
     [METAGEN_CMD_INTROSPECT] = STR8_LIT_COMP_CONST("metagen_introspect"),
+    [METAGEN_CMD_INTROSPECT_EXCLUDE] = STR8_LIT_COMP_CONST("metagen_introspectexclude"),
     [METAGEN_CMD_EMBED_FILE] = STR8_LIT_COMP_CONST("metagen_embedfile"),
 };
 
@@ -154,7 +155,7 @@ bool metagenHandleEmbedFile(BaseArena *arena, MetagenOutput *output, CTokArray n
     return true;
 }
 
-MetagenCStruct metagenParseCStruct(BaseArena *arena, CTokArray nextToks)
+MetagenCStruct metagenParseCStruct(BaseArena *arena, Str8List onlyList, CTokArray nextToks)
 {
     CTokArray temp = nextToks;
     MetagenCStruct parsed = {0};
@@ -187,6 +188,8 @@ MetagenCStruct metagenParseCStruct(BaseArena *arena, CTokArray nextToks)
 
         while (nextToks.len > 0 && (bracketCount != 0))
         {
+            bool skipMember = false;
+
             if (METAGEN_TOK_MATCH_KIND(*nextToks.data, '{'))
             {
                 nextToks = CTokArraySkip(nextToks, 1);
@@ -203,6 +206,13 @@ MetagenCStruct metagenParseCStruct(BaseArena *arena, CTokArray nextToks)
             {
                 if (METAGEN_TOK_MATCH_KIND(*nextToks.data, CTOK_IDEN))
                 {
+                    if (METAGEN_TOK_MATCH_LEXEME(*nextToks.data, gMetagenCmdKindStr8Table[METAGEN_CMD_INTROSPECT_EXCLUDE]))
+                    {
+                        skipMember = true;
+
+                        nextToks = CTokArraySkip(nextToks, 3);
+                    }
+
                     if (METAGEN_TOK_MATCH_LEXEME(*nextToks.data, STR8_LIT("struct")) ||
                         METAGEN_TOK_MATCH_LEXEME(*nextToks.data, STR8_LIT("union")))
                     {
@@ -214,33 +224,55 @@ MetagenCStruct metagenParseCStruct(BaseArena *arena, CTokArray nextToks)
                         else
                         {
                             // todo optimise, pass tmeo arena
-                            MetagenCStruct innerParsed = metagenParseCStruct(arena, nextToks);
+                            MetagenCStruct innerParsed = metagenParseCStruct(arena, onlyList, nextToks);
                             nextToks = CTokArraySkip(nextToks, innerParsed.tokensAdvanced);
 
-                            if (!BASE_NULL_OR_EMPTY(innerParsed.name))
+                            if (!skipMember)
                             {
-                                BASE_LIST_FOREACH(MetagenCStructMemb, membNode, innerParsed.membs)
+                                if (!BASE_NULL_OR_EMPTY(innerParsed.name))
                                 {
-                                    MetagenCStructMemb *memb = baseArenaPushType(arena, MetagenCStructMemb);
-                                    *memb = *membNode;
-                                    memb->name = baseStringsPushStr8Fmt(arena, "%S.%S", innerParsed.name, membNode->name);
+                                    BASE_LIST_FOREACH(MetagenCStructMemb, membNode, innerParsed.membs)
+                                    {
+                                        str8 name = baseStringsPushStr8Fmt(arena, "%S.%S", innerParsed.name, membNode->name);
+                                        if (BASE_ANY(onlyList))
+                                        {
+                                            skipMember = Str8ListFindFirst(&onlyList, name, 0) == onlyList.len;
+                                        }
 
-                                    memb->next = memb->prev = null;
+                                        if (!skipMember)
+                                        {
+                                            MetagenCStructMemb *memb = baseArenaPushType(arena, MetagenCStructMemb);
+                                            *memb = *membNode;
+                                            memb->name = name;
 
-                                    MetagenCStructMembListPushNodeLast(&membs, memb);
+                                            memb->next = memb->prev = null;
+
+                                            MetagenCStructMembListPushNodeLast(&membs, memb);
+                                        }
+                                    }
                                 }
-                            }
-                            else
-                            {
-                                BASE_LIST_FOREACH(MetagenCStructMemb, membNode, innerParsed.membs)
+                                else
                                 {
-                                    MetagenCStructMemb *memb = baseArenaPushType(arena, MetagenCStructMemb);
-                                    *memb = *membNode;
-                                    memb->name = baseStringsPushStr8Fmt(arena, "%S", membNode->name);
+                                    BASE_LIST_FOREACH(MetagenCStructMemb, membNode, innerParsed.membs)
+                                    {
+                                        str8 name = baseStringsPushStr8Fmt(arena, "%S", membNode->name);
+                                        
+                                        if (BASE_ANY(onlyList))
+                                        {
+                                            skipMember = Str8ListFindFirst(&onlyList, name, 0) == onlyList.len;
+                                        }
 
-                                    memb->next = memb->prev = null;
+                                        if (!skipMember)
+                                        {
+                                            MetagenCStructMemb *memb = baseArenaPushType(arena, MetagenCStructMemb);
+                                            *memb = *membNode;
+                                            memb->name = name;
 
-                                    MetagenCStructMembListPushNodeLast(&membs, memb);
+                                            memb->next = memb->prev = null;
+
+                                            MetagenCStructMembListPushNodeLast(&membs, memb);
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -248,32 +280,32 @@ MetagenCStruct metagenParseCStruct(BaseArena *arena, CTokArray nextToks)
                     else
                     {
                     PARSE_NORMAL_MEMBER:
-                        MetagenCStructMemb *memb = baseArenaPushType(arena, MetagenCStructMemb);
-                        memb->type = nextToks.data->lexeme;
 
+                        MetagenCStructMemb memb = {0};
+                        memb.type = nextToks.data->lexeme;
                         nextToks = CTokArraySkip(nextToks, 1);
 
                         // i only support one pointer level :( - right now
                         if (METAGEN_TOK_MATCH_KIND(*nextToks.data, '*'))
                         {
-                            memb->isPointer = true;
+                            memb.isPointer = true;
 
                             nextToks = CTokArraySkip(nextToks, 1);
                         }
                         
                         if (METAGEN_TOK_MATCH_KIND(*nextToks.data, CTOK_IDEN))
                         {
-                            memb->name = nextToks.data->lexeme;
+                            memb.name = nextToks.data->lexeme;
                             nextToks = CTokArraySkip(nextToks, 1);
 
                             if (METAGEN_TOK_MATCH_KIND(*nextToks.data, '['))
                             {
-                                memb->isArray = true;
+                                memb.isArray = true;
                                 nextToks = CTokArraySkip(nextToks, 1);
 
                                 if (METAGEN_TOK_MATCH_KIND(*nextToks.data, CTOK_INT_LIT))
                                 {
-                                    memb->arrayLength = baseU64FromStr8(nextToks.data->lexeme);
+                                    memb.arrayLength = baseU64FromStr8(nextToks.data->lexeme);
                                     nextToks = CTokArraySkip(nextToks, 1);
                                 }
                                 else
@@ -286,7 +318,18 @@ MetagenCStruct metagenParseCStruct(BaseArena *arena, CTokArray nextToks)
                             }
                         }
 
-                        MetagenCStructMembListPushNodeLast(&membs, memb);
+                        if(!skipMember && BASE_ANY(onlyList))
+                        {
+                            skipMember = Str8ListFindFirst(&onlyList, memb.name, 0) == onlyList.len;
+                        }
+
+                        if (!skipMember)
+                        {
+                            MetagenCStructMemb *membNode = baseArenaPushType(arena, MetagenCStructMemb);
+                            *membNode = memb;
+
+                            MetagenCStructMembListPushNodeLast(&membs, membNode);
+                        }
 
                         // for ';'
                         nextToks = CTokArraySkip(nextToks, 1);
@@ -315,12 +358,39 @@ bool metagenHandleIntrospect(BaseArena *arena, MetagenOutput *output, CTokArray 
 {
     if (nextToks.len >= 2) // ()
     {
-        // no params, you want to skip ()
-        nextToks = CTokArraySkip(nextToks, 2);
+        // skip (
+        nextToks = CTokArraySkip(nextToks, 1);
+        
+        Str8List onlyList = {0};
+
+        if (!METAGEN_TOK_MATCH_KIND(*nextToks.data, ')'))
+        {
+            if (METAGEN_TOK_MATCH_LEXEME(*nextToks.data, STR8_LIT("only")))
+            {
+                // skip 'only'':'
+                nextToks = CTokArraySkip(nextToks, 2);
+                
+                while(METAGEN_TOK_MATCH_KIND(*nextToks.data, CTOK_STR_LIT))
+                {
+                    Str8ListPushLast(arena, &onlyList, baseCLexerGetStr8RepFromTokLexeme(arena, *nextToks.data));
+                    nextToks = CTokArraySkip(nextToks, 1);
+
+                    if(METAGEN_TOK_MATCH_KIND(*nextToks.data, ','))
+                    {
+                        nextToks = CTokArraySkip(nextToks, 1);
+                    }
+                }
+            }
+        }
+
+        if (METAGEN_TOK_MATCH_KIND(*nextToks.data, ')'))
+        {
+            nextToks = CTokArraySkip(nextToks, 1);
+        }
 
         if (BASE_ANY(nextToks))
         {
-            MetagenCStruct parsedStruct = metagenParseCStruct(arena, nextToks);
+            MetagenCStruct parsedStruct = metagenParseCStruct(arena, onlyList, nextToks);
 
             metagenTypeDictAddType(arena, &gMetagenTypeDict, parsedStruct.name);
             Str8ListPushLastFmt(arena, &output->header.tables, "extern MetagenStructMembArray g%SMembDefsTable;\n", parsedStruct.name);
