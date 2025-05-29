@@ -130,7 +130,7 @@
 #define BASE_LL_FIRST(LL, DEFVAL)          (BASE_ANY(LL) ? (LL).first->val : DEFVAL)
 
 #define BASE_PTR_LL_LAST(pLL, DEFVAL)      (BASE_ANY_PTR(pLL) ? (pLL)->last->val : DEFVAL)
-#define BASE_LL_LAST(LL, DEFVAL)           (BASE_ANY(pLB) ? (pLB).last->val : DEFVAL)
+#define BASE_LL_LAST(LL, DEFVAL)           (BASE_ANY(LL) ? (LL).last->val : DEFVAL)
 
 #define BASE_CREATE_LL_JUST_LIST_DECLS_EX(NAME, NODENAME, ELEM) \
 typedef struct NAME NAME; \
