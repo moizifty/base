@@ -1,12 +1,12 @@
-#include "base\base.h"
-#include "os\os.h"
+#include "metagen\base\base.h"
+#include "metagen\os\os.h"
 #include "metagen\metagen.h"
 
-#include "base\base.c"
-#include "os\os.c"
+#include "metagen\base\base.c"
+#include "metagen\os\os.c"
 #include "metagen\metagen.c"
 
-#include "os\core\osEntryPoint.c"
+#include "metagen\os\core\osEntryPoint.c"
 
 void ProgramMain(CmdLineHashMap *opts)
 {

@@ -1,11 +1,11 @@
 #ifndef METAGEN_CORE_H
 #define METAGEN_CORE_H
 
-#include "base\baseCore.h"
-#include "base\baseStrings.h"
-#include "base\baseMemory.h"
-#include "base\baseThreads.h"
-#include "base\baseCLexer.h"
+#include "metagen\base\baseCore.h"
+#include "metagen\base\baseStrings.h"
+#include "metagen\base\baseMemory.h"
+#include "metagen\base\baseThreads.h"
+#include "metagen\base\baseCLexer.h"
 
 #define METAGEN_TOK_MATCH_KIND(T, K) ((T).kind == (K))
 #define METAGEN_TOK_MATCH_LEXEME(T, L) (baseStringsStrEquals((T).lexeme, (L), 0))

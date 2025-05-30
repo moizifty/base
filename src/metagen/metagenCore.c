@@ -1,6 +1,6 @@
-#include "base\baseHash.h"
+#include "metagen\base\baseHash.h"
 #include "metagen\metagenCore.h"
-#include "os\core\osCore.h"
+#include "metagen\os\core\osCore.h"
 
 extern str8 gMetagenCmdKindStr8Table[METAGEN_CMD_COUNT] = 
 {
