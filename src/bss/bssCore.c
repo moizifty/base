@@ -62,10 +62,10 @@ i64 bssGetEscapeCharValue(str8 escapeCharString)
     return -1;
 }
 
-str8 bssGetStr8RepFromTokLexeme(BaseArena *arena, BssTok tok)
+str8 bssGetStr8RepFromTokLexeme(Arena *arena, BssTok tok)
 {
     str8 ret = {0};
-    BaseArenaTemp temp = baseTempBegin(&arena, 1);
+    ArenaTemp temp = baseTempBegin(&arena, 1);
     {
         // '""
         tok.lexeme.data++;
@@ -74,7 +74,7 @@ str8 bssGetStr8RepFromTokLexeme(BaseArena *arena, BssTok tok)
         tok.lexeme.len -= 2;
 
         str8 t = {0}; 
-        t.data = baseArenaPushArray(temp.arena, u8, tok.lexeme.len);
+        t.data = arenaPushArray(temp.arena, u8, tok.lexeme.len);
         t.len = 0;
 
         for(u64 i = 0; i < tok.lexeme.len; i++)
@@ -97,10 +97,10 @@ str8 bssGetStr8RepFromTokLexeme(BaseArena *arena, BssTok tok)
             t.data[t.len++] = toWrite;
         }
 
-        ret = baseStringsPushStr8Copy(arena, t);
+        ret = Str8PushCopy(arena, t);
 
     }
-    baseArenaTempEnd(temp);
+    arenaTempEnd(temp);
 
     return ret;
 }
@@ -109,7 +109,7 @@ bool bssHasFlag(BSSInterpretorState *iState, str8 flag)
 {
     BASE_LIST_FOREACH(Str8ListNode, n, iState->buildFlags)
     {
-        if(baseStringsStrEquals(n->val, flag, 0))
+        if(Str8Equals(n->val, flag, 0))
         {
             return true;
         }

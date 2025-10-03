@@ -46,13 +46,13 @@ typedef struct OSEventList
     u64 len;
 }OSEventList;
 
-OSGfxState *OSGfxInitEx(BaseArena *arena, void *extra);
-OSGfxState *OSGfxInit(BaseArena *arena);
+OSGfxState *OSGfxInitEx(Arena *arena, void *extra);
+OSGfxState *OSGfxInit(Arena *arena);
 OSHandle OSGfxWindowOpen(str8 title, vec2i size, vec2i pos);
 void OSGfxWindowFirstPaint(OSHandle wnd);
 
-OSEventList OSGfxProcessEvents(BaseArena *arena);
-bool OSGfxProcessInputEvents(BaseArena *arena);
+OSEventList OSGfxProcessEvents(Arena *arena);
+bool OSGfxProcessInputEvents(Arena *arena);
 
 // inputs
 bool OSGfxIsKeyHeld(OSKey key);

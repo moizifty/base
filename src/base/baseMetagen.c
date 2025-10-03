@@ -47,7 +47,7 @@ void basePrintStructMember(void *member, MetagenStructMemb memb)
         basePrintf("]");
     }
 }
-void basePrintStruct(void *data, MetagenStructMembArray membs)
+void basePrintStructEx(void *data, MetagenStructMembArray membs)
 {
     basePrintf("{{");
     u8 *dataBuffer = (u8*)data;

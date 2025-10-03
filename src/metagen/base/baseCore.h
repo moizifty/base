@@ -12,6 +12,7 @@
 // General
 
 #define BASE_OFFSETOF(s, memb) ((u64)(&(((s *)0)->memb)))
+#define BASE_ALIGNOF(T) (_Alignof(T))
 #define BASE_BYTES(NUM) ((u64)(NUM))
 #define BASE_KILOBYTES(NUM) ((u64)(BASE_BYTES(NUM)) * 1024u)
 #define BASE_MEGABYTES(NUM) ((u64)(BASE_KILOBYTES(NUM)) * 1024u)
@@ -145,9 +146,9 @@ typedef struct NAME \
 inline void NAME##PushNodeLast(NAME *l, NODENAME *node); \
 inline void NAME##PushNodeFirst(NAME *l, NODENAME *node); \
 inline void NAME##InsertNode(NAME *l, NODENAME *prev, NODENAME *node); \
-inline void NAME##PushLast(struct BaseArena *arena, NAME *l, ELEM value); \
-inline void NAME##PushFirst(struct BaseArena *arena, NAME *l, ELEM value); \
-inline void NAME##PushInsert(struct BaseArena *arena, NAME *l, NODENAME *prev, ELEM value); \
+inline void NAME##PushLast(struct Arena *arena, NAME *l, ELEM value); \
+inline void NAME##PushFirst(struct Arena *arena, NAME *l, ELEM value); \
+inline void NAME##PushInsert(struct Arena *arena, NAME *l, NODENAME *prev, ELEM value); \
 
 #define BASE_CREATE_LL_JUST_NODE_DECLS_EX(NAME, NODENAME, ELEM) \
 typedef struct NAME NAME; \
@@ -182,28 +183,28 @@ inline void NAME##InsertNode(NAME *l, NODENAME *prev, NODENAME *node) \
 	l->len += 1; \
 	l->totalSize += sizeof(node->val); \
 } \
-inline void NAME##PushLast(BaseArena *arena, NAME *l, ELEM value) \
+inline void NAME##PushLast(Arena *arena, NAME *l, ELEM value) \
 { \
-	NODENAME *n = baseArenaPush(arena, sizeof(NODENAME)); \
+	NODENAME *n = arenaPush(arena, sizeof(NODENAME)); \
 	n->val = value; \
 	NAME##PushNodeLast(l, n); \
 } \
-inline void NAME##PushFirst(BaseArena *arena, NAME *l, ELEM value) \
+inline void NAME##PushFirst(Arena *arena, NAME *l, ELEM value) \
 { \
-	NODENAME *n = baseArenaPush(arena, sizeof(NODENAME)); \
+	NODENAME *n = arenaPush(arena, sizeof(NODENAME)); \
 	n->val = value; \
 	NAME##PushNodeFirst(l, n); \
 } \
-inline void NAME##PushInsert(BaseArena *arena, NAME *l, NODENAME *prev, ELEM value) \
+inline void NAME##PushInsert(Arena *arena, NAME *l, NODENAME *prev, ELEM value) \
 { \
-	NODENAME *n = baseArenaPush(arena, sizeof(NODENAME)); \
+	NODENAME *n = arenaPush(arena, sizeof(NODENAME)); \
 	n->val = value; \
 	NAME##InsertNode(l, prev, n); \
 } \
-inline ArrayView NAME##FlattenToArray(BaseArena *arena, NAME *l) \
+inline ArrayView NAME##FlattenToArray(Arena *arena, NAME *l) \
 { \
 	ArrayView view = {0}; \
-	view.data = baseArenaPushNoZero(arena, l->totalSize); \
+	view.data = arenaPushNoZero(arena, l->totalSize); \
 	view.len = l->len; \
 	i64 i = 0; \
 	BASE_PTR_LIST_FOREACH(NODENAME, node, l) \
@@ -274,11 +275,8 @@ typedef struct NAME \
 BASE_CREATE_ARRAY_VIEW_DECLS(NAME, ELEM) \
 BASE_CREATE_ARRAY_VIEW_DEFS(NAME, ELEM)
 
-#define ARRAY_VIEW_LIT_FROM_SIZED_EX(NAME, ARRAY)		((NAME){ARRAY, .len = BASE_ARRAY_SIZE(ARRAY)})
-#define ARRAY_VIEW_LIT_EX(NAME, ARRAY, SIZE)			((NAME){ARRAY, .len = SIZE})
-
-#define ARRAY_VIEW_LIT_FROM_SIZED(ARRAY)		((ArrayView){ARRAY, .len = BASE_ARRAY_SIZE(ARRAY)})
-#define ARRAY_VIEW_LIT(ARRAY, SIZE)			((ArrayView){ARRAY, .len = SIZE})
+#define ARRAY_VIEW_LIT_FROM_SIZED(T, ARRAY)		((T){ARRAY, .len = BASE_ARRAY_SIZE(ARRAY)})
+#define ARRAY_VIEW_LIT(T, ARRAY, SIZE)			((T){ARRAY, .len = SIZE})
 
 BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(U8Array, u8);
 
@@ -307,9 +305,9 @@ typedef struct U8ChunkList
 // disable this dumb warning
 #pragma warning( push )
 #pragma warning( disable : 4115)
-void U8ChunkListPushLast(struct BaseArena *arena, U8ChunkList *l, u8 n);
-void U8ChunkListPushStr8Last(struct BaseArena *arena, U8ChunkList *l, str8 str);
-U8Array U8ChunkListFlattenToArray(struct BaseArena *arena, U8ChunkList *l);
+void U8ChunkListPushLast(struct Arena *arena, U8ChunkList *l, u8 n);
+void U8ChunkListPushStr8Last(struct Arena *arena, U8ChunkList *l, str8 str);
+U8Array U8ChunkListFlattenToArray(struct Arena *arena, U8ChunkList *l);
 BASE_CREATE_LL_DECLS(U8ArrayList, U8Array);
 #pragma warning( pop ) 
 

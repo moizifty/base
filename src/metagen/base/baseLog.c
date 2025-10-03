@@ -8,7 +8,7 @@ u8 *gLogSeverityTable[] =
     [LOG_SEVERITY_DEBUG] = (u8 *)"SeverityDebug",
 };
 
-str8 logFormatLogEntryMsg(BaseArena *arena, LogEntry msg)
+str8 logFormatLogEntryMsg(Arena *arena, LogEntry msg)
 {
     DateTime time = msg.time;
     Str8List list = {0};
@@ -47,12 +47,12 @@ void LogEntryChunkListInsertNode(LogEntryChunkList *l, LogEntryChunkNode *prev, 
 	l->len += 1;
 	l->msgLen += node->chunk.len;
 }
-void LogEntryChunkListPush(BaseArena *arena, LogEntryChunkList *l, LogEntry msg)
+void LogEntryChunkListPush(Arena *arena, LogEntryChunkList *l, LogEntry msg)
 {
     if(!BASE_ANY_PTR(l) || (l->last->chunk.len >= l->last->cap))
     {
-        LogEntryChunkNode *n = baseArenaPush(arena, sizeof(LogEntryChunkNode));
-        n->chunk.data = baseArenaPush(arena, sizeof(LogEntry) * LOG_ENTRY_CHUNK_SIZE);
+        LogEntryChunkNode *n = arenaPush(arena, sizeof(LogEntryChunkNode));
+        n->chunk.data = arenaPush(arena, sizeof(LogEntry) * LOG_ENTRY_CHUNK_SIZE);
         n->chunk.len = 0;
         n->cap = LOG_ENTRY_CHUNK_SIZE;
 
@@ -64,7 +64,7 @@ void LogEntryChunkListPush(BaseArena *arena, LogEntryChunkList *l, LogEntry msg)
     l->msgLen += 1;
 }
 
-str8 LogEntryChunkListJoin(BaseArena *arena, LogEntryChunkList *l)
+str8 LogEntryChunkListJoin(Arena *arena, LogEntryChunkList *l)
 {
     LogEntryArray flattened = LogEntryChunkListFlattenToArray(arena, l);
 
@@ -83,7 +83,7 @@ str8 LogEntryChunkListJoin(BaseArena *arena, LogEntryChunkList *l)
 
     return Str8ListJoin(arena, &list, &(Str8ListJoinParams){.sep = STR8_LIT("\n")});
 }
-LogEntryArray LogEntryChunkListFlattenToArray(BaseArena *arena, LogEntryChunkList *l)
+LogEntryArray LogEntryChunkListFlattenToArray(Arena *arena, LogEntryChunkList *l)
 {
     LogEntryArray flattened = {0};
 
@@ -92,7 +92,7 @@ LogEntryArray LogEntryChunkListFlattenToArray(BaseArena *arena, LogEntryChunkLis
         return flattened;
     }
 
-    flattened.data = baseArenaPush(arena, sizeof(LogEntry) * l->msgLen);
+    flattened.data = arenaPush(arena, sizeof(LogEntry) * l->msgLen);
     flattened.len = l->msgLen;
 
     u64 i = 0;
@@ -107,9 +107,9 @@ LogEntryArray LogEntryChunkListFlattenToArray(BaseArena *arena, LogEntryChunkLis
     return flattened;
 }
 
-Log *logCreate(BaseArena *arena)
+Log *logCreate(Arena *arena)
 {
-    Log *l = baseArenaPush(arena, sizeof(Log));
+    Log *l = arenaPush(arena, sizeof(Log));
 
     return l;
    
@@ -119,7 +119,7 @@ void logClear(Log *log)
     BASE_UNUSED_PARAM(log);
 }
 
-str8 logOutputToFile(BaseArena *arena, Log *log, str8 path)
+str8 logOutputToFile(Arena *arena, Log *log, str8 path)
 {
     str8 logMsgAll = LogEntryChunkListJoin(arena, &log->entries);
 
@@ -134,7 +134,7 @@ str8 logOutputToFile(BaseArena *arena, Log *log, str8 path)
 }
 void logOutputToConsole(Log *log)
 {
-    BaseArenaTemp temp =  baseTempBegin(null, 0);
+    ArenaTemp temp =  baseTempBegin(null, 0);
     {
         BASE_LIST_FOREACH(LogEntryChunkNode, chunk, log->entries)
         {
@@ -169,9 +169,9 @@ void logOutputToConsole(Log *log)
     }
 }
 
-void logPrintFmtV(BaseArena *arena, Log *log, LogSeverityKind severity, bool outputToConsole, char *fmt, va_list va)
+void logPrintFmtV(Arena *arena, Log *log, LogSeverityKind severity, bool outputToConsole, char *fmt, va_list va)
 {
-    str8 s = baseStringsPushStr8FmtV(arena, fmt, va);
+    str8 s = Str8PushFmtV(arena, fmt, va);
     LogEntry entry = {.msg = s, .severity = severity, .time = OSGetLocalTime()};
     LogEntryChunkListPush(arena, &log->entries, entry);
 
@@ -181,7 +181,7 @@ void logPrintFmtV(BaseArena *arena, Log *log, LogSeverityKind severity, bool out
         else baseColPrintf("%S\n", s);
     }
 }
-void logPrintFmt(BaseArena *arena, Log *log, LogSeverityKind severity, char *fmt, ...)
+void logPrintFmt(Arena *arena, Log *log, LogSeverityKind severity, char *fmt, ...)
 {
     va_list list;
     va_start(list, fmt);
@@ -190,7 +190,7 @@ void logPrintFmt(BaseArena *arena, Log *log, LogSeverityKind severity, char *fmt
 
     va_end(list);
 }
-void logErrorFmt(BaseArena *arena, Log *log, char *fmt, ...)
+void logErrorFmt(Arena *arena, Log *log, char *fmt, ...)
 {
     va_list list;
     va_start(list, fmt);
@@ -199,7 +199,7 @@ void logErrorFmt(BaseArena *arena, Log *log, char *fmt, ...)
 
     va_end(list);
 }
-void logWarningFmt(BaseArena *arena, Log *log, char *fmt, ...)
+void logWarningFmt(Arena *arena, Log *log, char *fmt, ...)
 {
     va_list list;
     va_start(list, fmt);
@@ -208,7 +208,7 @@ void logWarningFmt(BaseArena *arena, Log *log, char *fmt, ...)
 
     va_end(list);
 }
-void logInfoFmt(BaseArena *arena, Log *log, char *fmt, ...)
+void logInfoFmt(Arena *arena, Log *log, char *fmt, ...)
 {
     va_list list;
     va_start(list, fmt);
@@ -217,7 +217,7 @@ void logInfoFmt(BaseArena *arena, Log *log, char *fmt, ...)
 
     va_end(list);
 }
-void logDebugFmt(BaseArena *arena, Log *log, char *fmt, ...)
+void logDebugFmt(Arena *arena, Log *log, char *fmt, ...)
 {
     va_list list;
     va_start(list, fmt);
@@ -232,7 +232,7 @@ str8 logThreadOutputToFile(void)
     BaseThreadCtx *threadCtx = baseThreadsGetCtx();
 
     str8 logDir = OSGetState()->thisProcState.logDirPath;
-    str8 logPath = baseStringsPushStr8Fmt(threadCtx->threadLogArena, "%S\\[%S]_log.txt", logDir, baseThreadsGetName());
+    str8 logPath = Str8PushFmt(threadCtx->threadLogArena, "%S\\[%S]_log.txt", logDir, baseThreadsGetName());
 
     return logOutputToFile(threadCtx->threadLogArena, threadCtx->threadLog, logPath);
 }

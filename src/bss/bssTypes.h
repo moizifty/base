@@ -57,15 +57,15 @@ typedef struct BssTypeTable
     BssTypeList entries;
 }BssTypeTable;
 
-BssType *bssAllocType(BaseArena *arena, BssTypeKind kind);
-BssType *bssAllocTypeInt(BaseArena *arena);
-BssType *bssAllocTypeBool(BaseArena *arena);
-BssType *bssAllocTypeString(BaseArena *arena);
-BssType *bssAllocTypeFunc(BaseArena *arena, BssType *ret, struct BssScope *scope);
-BssType *bssAllocTypeArray(BaseArena *arena, BssType *base);
-BssType *bssAllocTypeObj(BaseArena *arena, struct BssScope *scope);
+BssType *bssAllocType(Arena *arena, BssTypeKind kind);
+BssType *bssAllocTypeInt(Arena *arena);
+BssType *bssAllocTypeBool(Arena *arena);
+BssType *bssAllocTypeString(Arena *arena);
+BssType *bssAllocTypeFunc(Arena *arena, BssType *ret, struct BssScope *scope);
+BssType *bssAllocTypeArray(Arena *arena, BssType *base);
+BssType *bssAllocTypeObj(Arena *arena, struct BssScope *scope);
 
-BssTypeObjMemb *bssAllocTypeObjMemb(BaseArena *arena, BssTok name, BssType *type, i64 index);
+BssTypeObjMemb *bssAllocTypeObjMemb(Arena *arena, BssTok name, BssType *type, i64 index);
 
 bool bssAreBssTypesEqual(BssType *a, BssType *b);
 bool bssIsTypeArray(BssType *a);
@@ -81,7 +81,7 @@ BssTypeObjMemb *bssTypeObjHasMemb(BssType *a, char *name);
 
 str8 bssTypeToString(BssType *type);
 
-BssType *bssTypeTableAddEntry(BaseArena *arena, BssTypeTable *typeTable, BssType *type);
+BssType *bssTypeTableAddEntry(Arena *arena, BssTypeTable *typeTable, BssType *type);
 BssType *bssTypeTableTypeExists(BssTypeTable *typeTable, BssType *type);
 
 

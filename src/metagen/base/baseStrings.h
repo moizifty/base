@@ -14,17 +14,6 @@
 
 #define STR8_EMPTY (STR8_LIT(""))
 
-typedef struct BaseStringBuilder
-{
-    u8* data;
-    u64 cap;
-
-    u64 len;
-
-    //optional
-    BaseArena *arena;
-}BaseStringBuilder;
-
 // i define these here myself instead of using the BASE_CREATE_LL* macros
 // because i need custom behaviour for strlists
 typedef struct Str8ListNode Str8ListNode;
@@ -68,16 +57,16 @@ enum
 void Str8ListPushNodeLast(Str8List *l, Str8ListNode *node);
 void Str8ListPushNodeFirst(Str8List *l, Str8ListNode *node);
 void Str8ListInsertNode(Str8List *l, Str8ListNode *prev, Str8ListNode *node);
-void Str8ListPushLast(BaseArena *arena, Str8List *l, str8 value);
-void Str8ListPushFirst(BaseArena *arena, Str8List *l, str8 value);
-void Str8ListPushInsert(BaseArena *arena, Str8List *l, Str8ListNode *prev, str8 value);
-void Str8ListPushLastFmt(BaseArena *arena, Str8List *l, const i8 *fmt, ...);
+void Str8ListPushLast(Arena *arena, Str8List *l, str8 value);
+void Str8ListPushFirst(Arena *arena, Str8List *l, str8 value);
+void Str8ListPushInsert(Arena *arena, Str8List *l, Str8ListNode *prev, str8 value);
+void Str8ListPushLastFmt(Arena *arena, Str8List *l, const i8 *fmt, ...);
 
-void Str8ListPushListLast(BaseArena *arena, Str8List *l, Str8List* a);
+void Str8ListPushListLast(Arena *arena, Str8List *l, Str8List* a);
 
 u64 Str8ListFindFirst(Str8List *l, str8 needle, StrMatchFlags flags);
-str8 Str8ListJoin(BaseArena *arena, Str8List *l, Str8ListJoinParams *optionals);
-ArrayView Str8ListFlattenToArray(BaseArena *arena, Str8List *l);
+str8 Str8ListJoin(Arena *arena, Str8List *l, Str8ListJoinParams *optionals);
+ArrayView Str8ListFlattenToArray(Arena *arena, Str8List *l);
 
 // strings
 str8 baseStr8(u8 *bytes, u64 size);
@@ -86,33 +75,29 @@ str32 baseStr32(u32 *bytes, u64 size);
 
 u64 baseStr16DataLen(u16 *str);
 
-str8 baseStringsPushStr8Copy(BaseArena *arena, str8 str);
-str8 baseStringsPushStr8FmtV(BaseArena *arena, const i8 *fmt, va_list args);
-str8 baseStringsPushStr8Fmt(BaseArena *arena, const i8* fmt, ...);
+str8 Str8PushCopy(Arena *arena, str8 str);
+str8 Str8PushFmtV(Arena *arena, const i8 *fmt, va_list args);
+str8 Str8PushFmt(Arena *arena, const i8* fmt, ...);
 
-bool baseStringsStrIsNullOrEmpty(str8 a);
-i64 baseStringsStrCompare(str8 a, str8 b);
-bool baseStringsStrEquals(str8 a, str8 b, StrMatchFlags flags);
-bool baseStringsStrContains(str8 a, u8 ch);
-str8 baseStringsStrSubStr8(str8 str, u64 start, u64 end);
-u64 baseStringsStrFindSubStr8(str8 haystack, str8 needle, u64 start_pos, StrMatchFlags flags);
-str8 baseStringsStrReplace(BaseArena *arena, str8 str, u8 old, u8 new);
-bool baseStringsStrStartsWith(str8 str, str8 startsWith, StrMatchFlags flags);
-bool baseStringsStrEndsWith(str8 str, str8 endsWith, StrMatchFlags flags);
-str8 baseStringsStrSkip(str8 str, u64 amount);
-Str8List baseStringsStr8Split(BaseArena *arena, str8 str, str8 splitWith, StrMatchFlags matchFlags, StrSplitFlags splitFlags);
+bool Str8IsNullOrEmpty(str8 a);
+i64 Str8Compare(str8 a, str8 b);
+bool Str8Equals(str8 a, str8 b, StrMatchFlags flags);
+bool Str8Contains(str8 a, u8 ch);
+str8 Str8SubStr8(str8 str, u64 start, u64 end);
+u64 Str8FindSubStr8(str8 haystack, str8 needle, u64 start_pos, StrMatchFlags flags);
+str8 Str8Replace(Arena *arena, str8 str, u8 old, u8 new);
+bool Str8StartsWith(str8 str, str8 startsWith, StrMatchFlags flags);
+bool Str8EndsWith(str8 str, str8 endsWith, StrMatchFlags flags);
+str8 Str8Skip(str8 str, i64 amount);
+Str8List Str8Split(Arena *arena, str8 str, str8 splitWith, StrMatchFlags matchFlags, StrSplitFlags splitFlags);
 
-str8 baseStringsStr8Lower(BaseArena *arena, str8 str);
+str8 Str8Lower(Arena *arena, str8 str);
 
-str8 baseStringsStrChopPast(str8 str, str8 past, StrMatchFlags flags);
-str8 baseStringsStrChopPastLastSlash(str8 str);
-
-// string builder
-BaseStringBuilder baseStringsSBCreate(BaseArena *arena, u64 cap);
-void baseStringsSBAppendBytes(BaseStringBuilder *sb, const u8 *bytes, u64 count);
-void baseStringsSBAppendCStr(BaseStringBuilder *sb, const i8 *str, i64 strSize);
-void baseStringsSBAppendStr8(BaseStringBuilder *sb, str8 str);
-void baseStringsSBAppendFmt(BaseStringBuilder *sb, const i8 *fmt, ...);
+str8 Str8TrimStart(str8 str);
+str8 Str8TrimEnd(str8 str);
+str8 Str8Trim(str8 str);
+str8 Str8ChopPast(str8 str, str8 past, StrMatchFlags flags);
+str8 Str8ChopPastLastSlash(str8 str);
 
 // conversions
 BASE_CREATE_LL_DECLS_DEFS(U16List, u16);
@@ -124,17 +109,18 @@ typedef struct DecodeCodePointInfo
     u64 advance;
 }DecodeCodePointInfo;
 
-DecodeCodePointInfo baseDecodeCodepointFromUtf8(u8 *bytes, u64 remainingLen);
-DecodeCodePointInfo baseDecodeCodepointFromUtf16(u16 *doubles, u64 remainingLen);
+DecodeCodePointInfo baseStringsDecodeCodepointFromUtf8(u8 *bytes, u64 remainingLen);
+DecodeCodePointInfo baseStringsDecodeCodepointFromUtf16(u16 *doubles, u64 remainingLen);
 
 // outbuf should be an array of 2 u16s
-u32 Utf16FromCodepoint(u32 codepoint, u16 outBuf[2]);
+u32 baseStringsUtf16FromCodepoint(u32 codepoint, u16 outBuf[2]);
+
 // outbuf should be an array of 4 u8s
-u32 Utf8FromCodepoint(u32 codepoint, u8 outBuf[4]);
+u32 baseStringsUtf8FromCodepoint(u32 codepoint, u8 outBuf[4]);
 
-str8 baseStr8FromFromStr16(BaseArena *arena, str16 str);
-str16 baseStr16FromFromStr8(BaseArena *arena, str8 str);
+str8 Str8FromFromStr16(Arena *arena, str16 str);
+str16 Str16FromFromStr8(Arena *arena, str8 str);
 
-u64 baseU64FromStr8(str8 str);
-i64 baseI64FromStr8(str8 str);
+u64 U64FromStr8(str8 str);
+i64 I64FromStr8(str8 str);
 #endif

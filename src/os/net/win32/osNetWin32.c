@@ -202,7 +202,7 @@ bool OSNetInit(void)
     return true;
 }
 
-OSNetAddrInfoList OSNetGetAddrInfo(BaseArena *arena, str8 addr, str8 port, OSNetAddrInfo *hint)
+OSNetAddrInfoList OSNetGetAddrInfo(Arena *arena, str8 addr, str8 port, OSNetAddrInfo *hint)
 {
     ADDRINFOA win32AddrInfoHint = 
     {
@@ -240,7 +240,7 @@ OSNetAddrInfoList OSNetGetAddrInfo(BaseArena *arena, str8 addr, str8 port, OSNet
         ADDRINFOA *win32CurrentAddr = win32Ret;
         while(win32CurrentAddr != null)
         {
-            OSNetAddrInfo *info = baseArenaPushType(arena, OSNetAddrInfo);
+            OSNetAddrInfo *info = arenaPushType(arena, OSNetAddrInfo);
             OSNetWin32SOCKADDRToAddr((SOCKADDR_STORAGE*) win32CurrentAddr->ai_addr, &info->addr);
 
             info->protoKind = OSNetWin32IPPROTOToProtocolKind(win32CurrentAddr->ai_protocol);
@@ -257,12 +257,12 @@ OSNetAddrInfoList OSNetGetAddrInfo(BaseArena *arena, str8 addr, str8 port, OSNet
     return ret;
 }
 
-str8 OSNetAddrToStr8(BaseArena *arena, OSNetAddr addr)
+str8 OSNetAddrToStr8(Arena *arena, OSNetAddr addr)
 {
     str8 ret = {0};
     if (addr.kind == OS_NET_ADDR_IPV4)
     {
-        ret.data = baseArenaPushArray(arena, u8, INET_ADDRSTRLEN);
+        ret.data = arenaPushArray(arena, u8, INET_ADDRSTRLEN);
         ret.len = INET_ADDRSTRLEN;
 
         inet_ntop(AF_INET, &addr.addr.ipv4, (i8*)ret.data, ret.len - 1);
@@ -271,7 +271,7 @@ str8 OSNetAddrToStr8(BaseArena *arena, OSNetAddr addr)
     }
     else
     {
-        ret.data = baseArenaPushArray(arena, u8, INET6_ADDRSTRLEN);
+        ret.data = arenaPushArray(arena, u8, INET6_ADDRSTRLEN);
         ret.len = INET6_ADDRSTRLEN;
 
         inet_ntop(AF_INET6, &addr.addr.bytes, (i8*)ret.data, ret.len - 1);
@@ -314,7 +314,7 @@ OSNetAddr OSNetGetLocalIpAddressForDest(OSNetAddr dest)
 
     return bestSrc;
 }
-OSNetAddrList OSNetGetLocalIpAddress(BaseArena *arena, OSNetAddrKind preference)
+OSNetAddrList OSNetGetLocalIpAddress(Arena *arena, OSNetAddrKind preference)
 {
     OSNetAddrList addrList = {0};
 
@@ -335,10 +335,10 @@ OSNetAddrList OSNetGetLocalIpAddress(BaseArena *arena, OSNetAddrKind preference)
         }
         FreeMibTable(table);
 
-        BaseArenaTemp temp = baseTempBegin(&arena, 1);
+        ArenaTemp temp = baseTempBegin(&arena, 1);
         {
             ULONG adaptersLength = 1;
-            IP_ADAPTER_ADDRESSES *adapters = baseArenaPushArray(temp.arena, IP_ADAPTER_ADDRESSES, adaptersLength);
+            IP_ADAPTER_ADDRESSES *adapters = arenaPushArray(temp.arena, IP_ADAPTER_ADDRESSES, adaptersLength);
 
             result = GetAdaptersAddresses(AF_UNSPEC, 
                                             GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_SKIP_ANYCAST,
@@ -348,7 +348,7 @@ OSNetAddrList OSNetGetLocalIpAddress(BaseArena *arena, OSNetAddrKind preference)
 
             if (result == ERROR_BUFFER_OVERFLOW)
             {
-                adapters = baseArenaPushArray(arena, IP_ADAPTER_ADDRESSES, adaptersLength);
+                adapters = arenaPushArray(arena, IP_ADAPTER_ADDRESSES, adaptersLength);
                 result = GetAdaptersAddresses(AF_UNSPEC, 
                                             GAA_FLAG_SKIP_MULTICAST | GAA_FLAG_SKIP_ANYCAST,
                                             null,
@@ -368,7 +368,7 @@ OSNetAddrList OSNetGetLocalIpAddress(BaseArena *arena, OSNetAddrKind preference)
                             if ((currentUnicast->Address.lpSockaddr->sa_family == AF_INET) &&
                                 (preference == OS_NET_ADDR_IPV4 || preference == OS_NET_ADDR_EITHER))
                             {
-                                OSNetAddr *addr = baseArenaPushType(arena, OSNetAddr);
+                                OSNetAddr *addr = arenaPushType(arena, OSNetAddr);
 
                                 addr->kind = OS_NET_ADDR_IPV4;
                                 addr->addr.ipv4 = (u32)((SOCKADDR_IN*) currentUnicast->Address.lpSockaddr)->sin_addr.S_un.S_addr;
@@ -378,7 +378,7 @@ OSNetAddrList OSNetGetLocalIpAddress(BaseArena *arena, OSNetAddrKind preference)
                             }
                             else if (preference == OS_NET_ADDR_IPV6 || preference == OS_NET_ADDR_EITHER)
                             {
-                                OSNetAddr *addr = baseArenaPushType(arena, OSNetAddr);
+                                OSNetAddr *addr = arenaPushType(arena, OSNetAddr);
 
                                 addr->kind = OS_NET_ADDR_IPV6;
                                 BASE_MEMCPY(addr->addr.bytes, ((SOCKADDR_IN6*) currentUnicast->Address.lpSockaddr)->sin6_addr.u.Byte, 16);
@@ -423,17 +423,17 @@ OSHandle OSNetSocketCreateFromAddrInfo(OSNetAddrInfo *info)
 {
     return OSNetSocketCreate(info->addr.kind, info->sockKind, info->protoKind);
 }
-OSHandleList OSNetSocketCreateFromAddr(BaseArena *arena, str8 addr, str8 port, OSNetAddrInfo *hint)
+OSHandleList OSNetSocketCreateFromAddr(Arena *arena, str8 addr, str8 port, OSNetAddrInfo *hint)
 {
     OSHandleList handles = {0};
 
-    BaseArenaTemp temp = baseTempBegin(&arena, 1);
+    ArenaTemp temp = baseTempBegin(&arena, 1);
     {
         OSNetAddrInfoList addrInfos = OSNetGetAddrInfo(temp.arena, addr, port, hint);
 
         BASE_LIST_FOREACH(OSNetAddrInfo, addrInfo, addrInfos)
         {
-            OSHandle *handle = baseArenaPushType(arena, OSHandle);
+            OSHandle *handle = arenaPushType(arena, OSHandle);
             *handle = OSNetSocketCreateFromAddrInfo(addrInfo);
             BaseListNodePushLast(handles, handle);
         }
@@ -528,9 +528,9 @@ bool OSNetSocketClose(OSHandle socketHandle)
 i64 OSNetSocketPollList(OSNetPollDataList socketsToPoll, i64 timeoutMS)
 {
     i64 count = 0;
-    BaseArenaTemp temp = baseTempBegin(null, 0);
+    ArenaTemp temp = baseTempBegin(null, 0);
     {
-        WSAPOLLFD *pollData = baseArenaPushArray(temp.arena, WSAPOLLFD, socketsToPoll.len);
+        WSAPOLLFD *pollData = arenaPushArray(temp.arena, WSAPOLLFD, socketsToPoll.len);
 
         u64 index = 0;
         BASE_LIST_FOREACH_INDEX(OSNetPollData, socketToPoll, socketsToPoll, index)

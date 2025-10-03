@@ -48,5 +48,8 @@
         "sstream": "c",
         "xtree": "c",
         "initializer_list": "c"
-    }
+    },
+    "C_Cpp.default.includePath": [
+        "src"
+    ]
 }

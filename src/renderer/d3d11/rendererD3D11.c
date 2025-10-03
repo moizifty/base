@@ -38,14 +38,14 @@ IDXGIAdapter *rendererD3D11FindBestAdapter(void)
 }
 
 // core
-RendererState *rendererInit(BaseArena *arena, OSGfxState *gfxState)
+RendererState *rendererInit(Arena *arena, OSGfxState *gfxState)
 {
     if(gfxState == null)
     {
         return null;
     }
     
-    RendererStateD3D11 *state = baseArenaPush(arena, sizeof(RendererStateD3D11));
+    RendererStateD3D11 *state = arenaPush(arena, sizeof(RendererStateD3D11));
     state->gfxState = gfxState;
 
     IDXGIAdapter *adapter = rendererD3D11FindBestAdapter();
@@ -116,10 +116,10 @@ RendererState *rendererInit(BaseArena *arena, OSGfxState *gfxState)
     return (RendererState *) state;
 }
 
-RendererWindowState *rendererAttachToWindow(RendererState *rs, BaseArena *arena, OSHandle window)
+RendererWindowState *rendererAttachToWindow(RendererState *rs, Arena *arena, OSHandle window)
 {
-    RendererWindowState *wndState = baseArenaPush(arena, sizeof(RendererWindowState));
-    RendererWindowStatePlatformD3D11 *d3dWndState = baseArenaPush(arena, sizeof(RendererWindowStatePlatformD3D11));
+    RendererWindowState *wndState = arenaPush(arena, sizeof(RendererWindowState));
+    RendererWindowStatePlatformD3D11 *d3dWndState = arenaPush(arena, sizeof(RendererWindowStatePlatformD3D11));
     HWND wndHandle = (HWND) window._u64;
 
     wndState->clearColor = Vec4f(0.5f, 0.5f, 0.5f, 1.0f);
@@ -280,7 +280,7 @@ void rendererWindowEnd(RendererState *rs, RendererWindowState *wndState)
     d3dRS->deviceContext->lpVtbl->ClearState(d3dRS->deviceContext);
 }
 
-void rendererOutputFinalDebugReport(BaseArena *arena, RendererState *rs)
+void rendererOutputFinalDebugReport(Arena *arena, RendererState *rs)
 {
     logThreadInfoFmt("Printing renderer final debug report.");
 
@@ -307,7 +307,7 @@ void rendererOutputFinalDebugReport(BaseArena *arena, RendererState *rs)
             return;
         }
 
-        D3D11_MESSAGE *message = baseArenaPush(arena, messageByteLength);
+        D3D11_MESSAGE *message = arenaPush(arena, messageByteLength);
         hr = infoQueue->lpVtbl->GetMessage(infoQueue, i, message, &messageByteLength);
         if(HRFAILURE(hr))
         {

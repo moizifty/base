@@ -159,17 +159,17 @@ u16 OSNetChecksum(u16 *data, u64 len);
 
 bool OSNetInit(void);
 
-OSNetAddrInfoList OSNetGetAddrInfo(BaseArena *arena, str8 addr, str8 port, OSNetAddrInfo *hint);
-str8 OSNetAddrToStr8(BaseArena *arena, OSNetAddr addr);
+OSNetAddrInfoList OSNetGetAddrInfo(Arena *arena, str8 addr, str8 port, OSNetAddrInfo *hint);
+str8 OSNetAddrToStr8(Arena *arena, OSNetAddr addr);
 OSNetAddr OSNetStr8ToAddr(str8 addr, OSNetAddrKind kind);
 
 OSNetAddr OSNetGetLocalIpAddressForDest(OSNetAddr dest);
-OSNetAddrList OSNetGetLocalIpAddress(BaseArena *arena, OSNetAddrKind preference);
+OSNetAddrList OSNetGetLocalIpAddress(Arena *arena, OSNetAddrKind preference);
 OSNetAddr OSNetGetPublicIpAddress(void);
 
 OSHandle OSNetSocketCreate(OSNetAddrKind family, OSNetSocketKind socketKind, OSNetProtocolKind protocolKind);
 OSHandle OSNetSocketCreateFromAddrInfo(OSNetAddrInfo *info);
-OSHandleList OSNetSocketCreateFromAddr(BaseArena *arena, str8 addr, str8 port, OSNetAddrInfo *hint);
+OSHandleList OSNetSocketCreateFromAddr(Arena *arena, str8 addr, str8 port, OSNetAddrInfo *hint);
 
 bool OSNetSocketGetOptions(OSHandle socketHandle, OSNetSocketOptionLevel level, OSNetSocketOptionName name, void *value, u64 *valueLen);
 bool OSNetSocketSetOptions(OSHandle socketHandle, OSNetSocketOptionLevel level, OSNetSocketOptionName name, void *value, u64 valueLen);
@@ -184,7 +184,7 @@ i64 OSNetSocketRecieveFrom(OSHandle socketHandle, U8Array *outBuf, OSNetAddr *re
 i64 OSNetSocketSendAll(OSHandle socketHandle, U8Array buf);
 i64 OSNetSocketSend(OSHandle socketHandle, U8Array buf);
 i64 OSNetSocketRecieve(OSHandle socketHandle, U8Array *outBuf);
-U8ChunkList OSNetSocketRecieveAll(BaseArena *arena, OSHandle socketHandle);
+U8ChunkList OSNetSocketRecieveAll(Arena *arena, OSHandle socketHandle);
 
 bool OSNetSocketClose(OSHandle socketHandle);
 

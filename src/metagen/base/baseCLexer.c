@@ -46,10 +46,10 @@ i64 baseCLexerGetEscapeCharValue(str8 escapeCharString)
 
     return -1;
 }
-str8 baseCLexerGetStr8RepFromTokLexeme(BaseArena *arena, CTok tok)
+str8 baseCLexerGetStr8RepFromTokLexeme(Arena *arena, CTok tok)
 {
     str8 ret = {0};
-    BaseArenaTemp temp = baseTempBegin(&arena, 1);
+    ArenaTemp temp = baseTempBegin(&arena, 1);
     {
         // '""
         tok.lexeme.data++;
@@ -58,7 +58,7 @@ str8 baseCLexerGetStr8RepFromTokLexeme(BaseArena *arena, CTok tok)
         tok.lexeme.len -= 2;
 
         str8 t = {0}; 
-        t.data = baseArenaPushArray(temp.arena, u8, tok.lexeme.len);
+        t.data = arenaPushArray(temp.arena, u8, tok.lexeme.len);
         t.len = 0;
 
         for(u64 i = 0; i < tok.lexeme.len; i++)
@@ -81,21 +81,21 @@ str8 baseCLexerGetStr8RepFromTokLexeme(BaseArena *arena, CTok tok)
             t.data[t.len++] = toWrite;
         }
 
-        ret = baseStringsPushStr8Copy(arena, t);
+        ret = Str8PushCopy(arena, t);
 
     }
-    baseArenaTempEnd(temp);
+    arenaTempEnd(temp);
 
     return ret;
 }
 
-void CTokChunkListPushLast(BaseArena *arena, CTokChunkList *l, CTok tok)
+void CTokChunkListPushLast(Arena *arena, CTokChunkList *l, CTok tok)
 {
     if(!BASE_ANY_PTR(l) || (l->last->chunk.len >= l->last->cap))
     {
-        CTokChunkListNode *n = baseArenaPushType(arena, CTokChunkListNode);
+        CTokChunkListNode *n = arenaPushType(arena, CTokChunkListNode);
         n->cap = 50;
-        n->chunk.data = baseArenaPushArray(arena, CTok, n->cap);
+        n->chunk.data = arenaPushArray(arena, CTok, n->cap);
         n->chunk.len = 0;
 
         BasePtrListNodePushLast(l, n);
@@ -105,7 +105,7 @@ void CTokChunkListPushLast(BaseArena *arena, CTokChunkList *l, CTok tok)
     l->last->chunk.len += 1;
     l->totalLen += 1;
 }
-CTokArray CTokChunkListFlattenToArray(BaseArena *arena, CTokChunkList *l)
+CTokArray CTokChunkListFlattenToArray(Arena *arena, CTokChunkList *l)
 {
     CTokArray flattened = {0};
 
@@ -114,7 +114,7 @@ CTokArray CTokChunkListFlattenToArray(BaseArena *arena, CTokChunkList *l)
         return flattened;
     }
 
-    flattened.data = baseArenaPushArray(arena, CTok, l->totalLen);
+    flattened.data = arenaPushArray(arena, CTok, l->totalLen);
     flattened.len = l->totalLen;
 
     u64 i = 0;
@@ -129,7 +129,7 @@ CTokArray CTokChunkListFlattenToArray(BaseArena *arena, CTokChunkList *l)
     return flattened;
 }
 
-CLexerState baseCLexerInitFromFile(BaseArena *arena, str8 filePath)
+CLexerState baseCLexerInitFromFile(Arena *arena, str8 filePath)
 {
     CLexerState ret = {0};
     U8Array buffer = OSFileReadAll(arena, filePath);
@@ -153,11 +153,11 @@ CLexerState baseCLexerInitFromBuffer(U8Array buffer)
     return ret;
 }
 
-CTokArray baseCLexerLexWholeBuffer(BaseArena *arena, CLexerState *lexerState)
+CTokArray baseCLexerLexWholeBuffer(Arena *arena, CLexerState *lexerState)
 {
     CTokChunkList tokChunks = {0};
 
-    BaseArenaTemp temp = baseTempBegin(&arena, 1);
+    ArenaTemp temp = baseTempBegin(&arena, 1);
     {
         while((lexerState->tok = baseCLexerNextFromBuffer(lexerState)).kind != CTOK_END_INPUT)
         {
@@ -301,7 +301,7 @@ LEX_START:
                 if(charsLeftInBuffer >= gBaseCTokLexemeTable[i].len)
                 {
                     str8 l = baseStr8(lexerState->currLocInBuffer - 1, gBaseCTokLexemeTable[i].len);
-                    if(baseStringsStrEquals(l, gBaseCTokLexemeTable[i], 0) && (l.len > longestMatch))
+                    if(Str8Equals(l, gBaseCTokLexemeTable[i], 0) && (l.len > longestMatch))
                     {
                         // for it to match with a keyword identifier,
                         // it should be a token, forexample
@@ -344,7 +344,7 @@ LEX_START:
             lexeme.data =  lexerState->currLocInBuffer - 1;
             lexeme.len = tokLen;
 
-            if(baseStringsStrEquals(STR8_LIT("false"), lexeme, 0) || baseStringsStrEquals(STR8_LIT("true"), lexeme, 0))
+            if(Str8Equals(STR8_LIT("false"), lexeme, 0) || Str8Equals(STR8_LIT("true"), lexeme, 0))
             {
                 tokKind = CTOK_BOOL_LIT;
             }

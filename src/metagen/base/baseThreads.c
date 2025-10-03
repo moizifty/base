@@ -10,10 +10,10 @@ BaseThreadCtx baseThreadsCreateCtx(void)
     BaseThreadCtx ctx = {0};
     for(int i = 0; i < BASE_THREADS_NUM_ARENAS; i++)
     {
-        ctx.scratchArenas[i] = baseArenaAlloc(BASE_THREADS_DEFAULT_ARENA_ALLOC_SIZE);
+        ctx.scratchArenas[i] = arenaAlloc(BASE_THREADS_DEFAULT_ARENA_ALLOC_SIZE);
     }
     
-    ctx.threadLogArena = baseArenaAlloc(BASE_THREADS_DEFAULT_ARENA_ALLOC_SIZE);
+    ctx.threadLogArena = arenaAlloc(BASE_THREADS_DEFAULT_ARENA_ALLOC_SIZE);
     ctx.threadLog = logCreate(ctx.threadLogArena);
     
     return ctx;
@@ -27,9 +27,9 @@ void baseThreadsSetCtx(BaseThreadCtx *ctx)
     tlThreadCtx = ctx;
 }
 
-BaseArenaTemp baseTempBegin(BaseArena **conflictsToCheck, u64 count)
+ArenaTemp baseTempBegin(Arena **conflictsToCheck, u64 count)
 {
-    BaseArenaTemp temp = {0};
+    ArenaTemp temp = {0};
     BaseThreadCtx *ctx = baseThreadsGetCtx();
 
     for(u64 i = 0; i < BASE_THREADS_NUM_ARENAS; i++)
@@ -37,7 +37,7 @@ BaseArenaTemp baseTempBegin(BaseArena **conflictsToCheck, u64 count)
         bool isConflicting = false;
         for(u64 c = 0; c < count; c++)
         {
-            BaseArena *conflict = conflictsToCheck[c];
+            Arena *conflict = conflictsToCheck[c];
             if(conflict == ctx->scratchArenas[i])
             {
                 isConflicting = true;
@@ -55,9 +55,9 @@ BaseArenaTemp baseTempBegin(BaseArena **conflictsToCheck, u64 count)
     
     return temp;
 }
-void baseTempEnd(BaseArenaTemp temp)
+void baseTempEnd(ArenaTemp temp)
 {
-    baseArenaTempEnd(temp);
+    arenaTempEnd(temp);
 }
 
 void baseThreadsSetName(str8 name)

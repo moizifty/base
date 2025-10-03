@@ -16,7 +16,7 @@ inline LONG WINAPI BaseMainThreadExceptionHandler(EXCEPTION_POINTERS *exceptionI
 {
     logThreadErrorFmt("Program encountered an exception(0x%x).", exceptionInfo->ExceptionRecord->ExceptionCode);
 
-    BaseArenaTemp temp = baseTempBegin(null, 0);
+    ArenaTemp temp = baseTempBegin(null, 0);
     {
         HANDLE process = GetCurrentProcess();
         HANDLE thread = GetCurrentThread();
@@ -55,7 +55,7 @@ inline LONG WINAPI BaseMainThreadExceptionHandler(EXCEPTION_POINTERS *exceptionI
                             SymGetModuleBase64,
                             null))
                 {
-                    SYMBOL_INFOW *symbol = baseArenaPush(temp.arena, sizeof(SYMBOL_INFOW) + (MAX_SYM_NAME * sizeof(WCHAR)));
+                    SYMBOL_INFOW *symbol = arenaPush(temp.arena, sizeof(SYMBOL_INFOW) + (MAX_SYM_NAME * sizeof(WCHAR)));
                     symbol->SizeOfStruct = sizeof(SYMBOL_INFOW);
                     symbol->MaxNameLen = MAX_SYM_NAME;
 
@@ -63,7 +63,7 @@ inline LONG WINAPI BaseMainThreadExceptionHandler(EXCEPTION_POINTERS *exceptionI
                     if(SymFromAddrW(process, frame.AddrPC.Offset, &displacement, symbol))
                     {
                         str16 name = baseStr16(symbol->Name, wcslen(symbol->Name));
-                        str8 name8 = baseStr8FromFromStr16(temp.arena, name);
+                        str8 name8 = Str8FromFromStr16(temp.arena, name);
 
                         IMAGEHLP_LINEW64 line = {0};
                         line.SizeOfStruct = sizeof(line);
@@ -72,7 +72,7 @@ inline LONG WINAPI BaseMainThreadExceptionHandler(EXCEPTION_POINTERS *exceptionI
                         if(SymGetLineFromAddrW64(process, frame.AddrPC.Offset, &lineDisplacement, &line))
                         {
                             str16 filename = baseStr16(line.FileName, wcslen(line.FileName));
-                            str8 filename8 = baseStr8FromFromStr16(temp.arena, filename);
+                            str8 filename8 = Str8FromFromStr16(temp.arena, filename);
                             logThreadErrorFmt("%S +%d, '%S' line %d", name8, displacement, filename8, line.LineNumber);
                         }
                         
@@ -84,7 +84,7 @@ inline LONG WINAPI BaseMainThreadExceptionHandler(EXCEPTION_POINTERS *exceptionI
                         if(SymGetModuleInfoW64(process, frame.AddrPC.Offset, &module))
                         {
                             str16 name = baseStr16(module.ModuleName,wcslen(module.ModuleName));
-                            logThreadInfoFmt("%S", baseStr8FromFromStr16(temp.arena, name));
+                            logThreadInfoFmt("%S", Str8FromFromStr16(temp.arena, name));
                         }
                     }
                 }
@@ -109,7 +109,7 @@ inline LONG WINAPI BaseMainThreadExceptionHandler(EXCEPTION_POINTERS *exceptionI
 #endif
 
         str8 logContent8 = logThreadOutputToFile();
-        str16 logContent = baseStr16FromFromStr8(temp.arena, logContent8);
+        str16 logContent = Str16FromFromStr8(temp.arena, logContent8);
         
         TASKDIALOGCONFIG dialog = {0};
         dialog.cbSize = sizeof(dialog);

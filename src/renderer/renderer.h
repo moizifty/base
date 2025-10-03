@@ -31,11 +31,11 @@ typedef struct RendererWindowState
     vec4f clearColor;
 }RendererWindowState;
 
-RendererState *rendererInit(BaseArena *arena, OSGfxState *gfxState);
-RendererWindowState *rendererAttachToWindow(RendererState *rs, BaseArena *arena, OSHandle window);
+RendererState *rendererInit(Arena *arena, OSGfxState *gfxState);
+RendererWindowState *rendererAttachToWindow(RendererState *rs, Arena *arena, OSHandle window);
 
 void rendererWindowResizeBuffers(RendererState *rs, RendererWindowState *wndState, vec2i newResolution);
 void rendererWindowBegin(RendererState *rs, RendererWindowState *wndState, vec2i resolution);
 void rendererWindowEnd(RendererState *rs, RendererWindowState *wndState);
-void rendererOutputFinalDebugReport(BaseArena *arena, RendererState *rs);
+void rendererOutputFinalDebugReport(Arena *arena, RendererState *rs);
 #endif

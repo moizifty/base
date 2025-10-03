@@ -98,7 +98,7 @@ typedef struct PNGUnfilteredData
     PNGInfo pngInfo;
 }PNGUnfilteredData;
 
-Bitmap bitmapFromPNGRaw(BaseArena *arena, u8 *rawBytes, u64 byteLen);
-Bitmap bitmapFromPNGPath(BaseArena *arena, str8 file);
+Bitmap bitmapFromPNGRaw(Arena *arena, u8 *rawBytes, u64 byteLen);
+Bitmap bitmapFromPNGPath(Arena *arena, str8 file);
 
 #endif

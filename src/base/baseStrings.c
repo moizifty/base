@@ -23,38 +23,48 @@ void Str8ListInsertNode(Str8List *l, Str8ListNode *prev, Str8ListNode *node)
 	l->totalSize += sizeof(node->val);
 	l->totalBytes += node->val.len;
 }
-void Str8ListPushLast(BaseArena *arena, Str8List *l, str8 value)
+void Str8ListPushLast(Arena *arena, Str8List *l, str8 value)
 {
-	Str8ListNode *n = baseArenaPush(arena, sizeof(Str8ListNode));
+	Str8ListNode *n = arenaPush(arena, sizeof(Str8ListNode));
 	n->val = value;
 	Str8ListPushNodeLast(l, n);
 }
-void Str8ListPushFirst(BaseArena *arena, Str8List *l, str8 value)
+void Str8ListPushFirst(Arena *arena, Str8List *l, str8 value)
 {
-	Str8ListNode *n = baseArenaPush(arena, sizeof(Str8ListNode));
+	Str8ListNode *n = arenaPush(arena, sizeof(Str8ListNode));
 	n->val = value;
 	Str8ListPushNodeFirst(l, n);
 }
-void Str8ListPushInsert(BaseArena *arena, Str8List *l, Str8ListNode *prev, str8 value)
+void Str8ListPushInsert(Arena *arena, Str8List *l, Str8ListNode *prev, str8 value)
 {
-	Str8ListNode *n = baseArenaPush(arena, sizeof(Str8ListNode));
+	Str8ListNode *n = arenaPush(arena, sizeof(Str8ListNode));
 	n->val = value;
 	Str8ListInsertNode(l, prev, n);
 }
 
-void Str8ListPushLastFmt(BaseArena *arena, Str8List *l, const i8 *fmt, ...)
+void Str8ListPopNodeLast(Str8List *l)
+{
+    if (BASE_ANY_PTR(l))
+    {
+        l->totalBytes -= l->last->val.len;
+        l->totalSize -= sizeof(l->last->val);
+	    BasePtrListNodeRemove(l, l->last);
+    }
+}
+
+void Str8ListPushLastFmt(Arena *arena, Str8List *l, const i8 *fmt, ...)
 {
     va_list list;
     va_start(list, fmt);
 
-    str8 s = baseStringsPushStr8FmtV(arena, fmt, list);
+    str8 s = Str8PushFmtV(arena, fmt, list);
 
     va_end(list);
 
     Str8ListPushLast(arena, l, s);
 }
 
-void Str8ListPushListLast(BaseArena *arena, Str8List *l, Str8List* a)
+void Str8ListPushListLast(Arena *arena, Str8List *l, Str8List* a)
 {
     BASE_PTR_LIST_FOREACH(Str8ListNode, n, a)
     {
@@ -67,7 +77,7 @@ u64 Str8ListFindFirst(Str8List *l, str8 needle, StrMatchFlags flags)
     u64 index = 0;
     BASE_PTR_LIST_FOREACH_INDEX(Str8ListNode, node, l, index)
     {
-        if (baseStringsStrEquals(node->val, needle, flags))
+        if (Str8Equals(node->val, needle, flags))
         {
             break;
         }
@@ -75,7 +85,7 @@ u64 Str8ListFindFirst(Str8List *l, str8 needle, StrMatchFlags flags)
 
     return index;
 }
-str8 Str8ListJoin(BaseArena *arena, Str8List *l, Str8ListJoinParams *optionals)
+str8 Str8ListJoin(Arena *arena, Str8List *l, Str8ListJoinParams *optionals)
 {
     Str8ListJoinParams params = {0};
     if (optionals != null)
@@ -87,7 +97,7 @@ str8 Str8ListJoin(BaseArena *arena, Str8List *l, Str8ListJoinParams *optionals)
     u64 resultTotalSize = (params.pre.len + l->totalBytes + (sepCount * params.sep.len) + params.post.len);
 
     str8 result = {0};
-    result.data = baseArenaPushNoZero(arena, resultTotalSize + 1);
+    result.data = arenaPushNoZero(arena, resultTotalSize + 1);
     result.len = resultTotalSize;
 
     u8 *destPtr = result.data;
@@ -114,10 +124,10 @@ str8 Str8ListJoin(BaseArena *arena, Str8List *l, Str8ListJoinParams *optionals)
 
     return result;
 }
-ArrayView Str8ListFlattenToArray(BaseArena *arena, Str8List *l)
+ArrayView Str8ListFlattenToArray(Arena *arena, Str8List *l)
 {
     ArrayView view = {0};
-	view.data = baseArenaPushNoZero(arena, l->totalSize);
+	view.data = arenaPushNoZero(arena, l->totalSize);
 	view.len = l->len;
 	i64 i = 0;
 	BASE_PTR_LIST_FOREACH(Str8ListNode, node, l)
@@ -149,10 +159,10 @@ u64 baseStr16DataLen(u16 *str)
     return i;
 }
 
-str8 baseStringsPushStr8Copy(BaseArena *arena, str8 str)
+str8 Str8PushCopy(Arena *arena, str8 str)
 {
     str8 s = {0};
-    s.data = baseArenaPushNoZero(arena, str.len + 1);
+    s.data = arenaPushNoZero(arena, str.len + 1);
     s.len = str.len;
 
     BASE_MEMCPY(s.data, str.data, s.len);
@@ -160,7 +170,7 @@ str8 baseStringsPushStr8Copy(BaseArena *arena, str8 str)
 
     return s;
 }
-str8 baseStringsPushStr8FmtV(BaseArena *arena, const i8 *fmt, va_list args)
+str8 Str8PushFmtV(Arena *arena, const i8 *fmt, va_list args)
 {
     va_list list;
     va_copy(list, args);
@@ -168,28 +178,28 @@ str8 baseStringsPushStr8FmtV(BaseArena *arena, const i8 *fmt, va_list args)
     i64 numWritten = stbsp_vsnprintf(null, 0, (i8 *)fmt, list);
 
     str8 s = {0};
-    s.data = baseArenaPushNoZero(arena, numWritten + 1);
+    s.data = arenaPushNoZero(arena, numWritten + 1);
     s.len = numWritten;
 
     stbsp_vsnprintf((i8 *)s.data, (int)s.len + 1, (i8 *)fmt, list);
     return s;
 }
-str8 baseStringsPushStr8Fmt(BaseArena *arena, const i8* fmt, ...)
+str8 Str8PushFmt(Arena *arena, const i8* fmt, ...)
 {
     va_list list;
     va_start(list, fmt);
 
-    str8 s = baseStringsPushStr8FmtV(arena, fmt, list);
+    str8 s = Str8PushFmtV(arena, fmt, list);
 
     va_end(list);
     return s;
 }
 
-bool baseStringsStrIsNullOrEmpty(str8 a)
+bool Str8IsNullOrEmpty(str8 a)
 {
     return a.data == null || a.len <= 0;
 }
-i64 baseStringsStrCompare(str8 a, str8 b)
+i64 Str8Compare(str8 a, str8 b)
 {
     if (a.data == null || b.data == null)
     {
@@ -203,7 +213,7 @@ i64 baseStringsStrCompare(str8 a, str8 b)
     return strcmp((char *)a.data, (char *) b.data);
 }
 
-bool baseStringsStrEquals(str8 a, str8 b, StrMatchFlags flags)
+bool Str8Equals(str8 a, str8 b, StrMatchFlags flags)
 {
     bool result = false;
     if (a.len == b.len)
@@ -231,19 +241,11 @@ bool baseStringsStrEquals(str8 a, str8 b, StrMatchFlags flags)
 
     return result;
 }
-bool baseStringsStrContains(str8 a, u8 ch)
+bool Str8Contains(str8 a, str8 needle, StrMatchFlags flags)
 {
-    for(u64 i = 0; i < a.len; i++)
-    {
-        if(a.data[i] == ch)
-        {
-            return true;
-        }
-    }
-
-    return false;
+    return Str8FindSubStr8(a, needle, 0, flags) != a.len;
 }
-str8 baseStringsStrSubStr8(str8 str, u64 start, u64 end)
+str8 Str8SubStr8(str8 str, u64 start, u64 end)
 {
     u64 min = start;
     u64 max = end;
@@ -267,7 +269,7 @@ str8 baseStringsStrSubStr8(str8 str, u64 start, u64 end)
     
     return str;
 }
-u64 baseStringsStrFindSubStr8(str8 haystack, str8 needle, u64 startPos, StrMatchFlags flags)
+u64 Str8FindSubStr8(str8 haystack, str8 needle, u64 startPos, StrMatchFlags flags)
 {
     bool found = false;
     u64 foundIndex = haystack.len;
@@ -275,8 +277,8 @@ u64 baseStringsStrFindSubStr8(str8 haystack, str8 needle, u64 startPos, StrMatch
     {
         if(i + needle.len <= haystack.len)
         {
-            str8 substr = baseStringsStrSubStr8(haystack, i, i + needle.len);
-            if(baseStringsStrEquals(substr, needle, flags))
+            str8 substr = Str8SubStr8(haystack, i, i + needle.len);
+            if(Str8Equals(substr, needle, flags))
             {
                 foundIndex = i;
                 found = true;
@@ -289,9 +291,9 @@ u64 baseStringsStrFindSubStr8(str8 haystack, str8 needle, u64 startPos, StrMatch
     }
     return foundIndex;
 }
-str8 baseStringsStrReplace(BaseArena *arena, str8 str, u8 old, u8 new)
+str8 Str8Replace(Arena *arena, str8 str, u8 old, u8 new)
 {
-    str8 ret = baseStringsPushStr8Fmt(arena, "%S", str);
+    str8 ret = Str8PushFmt(arena, "%S", str);
 
     for(u64 i = 0; i < ret.len; i++)
     {
@@ -303,7 +305,7 @@ str8 baseStringsStrReplace(BaseArena *arena, str8 str, u8 old, u8 new)
 
     return ret;
 }
-bool baseStringsStrStartsWith(str8 str, str8 startsWith, StrMatchFlags flags)
+bool Str8StartsWith(str8 str, str8 startsWith, StrMatchFlags flags)
 {
     if(str.len < startsWith.len)
     {
@@ -312,9 +314,9 @@ bool baseStringsStrStartsWith(str8 str, str8 startsWith, StrMatchFlags flags)
 
     str8 a = {.data = str.data, .len = startsWith.len};
 
-    return baseStringsStrEquals(a, startsWith, flags);
+    return Str8Equals(a, startsWith, flags);
 }
-bool baseStringsStrEndsWith(str8 str, str8 endsWith, StrMatchFlags flags)
+bool Str8EndsWith(str8 str, str8 endsWith, StrMatchFlags flags)
 {
     if(str.len < endsWith.len)
     {
@@ -323,15 +325,15 @@ bool baseStringsStrEndsWith(str8 str, str8 endsWith, StrMatchFlags flags)
 
     str8 a = {.data = (str.data + str.len) - endsWith.len, .len = endsWith.len};
 
-    return baseStringsStrEquals(a, endsWith, flags);
+    return Str8Equals(a, endsWith, flags);
 }
-str8 baseStringsStrSkip(str8 str, u64 amount)
+str8 Str8Skip(str8 str, i64 amount)
 {
     str8 a = str;
 
     if (!BASE_NULL_OR_EMPTY(a))
     {
-        if (a.len >= amount)
+        if ((i64)a.len >= amount)
         {
             a.data += amount;
             a.len -= amount;
@@ -340,16 +342,17 @@ str8 baseStringsStrSkip(str8 str, u64 amount)
 
     return a;
 }
-Str8List baseStringsStr8Split(BaseArena *arena, str8 str, str8 splitWith, StrMatchFlags matchFlags, StrSplitFlags splitFlags)
+Str8List Str8Split(Arena *arena, str8 str, str8 splitWith, StrMatchFlags matchFlags, StrSplitFlags splitFlags)
 {
     Str8List ret = {0};
 
     u64 lastIndex = 0;
     str8 remainingStr = str;
 
+    bool noCopy = splitFlags & STR_SPLITFLAGS_NO_COPY;
     while(lastIndex < remainingStr.len)
     {
-        u64 swIndex = baseStringsStrFindSubStr8(remainingStr, splitWith, 0, matchFlags);
+        u64 swIndex = Str8FindSubStr8(remainingStr, splitWith, 0, matchFlags);
         if (swIndex == remainingStr.len)
         {
             break;
@@ -363,7 +366,7 @@ Str8List baseStringsStr8Split(BaseArena *arena, str8 str, str8 splitWith, StrMat
 
         if (BASE_ANY(before) || !(splitFlags & STR_SPLITFLAGS_DISCARD_EMPTY))
         {
-            Str8ListPushLast(arena, &ret, baseStringsPushStr8Copy(arena, before));
+            Str8ListPushLast(arena, &ret, (noCopy) ? before : Str8PushCopy(arena, before));
         }
 
 
@@ -373,13 +376,13 @@ Str8List baseStringsStr8Split(BaseArena *arena, str8 str, str8 splitWith, StrMat
 
     if (BASE_ANY(remainingStr) || !(splitFlags & STR_SPLITFLAGS_DISCARD_EMPTY))
     {
-        Str8ListPushLast(arena, &ret, baseStringsPushStr8Copy(arena, remainingStr));
+        Str8ListPushLast(arena, &ret, (noCopy) ? remainingStr : Str8PushCopy(arena, remainingStr));
 
     }
     
     return ret;
 }
-str8 baseStringsStrTrimStart(str8 str)
+str8 Str8TrimStart(str8 str)
 {
     str8 a = str;
     if (!BASE_NULL_OR_EMPTY(a))
@@ -393,7 +396,7 @@ str8 baseStringsStrTrimStart(str8 str)
 
     return a;
 }
-str8 baseStringsStrTrimEnd(str8 str)
+str8 Str8TrimEnd(str8 str)
 {
     str8 a = str;
     if (!BASE_NULL_OR_EMPTY(a))
@@ -406,17 +409,17 @@ str8 baseStringsStrTrimEnd(str8 str)
 
     return a;
 }
-str8 baseStringsStrTrim(str8 str)
+str8 Str8Trim(str8 str)
 {
-    return baseStringsStrTrimEnd(baseStringsStrTrimStart(str));
+    return Str8TrimEnd(Str8TrimStart(str));
 }
 
-str8 baseStringsStrChopPast(str8 str, str8 past, StrMatchFlags flags)
+str8 Str8ChopPast(str8 str, str8 past, StrMatchFlags flags)
 {
-    u64 lastIndex = baseStringsStrFindSubStr8(str,
-                                              past,
-                                              0, 
-                                              flags);
+    u64 lastIndex = Str8FindSubStr8(str,
+                                    past,
+                                    0, 
+                                    flags);
     if (lastIndex < str.len)
     {
         str.len = lastIndex;
@@ -425,16 +428,31 @@ str8 baseStringsStrChopPast(str8 str, str8 past, StrMatchFlags flags)
     return str;
 }
 
-str8 baseStringsStrChopPastLastSlash(str8 str)
+str8 Str8ChopBefore(str8 str, str8 before, StrMatchFlags flags)
 {
-    return baseStringsStrChopPast(str, STR8_LIT("/"), STR_MATCHFLAGS_SLASH_INSENSITIVE|STR_MATCHFLAGS_FIND_LAST);
+    u64 lastIndex = Str8FindSubStr8(str,
+                                    before,
+                                    0, 
+                                    flags);
+    if (lastIndex < str.len)
+    {
+        str.data += lastIndex + 1;
+        str.len = str.len - (lastIndex + 1);
+    }
+
+    return str;
 }
 
-str8 baseStringsStr8Lower(BaseArena *arena, str8 str)
+str8 Str8ChopPastLastSlash(str8 str)
+{
+    return Str8ChopPast(str, STR8_LIT("/"), STR_MATCHFLAGS_SLASH_INSENSITIVE|STR_MATCHFLAGS_FIND_LAST);
+}
+
+str8 Str8Lower(Arena *arena, str8 str)
 {
     str8 ret = {0};
     ret.len = str.len;
-    ret.data = baseArenaPushArray(arena, u8, ret.len);
+    ret.data = arenaPushArray(arena, u8, ret.len);
 
     for(u64 i = 0; i < ret.len; i++)
     {
@@ -451,67 +469,8 @@ str8 baseStringsStr8Lower(BaseArena *arena, str8 str)
     return ret;
 }
 
-BaseStringBuilder baseStringsCreateSB(BaseArena *arena, u64 cap)
-{
-    BaseStringBuilder builder = {0};
-    
-    // dont allocate from this arena but
-    // have specialist functions that do that
-    builder.arena = arena;
-    builder.cap = cap;
-    builder.len = 0;
-    builder.data = baseArenaPush(arena, cap);
-
-    return builder;
-}
-void baseStringsSBAppendBytes(BaseStringBuilder *sb, const u8 *bytes, u64 count)
-{
-    if((sb->len + count) > sb->cap)
-    {
-        baseArenaPush(sb->arena, count);
-        sb->cap += count;
-    }
-
-    BASE_MEMCPY(sb->data + sb->len, bytes, count);
-    sb->len += count;
-}
-void baseStringsSBAppendCStr(BaseStringBuilder *sb, const i8 *str, i64 strSize)
-{
-    u64 strLength = (strSize == -1) ? strlen((i8 *)str) : strSize;
-    baseStringsSBAppendBytes(sb, (u8*) str, strLength + 1); //+ 1 for coppying '\0'
-    sb->len -= 1; //since we coppied the '\0' over
-}
-void baseStringsSBAppendStr8(BaseStringBuilder *sb, str8 str)
-{
-    baseStringsSBAppendBytes(sb, str.data, str.len);
-
-    u8 ch = '\0';
-    baseStringsSBAppendBytes(sb, &ch, 1);
-    sb->len -= 1;
-}
-void baseStringsSBAppendFmt(BaseStringBuilder *sb, const i8 *fmt, ...)
-{
-    va_list list;
-    va_start(list, (i8 *)fmt);
-
-    i64 numWritten = stbsp_vsnprintf(null, 0, (i8 *)fmt, list);
-
-    BaseArenaTemp temp = baseTempBegin(&sb->arena, 1);
-    {
-        BaseStringBuilder tempSb = baseStringsCreateSB(temp.arena, numWritten + 1);
-        {
-            tempSb.len = stbsp_vsnprintf((i8 *)tempSb.data, (int)tempSb.cap, (i8 *)fmt, list);
-        }
-
-        baseStringsSBAppendCStr(sb, (i8*) tempSb.data, tempSb.len);
-    }
-
-    baseTempEnd(temp);
-    va_end(list);
-}
-
 // conversions
-DecodeCodePointInfo baseDecodeCodepointFromUtf8(u8 *bytes, u64 remainingLen)
+DecodeCodePointInfo baseStringsDecodeCodepointFromUtf8(u8 *bytes, u64 remainingLen)
 {
     BASE_UNUSED_PARAM(remainingLen);
 
@@ -557,7 +516,7 @@ DecodeCodePointInfo baseDecodeCodepointFromUtf8(u8 *bytes, u64 remainingLen)
 
     return dp;
 }
-DecodeCodePointInfo baseDecodeCodepointFromUtf16(u16 *doubles, u64 remainingLen)
+DecodeCodePointInfo baseStringsDecodeCodepointFromUtf16(u16 *doubles, u64 remainingLen)
 {
     BASE_UNUSED_PARAM(remainingLen);
     
@@ -577,7 +536,7 @@ DecodeCodePointInfo baseDecodeCodepointFromUtf16(u16 *doubles, u64 remainingLen)
 }
 
 // outbuf should be an array of 2 u16s
-u32 Utf16FromCodepoint(u32 codepoint, u16 outBuf[2])
+u32 baseStringsUtf16FromCodepoint(u32 codepoint, u16 outBuf[2])
 {
     u32 encodingLength = 0;
 
@@ -598,7 +557,7 @@ u32 Utf16FromCodepoint(u32 codepoint, u16 outBuf[2])
 }
 
 // outbuf should be an array of 4 u8s
-u32 Utf8FromCodepoint(u32 codepoint, u8 outBuf[4])
+u32 baseStringsUtf8FromCodepoint(u32 codepoint, u8 outBuf[4])
 {
     u32 encodingLength = 0;
 
@@ -632,22 +591,22 @@ u32 Utf8FromCodepoint(u32 codepoint, u8 outBuf[4])
     return encodingLength;
 }
 
-str8 baseStr8FromFromStr16(BaseArena *arena, str16 str)
+str8 Str8FromFromStr16(Arena *arena, str16 str)
 {
     str8 outStr = {0};
     U8List utf8bytes = {0}; 
     u16 *doubles = str.data;
 
-    BaseArenaTemp temp = baseTempBegin(&arena, 1);
+    ArenaTemp temp = baseTempBegin(&arena, 1);
     {
         u64 strByteLength = 0;
         for(u64 i = 0; i < str.len;)
         {
-            DecodeCodePointInfo dp = baseDecodeCodepointFromUtf16(doubles + i, str.len - i);
+            DecodeCodePointInfo dp = baseStringsDecodeCodepointFromUtf16(doubles + i, str.len - i);
             i += dp.advance;
 
             u8 utf8Buf[4] = {0};
-            u32 encodingLength = Utf8FromCodepoint(dp.codepoint, utf8Buf);
+            u32 encodingLength = baseStringsUtf8FromCodepoint(dp.codepoint, utf8Buf);
             strByteLength += encodingLength;
 
             switch(encodingLength)
@@ -686,22 +645,22 @@ str8 baseStr8FromFromStr16(BaseArena *arena, str16 str)
 
     return outStr;
 }
-str16 baseStr16FromFromStr8(BaseArena *arena, str8 str)
+str16 Str16FromFromStr8(Arena *arena, str8 str)
 {
     str16 outStr = {0};
     U16List utf16bytes = {0}; 
     u8 *bytes = str.data;
 
-    BaseArenaTemp temp = baseTempBegin(&arena, 1);
+    ArenaTemp temp = baseTempBegin(&arena, 1);
     {
         u64 strByteLength = 0;
         for(u64 i = 0; i < str.len;)
         {
-            DecodeCodePointInfo dp = baseDecodeCodepointFromUtf8(bytes + i, str.len - i);
+            DecodeCodePointInfo dp = baseStringsDecodeCodepointFromUtf8(bytes + i, str.len - i);
             i += dp.advance;
 
             u16 utf16Buf[2] = {0};
-            u32 encodingLength = Utf16FromCodepoint(dp.codepoint, utf16Buf);
+            u32 encodingLength = baseStringsUtf16FromCodepoint(dp.codepoint, utf16Buf);
             strByteLength += encodingLength;
 
             U16ListPushLast(temp.arena, &utf16bytes, utf16Buf[0]);
@@ -719,7 +678,7 @@ str16 baseStr16FromFromStr8(BaseArena *arena, str8 str)
 }
 
 
-u64 baseU64FromStr8(str8 str)
+u64 U64FromStr8(str8 str)
 {
     u64 num = 0;
     if (!BASE_NULL_OR_EMPTY(str))
@@ -727,7 +686,7 @@ u64 baseU64FromStr8(str8 str)
         if((str.data[0] == '0') && (str.data[1] == 'x'))
         {
             //hex number
-            str = baseStringsStrSkip(str, 2);
+            str = Str8Skip(str, 2);
 
             for(u64 i = 0; i < str.len; i++)
             {
@@ -737,7 +696,7 @@ u64 baseU64FromStr8(str8 str)
         else if((str.data[0] == '0') && (str.data[1] == 'b'))
         {
             //binary number
-            str = baseStringsStrSkip(str, 2);
+            str = Str8Skip(str, 2);
 
             for(u64 i = 0; i < str.len; i++)
             {
@@ -756,7 +715,7 @@ u64 baseU64FromStr8(str8 str)
     return num;
 }
 
-i64 baseI64FromStr8(str8 str)
+i64 I64FromStr8(str8 str)
 {
     i8 sign = 1;
     i64 num = 0;
@@ -764,7 +723,7 @@ i64 baseI64FromStr8(str8 str)
     {
         if (str.data[0] == '-') sign = -1;
 
-        num = (i64)baseU64FromStr8(str);
+        num = (i64)U64FromStr8(str);
     }
 
     return num * sign;

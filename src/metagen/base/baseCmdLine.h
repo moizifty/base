@@ -30,7 +30,7 @@ typedef struct CmdLineHashMap
 }CmdLineHashMap;
 
 u64 cmdlineGetHashOfOption(str8 option);
-CmdLineHashMap cmdlineParseCmdLineFromStringList(BaseArena *arena, Str8List list);
+CmdLineHashMap cmdlineParseCmdLineFromStringList(Arena *arena, Str8List list);
 str8 cmdlineGetStr8(CmdLineHashMap *map, str8 option);
 bool cmdlineGetFlag(CmdLineHashMap *map, str8 option);
 i64 cmdlineGetI64(CmdLineHashMap *map, str8 option);

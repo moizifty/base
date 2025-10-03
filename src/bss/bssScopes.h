@@ -100,9 +100,9 @@ typedef struct BssScope
     BssSymTable table;
 }BssScope;
 
-BssSymTable BssNewSymTable(BaseArena *arena);
+BssSymTable BssNewSymTable(Arena *arena);
 
-BssScope *bssNewScope(BaseArena *arena, BssScope *parent);
+BssScope *bssNewScope(Arena *arena, BssScope *parent);
 
 u64 bssScopeCalculateInsertIndex(BssScope *bssScope, str8 s);
 BssSymTableSlotEntry *bssScopeAddEntry(BssScope *bssScope, BssSymTableSlotEntry *entry);

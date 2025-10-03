@@ -8,12 +8,12 @@
 
 typedef struct BaseThreadCtx
 {
-    BaseArena *scratchArenas[BASE_THREADS_NUM_ARENAS];
+    Arena *scratchArenas[BASE_THREADS_NUM_ARENAS];
 
     u8 threadNameBuffer[64];
     u64 threadNameLen;
 
-    BaseArena *threadLogArena;
+    Arena *threadLogArena;
     struct Log *threadLog;
 }BaseThreadCtx;
 
@@ -21,8 +21,8 @@ BaseThreadCtx baseThreadsCreateCtx(void);
 BaseThreadCtx *baseThreadsGetCtx(void);
 void baseThreadsSetCtx(BaseThreadCtx *ctx);
 
-BaseArenaTemp baseTempBegin(BaseArena **conflictsToCheck, u64 count);
-void baseTempEnd(BaseArenaTemp temp);
+ArenaTemp baseTempBegin(Arena **conflictsToCheck, u64 count);
+void baseTempEnd(ArenaTemp temp);
 
 void baseThreadsSetName(str8 name);
 str8 baseThreadsGetName(void);

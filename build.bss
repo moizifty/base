@@ -35,7 +35,7 @@ if (hasflag("metagen"))
 {
     compiler = "cl";
 
-    exePath = "{cwd}\src\metagen\builds\metagen.exe";
+    exePath = "{cwd}\src\metagen\builds\mg.exe";
 
     includeArg = "/I" + "src";
     outputName = "/Fe~"{exePath}~"";

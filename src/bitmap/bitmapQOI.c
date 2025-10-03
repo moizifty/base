@@ -10,10 +10,10 @@ u64 bitmapQOIHashColor(vec4u8 color)
     return ((r * 3) + (g * 5) + (b * 7) + (a * 11)) % 64;
 }
 
-QOITagKind bitmapQOIGetTagType(BaseBitstream *stream)
+QOITagKind bitmapQOIGetTagType(Bitstream *stream)
 {
     u8 tag = 0;
-    if(!baseBitstreamPeekBitsAsU8(stream, 8, &tag))
+    if(!bitstreamPeekBitsAsU8(stream, 8, &tag))
     {
         return -1;
     }
@@ -23,7 +23,7 @@ QOITagKind bitmapQOIGetTagType(BaseBitstream *stream)
         case QOI_TAG_RGB:
         case QOI_TAG_RGBA:
         {
-            baseBitstreamConsumeBits(stream, 8);
+            bitstreamConsumeBits(stream, 8);
             return tag;
         }break;
         default:
@@ -51,7 +51,7 @@ QOITagKind bitmapQOIGetTagType(BaseBitstream *stream)
     }
 }
 
-u64 bitmapQOIProcessNextChunk(BaseBitstream *stream, vec4u8 prevPixels[64], vec4u8 prevPixel, U8Array pixels, u64 currOffset)
+u64 bitmapQOIProcessNextChunk(Bitstream *stream, vec4u8 prevPixels[64], vec4u8 prevPixel, U8Array pixels, u64 currOffset)
 {
     QOITagKind tag = bitmapQOIGetTagType(stream);
 
@@ -61,9 +61,9 @@ u64 bitmapQOIProcessNextChunk(BaseBitstream *stream, vec4u8 prevPixels[64], vec4
         case QOI_TAG_RGB:
         {
             u8 r, g, b;
-            baseBitstreamPopU8(stream, &r);
-            baseBitstreamPopU8(stream, &g);
-            baseBitstreamPopU8(stream, &b);
+            bitstreamPopU8(stream, &r);
+            bitstreamPopU8(stream, &g);
+            bitstreamPopU8(stream, &b);
 
             pixels.data[currOffset] = r;
             pixels.data[currOffset + 1] = g;
@@ -75,10 +75,10 @@ u64 bitmapQOIProcessNextChunk(BaseBitstream *stream, vec4u8 prevPixels[64], vec4
         case QOI_TAG_RGBA:
         {
             u8 r, g, b, a;
-            baseBitstreamPopU8(stream, &r);
-            baseBitstreamPopU8(stream, &g);
-            baseBitstreamPopU8(stream, &b);
-            baseBitstreamPopU8(stream, &a);
+            bitstreamPopU8(stream, &r);
+            bitstreamPopU8(stream, &g);
+            bitstreamPopU8(stream, &b);
+            bitstreamPopU8(stream, &a);
 
             pixels.data[currOffset] = r;
             pixels.data[currOffset + 1] = g;
@@ -90,7 +90,7 @@ u64 bitmapQOIProcessNextChunk(BaseBitstream *stream, vec4u8 prevPixels[64], vec4
         case QOI_TAG_RUN:
         {
             u8 run;
-            baseBitstreamPopBitsAsU8(stream, 6, &run);
+            bitstreamPopBitsAsU8(stream, 6, &run);
             run += 1;
 
             while(run--)
@@ -103,12 +103,12 @@ u64 bitmapQOIProcessNextChunk(BaseBitstream *stream, vec4u8 prevPixels[64], vec4
                 bytesWritten += 4;
             }
 
-            baseBitstreamConsumeBits(stream, 2);
+            bitstreamConsumeBits(stream, 2);
         }break;
         case QOI_TAG_INDEX:
         {
             u8 index;
-            baseBitstreamPopBitsAsU8(stream, 6, &index);
+            bitstreamPopBitsAsU8(stream, 6, &index);
 
             pixels.data[currOffset] = prevPixels[index].r;
             pixels.data[currOffset + 1] = prevPixels[index].g;
@@ -116,14 +116,14 @@ u64 bitmapQOIProcessNextChunk(BaseBitstream *stream, vec4u8 prevPixels[64], vec4
             pixels.data[currOffset + 3] = prevPixels[index].a;
 
             bytesWritten += 4;
-            baseBitstreamConsumeBits(stream, 2);
+            bitstreamConsumeBits(stream, 2);
         }break;
         case QOI_TAG_DIFF:
         {
             u8 dr, dg, db;
-            baseBitstreamPopBitsAsU8(stream, 2, &db);
-            baseBitstreamPopBitsAsU8(stream, 2, &dg);
-            baseBitstreamPopBitsAsU8(stream, 2, &dr);
+            bitstreamPopBitsAsU8(stream, 2, &db);
+            bitstreamPopBitsAsU8(stream, 2, &dg);
+            bitstreamPopBitsAsU8(stream, 2, &dr);
 
             i8 udr = ((i8)dr - 2);
             i8 udg = ((i8)dg - 2);
@@ -135,16 +135,16 @@ u64 bitmapQOIProcessNextChunk(BaseBitstream *stream, vec4u8 prevPixels[64], vec4
             pixels.data[currOffset + 3] = prevPixel.a;
 
             bytesWritten += 4;
-            baseBitstreamConsumeBits(stream, 2);
+            bitstreamConsumeBits(stream, 2);
         }break;
         case QOI_TAG_LUMA:
         {
             u8 dg, drdg, dbdg;
-            baseBitstreamPopBitsAsU8(stream, 6, &dg);
-            baseBitstreamConsumeBits(stream, 2);
+            bitstreamPopBitsAsU8(stream, 6, &dg);
+            bitstreamConsumeBits(stream, 2);
 
-            baseBitstreamPopBitsAsU8(stream, 4, &dbdg);
-            baseBitstreamPopBitsAsU8(stream, 4, &drdg);
+            bitstreamPopBitsAsU8(stream, 4, &dbdg);
+            bitstreamPopBitsAsU8(stream, 4, &drdg);
 
             i8 udg = ((i8)dg - 32);
             i8 udrdg = ((i8)drdg - 8);
@@ -168,7 +168,7 @@ u64 bitmapQOIProcessNextChunk(BaseBitstream *stream, vec4u8 prevPixels[64], vec4
     return bytesWritten;
 }
 
-Bitmap bitmapFromQOIRaw(BaseArena *arena, u8 *rawBytes, u64 byteLen)
+Bitmap bitmapFromQOIRaw(Arena *arena, u8 *rawBytes, u64 byteLen)
 {
     Bitmap bm = {0};
 
@@ -183,15 +183,15 @@ Bitmap bitmapFromQOIRaw(BaseArena *arena, u8 *rawBytes, u64 byteLen)
         {
             QOIHeader header;
 
-            BaseBitstream inputStream = {.bytes = (U8Array){.data = currBytePtr, .len = byteLen}};
-            baseBitstreamPopU32LE(&inputStream, (u32*)header.magic);
-            baseBitstreamPopU32BE(&inputStream, &header.width);
-            baseBitstreamPopU32BE(&inputStream, &header.height);
-            baseBitstreamPopU8(&inputStream, &header.channels);
-            baseBitstreamPopU8(&inputStream, &header.colorspace);
+            Bitstream inputStream = {.bytes = (U8Array){.data = currBytePtr, .len = byteLen}};
+            bitstreamPopU32LE(&inputStream, (u32*)header.magic);
+            bitstreamPopU32BE(&inputStream, &header.width);
+            bitstreamPopU32BE(&inputStream, &header.height);
+            bitstreamPopU8(&inputStream, &header.channels);
+            bitstreamPopU8(&inputStream, &header.colorspace);
 
             u64 imgByteSizeIncludingAlpha = header.width * header.height * 4;
-            U8Array imgPixels = {.data = baseArenaPushNoZero(arena, imgByteSizeIncludingAlpha), .len = imgByteSizeIncludingAlpha};
+            U8Array imgPixels = {.data = arenaPushNoZero(arena, imgByteSizeIncludingAlpha), .len = imgByteSizeIncludingAlpha};
 
             vec4u8 prevPixels[64] = {0};
             vec4u8 prevPixel = Vec4u8(0, 0, 0, 255);
@@ -219,11 +219,11 @@ Bitmap bitmapFromQOIRaw(BaseArena *arena, u8 *rawBytes, u64 byteLen)
     return bm;
 }
 
-Bitmap bitmapFromQOIPath(BaseArena *arena, str8 file)
+Bitmap bitmapFromQOIPath(Arena *arena, str8 file)
 {
     Bitmap bm = {0};
 
-    BaseArenaTemp temp = baseTempBegin(&arena, 1);
+    ArenaTemp temp = baseTempBegin(&arena, 1);
     {
         U8Array fileBytes = OSFileReadAll(temp.arena, file);
 

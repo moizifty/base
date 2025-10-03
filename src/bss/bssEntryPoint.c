@@ -17,7 +17,7 @@ void ProgramMain(CmdLineHashMap *cmdline)
         return;
     }
 
-    BaseArena *arena = baseArenaAlloc(BASE_GIGABYTES(8));
+    Arena *arena = arenaAlloc(BASE_GIGABYTES(8));
 
     Str8List buildFlags = {0};
     str8 file = cmdline->originalInputs.first->val;

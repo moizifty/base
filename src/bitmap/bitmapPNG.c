@@ -55,7 +55,7 @@ PNGChunkIHDR bitmapPNGParseIHDRInfo(PNGChunk ihdrChunk)
 
     return hdr;
 }
-PNGCollectIDATChunksData bitmapPNGCollectIDATChunks(BaseArena *arena, u8 *currBytePtr, PNGChunkList *list)
+PNGCollectIDATChunksData bitmapPNGCollectIDATChunks(Arena *arena, u8 *currBytePtr, PNGChunkList *list)
 {
     PNGChunkIHDR hdrInfo = {0};
     PNGChunk currChunk = {0};
@@ -78,7 +78,7 @@ PNGCollectIDATChunksData bitmapPNGCollectIDATChunks(BaseArena *arena, u8 *currBy
             //IDAT
             case PNG_CHUNK_TYPE_IDAT:
             {
-                PNGChunk *idatNode = baseArenaPush(arena, sizeof(PNGChunk));
+                PNGChunk *idatNode = arenaPush(arena, sizeof(PNGChunk));
                 *idatNode = currChunk;
 
                 BasePtrListNodePushLast(list, idatNode);
@@ -120,7 +120,7 @@ PNGCollectIDATChunksData bitmapPNGCollectIDATChunks(BaseArena *arena, u8 *currBy
 
     return ret;
 }
-U8Array bitmapPNGCombineIDATDataBlocks(BaseArena *arena, PNGChunkList *list)
+U8Array bitmapPNGCombineIDATDataBlocks(Arena *arena, PNGChunkList *list)
 {
     u64 combinedDataBlockLen = 0;
     // https://www.w3.org/TR/png-3/#10CompressionCM0
@@ -136,7 +136,7 @@ U8Array bitmapPNGCombineIDATDataBlocks(BaseArena *arena, PNGChunkList *list)
     combinedDataBlockLen = combinedDataBlockLen - 1 - 1;
     U8Array view = 
     {
-        .data = baseArenaPushNoZero(arena, combinedDataBlockLen),
+        .data = arenaPushNoZero(arena, combinedDataBlockLen),
     };
 
     BASE_PTR_LIST_FOREACH(PNGChunk, chunk, list)
@@ -157,12 +157,12 @@ U8Array bitmapPNGCombineIDATDataBlocks(BaseArena *arena, PNGChunkList *list)
 
     return view;
 }
-PNGUncompressedData bitmapPNGUncompress(BaseArena *arena, PNGCompressedData input)
+PNGUncompressedData bitmapPNGUncompress(Arena *arena, PNGCompressedData input)
 {
     PNGUncompressedData uncompressedRet = {0};
     uncompressedRet.pngInfo = input.pngInfo;
 
-    BaseBitstream stream = {.bytes = input.compressedStream };
+    Bitstream stream = {.bytes = input.compressedStream };
     u64 imageBufferLength = input.pngInfo.w * input.pngInfo.h * ((input.pngInfo.bitDepth * input.pngInfo.colorComponents) / 8);
 
     // the filter is stored as one byte per scanline
@@ -170,7 +170,7 @@ PNGUncompressedData bitmapPNGUncompress(BaseArena *arena, PNGCompressedData inpu
     // image buffer size + (image height * 1);
     U8Array decompressedBuffer = {0};
     u64 filteredBufferSize = imageBufferLength + input.pngInfo.h * 1;
-    decompressedBuffer.data = baseArenaPushNoZero(arena, filteredBufferSize);
+    decompressedBuffer.data = arenaPushNoZero(arena, filteredBufferSize);
     decompressedBuffer.len = filteredBufferSize;
 
     // when decompressing the filtered data will be stored in decompressedBuffer which is why u create it from temp arena
@@ -199,14 +199,14 @@ u32 bitmapPNGFilterPaethPredictor(u32 a, u32 b, u32 c)
         return c;
     }
 }
-PNGUnfilteredData bitmapPNGUnfilter(BaseArena *arena, PNGUncompressedData uncompressedInput)
+PNGUnfilteredData bitmapPNGUnfilter(Arena *arena, PNGUncompressedData uncompressedInput)
 {
     u64 pixelWidth = (uncompressedInput.pngInfo.colorComponents * (uncompressedInput.pngInfo.bitDepth / 8));
     u64 scanlineByteWidthIncludingFilter = uncompressedInput.pngInfo.w * pixelWidth + 1; //+1 for filter type byte at start
 
     U8Array defilteredBuffer = {0};
     u64 imageBufferLength = uncompressedInput.pngInfo.w * uncompressedInput.pngInfo.h * (pixelWidth);
-    defilteredBuffer.data = baseArenaPushNoZero(arena, imageBufferLength);
+    defilteredBuffer.data = arenaPushNoZero(arena, imageBufferLength);
     defilteredBuffer.len = imageBufferLength;
 
     u8 *data = uncompressedInput.uncompressedStream.data;
@@ -243,7 +243,7 @@ PNGUnfilteredData bitmapPNGUnfilter(BaseArena *arena, PNGUncompressedData uncomp
 
     return (PNGUnfilteredData){.pngInfo = uncompressedInput.pngInfo, .output = defilteredBuffer};
 }
-Bitmap bitmapFromPNGRaw(BaseArena *arena, u8 *rawBytes, u64 byteLen)
+Bitmap bitmapFromPNGRaw(Arena *arena, u8 *rawBytes, u64 byteLen)
 {
     Bitmap bm = {0};
 
@@ -270,7 +270,7 @@ Bitmap bitmapFromPNGRaw(BaseArena *arena, u8 *rawBytes, u64 byteLen)
                 .compressedStream = compressedStream,
             };
 
-            BaseArenaTemp temp = baseTempBegin(&arena, 1);
+            ArenaTemp temp = baseTempBegin(&arena, 1);
             {
                 PNGUncompressedData uncompressedData = bitmapPNGUncompress(temp.arena, input);
                 PNGUnfilteredData unfiltered = bitmapPNGUnfilter(arena, uncompressedData);
@@ -291,10 +291,10 @@ Bitmap bitmapFromPNGRaw(BaseArena *arena, u8 *rawBytes, u64 byteLen)
     return bm;
 }
 
-Bitmap bitmapFromPNGPath(BaseArena *arena, str8 file)
+Bitmap bitmapFromPNGPath(Arena *arena, str8 file)
 {
     Bitmap bm = {0};
-    BaseArenaTemp temp = baseTempBegin(&arena, 1);
+    ArenaTemp temp = baseTempBegin(&arena, 1);
     {
         U8Array fileBytes = OSFileReadAll(temp.arena, file);
 

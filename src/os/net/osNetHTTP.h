@@ -29,7 +29,7 @@ typedef struct OSNetHttpPacket
     OSNetHttpHeaderList headers;
 }OSNetHttpPacket;
 
-OSNetHttpHeader OSNetHttpHeaderFromStr8(BaseArena *arena, str8 str);
-OSNetHttpHeaderList OSNetHttpHeaderListFromStr8(BaseArena *arena, str8 str);
-OSNetHttpPacket OSNetHttpPacketFromStr8(BaseArena *arena, str8 str);
+OSNetHttpHeader OSNetHttpHeaderFromStr8(Arena *arena, str8 str);
+OSNetHttpHeaderList OSNetHttpHeaderListFromStr8(Arena *arena, str8 str);
+OSNetHttpPacket OSNetHttpPacketFromStr8(Arena *arena, str8 str);
 #endif

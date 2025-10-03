@@ -11,13 +11,14 @@
 #include "..\renderer\renderer.c"
 #include "..\compression\compression.c"
 #include "..\bitmap\bitmap.c"
+#include "..\datastructures\bitstream.c"
 
 #include "..\os\core\osEntryPoint.c"
 #include "..\bss\bss.c"
 
 BASE_CREATE_LL_DECLS_DEFS(IntList, int);
 
-void printFiles(BaseArena *arena, str8 path)
+void printFiles(Arena *arena, str8 path)
 {
 	// OSFileInfo fileInfo = {0};
 	// OSFileFindIter *iter = OSFindFileBegin(arena, path, &(OSFileFindOptionalParams){.type = OS_FILEFIND_TYPE_TOP_LEVEL_DIR});
@@ -36,9 +37,11 @@ void printFiles(BaseArena *arena, str8 path)
 
 void ProgramMain(CmdLineHashMap *cmdline)
 {
-	BaseArena *generalArena = baseArenaAlloc(BASE_GIGABYTES(2));
-
+	Arena *generalArena = arenaAlloc(BASE_GIGABYTES(2));
 	OSNetAddrList localIps = OSNetGetLocalIpAddress(generalArena, OS_NET_ADDR_EITHER);
+
+	Path p = pathFromStr8(generalArena, STR8_LIT("examples/moi/i/test.txt"));
+	Path d = pathFromStr8(generalArena, STR8_LIT("c:/examples/moi/i/test.txt"));
 
 	BASE_LIST_FOREACH(OSNetAddr, node, localIps)
 	{
@@ -68,14 +71,14 @@ void ProgramMain(CmdLineHashMap *cmdline)
 	// str8 str = STR8("255 255 255 150 150 150 255 255 255 255 255 150");
 	// U8Array out = compressionLZ4MCompress(generalArena, (U8Array){.data = str.data, .len = str.len}, null);
 
-	// U8Array uc = {.data = baseArenaPush(generalArena, str.len), .len = str.len};
+	// U8Array uc = {.data = arenaPush(generalArena, str.len), .len = str.len};
 	// compressionLZ4MUncompress(out, uc);
 	// Bitmap bm =  bitmapFromPath(generalArena,STR8_LIT("C:\\Users\\Moizi\\OneDrive\\Documents\\Programming\\C\\base\\builds\\edgecase.qoi"));
 	{
 		U8Array f = OSFileReadAll(generalArena, STR8_LIT("C:\\Users\\Moizi\\OneDrive\\Documents\\Programming\\C\\base\\builds\\edgecase.qoi"));
 		U8Array compressedBitmap = compressionLZ4MCompress(generalArena, f, null);
 		
-		U8Array uncompressed = {.data = baseArenaPush(generalArena, f.len), .len = f.len};
+		U8Array uncompressed = {.data = arenaPush(generalArena, f.len), .len = f.len};
 		compressionLZ4MUncompress(compressedBitmap, uncompressed);
 	}
 	
@@ -105,5 +108,5 @@ void ProgramMain(CmdLineHashMap *cmdline)
 		}
 	}
 
-	baseArenaFree(generalArena);
+	arenaFree(generalArena);
 }

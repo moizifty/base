@@ -14,13 +14,13 @@
 
 BASE_CREATE_LL_DEFS(U8ArrayList, U8Array);
 
-void U8ChunkListPushLast(BaseArena *arena, U8ChunkList *l, u8 u)
+void U8ChunkListPushLast(Arena *arena, U8ChunkList *l, u8 u)
 {
     if(!BASE_ANY_PTR(l) || (l->last->chunk.len >= l->last->cap))
     {
-        U8ChunkListNode *n = baseArenaPushType(arena, U8ChunkListNode);
+        U8ChunkListNode *n = arenaPushType(arena, U8ChunkListNode);
         n->cap = l->defaultCap == 0 ? BASE_U8CHUNKLIST_DEFAULT_CAP : l->defaultCap;
-        n->chunk.data = baseArenaPushArray(arena, u8, n->cap);
+        n->chunk.data = arenaPushArray(arena, u8, n->cap);
         n->chunk.len = 0;
 
         BasePtrListNodePushLast(l, n);
@@ -30,7 +30,7 @@ void U8ChunkListPushLast(BaseArena *arena, U8ChunkList *l, u8 u)
     l->last->chunk.len += 1;
     l->totalLen += 1;
 }
-void U8ChunkListPushStr8Last(BaseArena *arena, U8ChunkList *l, str8 str)
+void U8ChunkListPushStr8Last(Arena *arena, U8ChunkList *l, str8 str)
 {
     for(u64 i = 0; i < str.len; i++)
     {
@@ -38,7 +38,7 @@ void U8ChunkListPushStr8Last(BaseArena *arena, U8ChunkList *l, str8 str)
     }
 }
 
-U8Array U8ChunkListFlattenToArray(BaseArena *arena, U8ChunkList *l)
+U8Array U8ChunkListFlattenToArray(Arena *arena, U8ChunkList *l)
 {
     U8Array flattened = {0};
 
@@ -47,7 +47,7 @@ U8Array U8ChunkListFlattenToArray(BaseArena *arena, U8ChunkList *l)
         return flattened;
     }
 
-    flattened.data = baseArenaPushArray(arena, u8, l->totalLen);
+    flattened.data = arenaPushArray(arena, u8, l->totalLen);
     flattened.len = l->totalLen;
 
     u64 i = 0;
@@ -99,7 +99,7 @@ i64 baseColFprintf(FILE *fp, const char *fmt, ...)
     va_start(list, fmt);
 
     i64 res = 0;
-    BaseArenaTemp temp = baseTempBegin(null, 0);
+    ArenaTemp temp = baseTempBegin(null, 0);
     {
         Str8List strList = {0};
         char buf[100] = {0};
@@ -122,7 +122,7 @@ i64 baseColFprintf(FILE *fp, const char *fmt, ...)
                             {
                                 if (bufOccupied > 0)
                                 {
-                                    str8 s = baseStringsPushStr8Copy(temp.arena, baseStr8((u8*)buf, bufOccupied));
+                                    str8 s = Str8PushCopy(temp.arena, baseStr8((u8*)buf, bufOccupied));
                                     Str8ListPushLast(temp.arena, &strList, s);
                                     bufOccupied = 0;
                                 }
@@ -184,7 +184,7 @@ i64 baseColFprintf(FILE *fp, const char *fmt, ...)
                     {
                         buf[bufOccupied] = fmt[i];
 
-                        str8 s = baseStringsPushStr8Copy(temp.arena, baseStr8((u8*)buf, bufOccupied));
+                        str8 s = Str8PushCopy(temp.arena, baseStr8((u8*)buf, bufOccupied));
                         Str8ListPushLast(temp.arena, &strList, s);
                         bufOccupied = 0;
                     }
@@ -202,7 +202,7 @@ i64 baseColFprintf(FILE *fp, const char *fmt, ...)
         str8 finalStr = Str8ListJoin(temp.arena, &strList, null);
         i64 needed = stbsp_vsnprintf(null, 0, (i8 *)finalStr.data, list) + 1;
 
-        i8 *data = baseArenaPush(temp.arena, needed);
+        i8 *data = arenaPush(temp.arena, needed);
         res = stbsp_vsnprintf(data, (int)needed, (i8 *)finalStr.data, list);
 
         fprintf(fp, data);

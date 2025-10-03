@@ -29,9 +29,9 @@ bool baseUriIsPCTEncoded(str8 str, u64 index)
 }
 
 // https://datatracker.ietf.org/doc/html/rfc3986
-BaseUri baseUriParseFromStr8(str8 str)
+Uri baseUriParseFromStr8(str8 str)
 {
-    BaseUri ret = {0};
+    Uri ret = {0};
     if (!BASE_ANY(str))
     {
         return ret;
@@ -90,7 +90,7 @@ BaseUri baseUriParseFromStr8(str8 str)
 
                     str8 auth = baseStr8(str.data + authStartIndex, authEndIndex - authStartIndex);
                     
-                    if(baseStringsStrContains(auth, '@'))
+                    if(Str8Contains(auth, STR8_LIT("@"), 0))
                     {
                         u64 userInfoStartIndex = i;
 
@@ -116,9 +116,9 @@ BaseUri baseUriParseFromStr8(str8 str)
                         .len = (auth.len - ret.hier.userinfo.len) - (BASE_ANY(ret.hier.userinfo) ? 1 : 0),
                     };
 
-                    if (baseStringsStrContains(hostAndMaybePort, ':'))
+                    if (Str8Contains(hostAndMaybePort, STR8_LIT(":"), 0))
                     {
-                        u64 colonIndex = baseStringsStrFindSubStr8(hostAndMaybePort, STR8_LIT(":"), 0, STR_MATCHFLAGS_FIND_LAST);
+                        u64 colonIndex = Str8FindSubStr8(hostAndMaybePort, STR8_LIT(":"), 0, STR_MATCHFLAGS_FIND_LAST);
                         ret.hier.port = baseStr8(hostAndMaybePort.data + colonIndex + 1, hostAndMaybePort.len - colonIndex - 1);
 
                         i += 1;
@@ -161,7 +161,7 @@ BaseUri baseUriParseFromStr8(str8 str)
                 str8 maybeQueryAndMaybeFragment = baseStr8(str.data + i, str.len - i);
                 if (BASE_ANY(maybeQueryAndMaybeFragment))
                 {
-                    u64 hashTagIndex = baseStringsStrFindSubStr8(maybeQueryAndMaybeFragment, STR8_LIT("#"), 0, STR_MATCHFLAGS_FIND_LAST);
+                    u64 hashTagIndex = Str8FindSubStr8(maybeQueryAndMaybeFragment, STR8_LIT("#"), 0, STR_MATCHFLAGS_FIND_LAST);
                     if (hashTagIndex != maybeQueryAndMaybeFragment.len)
                     {
                         ret.fragment = baseStr8(maybeQueryAndMaybeFragment.data + hashTagIndex + 1, maybeQueryAndMaybeFragment.len - hashTagIndex - 1);
@@ -176,17 +176,17 @@ BaseUri baseUriParseFromStr8(str8 str)
     return ret;
 }
 
-BaseUri baseUriParseFromStr8Copy(BaseArena *arena, str8 str)
+Uri baseUriParseFromStr8Copy(Arena *arena, str8 str)
 {
-    BaseUri uri = baseUriParseFromStr8(str);
+    Uri uri = baseUriParseFromStr8(str);
 
-    uri.scheme = baseStringsPushStr8Copy(arena, uri.scheme);
-    uri.hier.userinfo = baseStringsPushStr8Copy(arena, uri.hier.userinfo);
-    uri.hier.host = baseStringsPushStr8Copy(arena, uri.hier.host);
-    uri.hier.port = baseStringsPushStr8Copy(arena, uri.hier.port);
-    uri.hier.path = baseStringsPushStr8Copy(arena, uri.hier.path);
-    uri.query = baseStringsPushStr8Copy(arena, uri.query);
-    uri.fragment = baseStringsPushStr8Copy(arena, uri.fragment);
+    uri.scheme = Str8PushCopy(arena, uri.scheme);
+    uri.hier.userinfo = Str8PushCopy(arena, uri.hier.userinfo);
+    uri.hier.host = Str8PushCopy(arena, uri.hier.host);
+    uri.hier.port = Str8PushCopy(arena, uri.hier.port);
+    uri.hier.path = Str8PushCopy(arena, uri.hier.path);
+    uri.query = Str8PushCopy(arena, uri.query);
+    uri.fragment = Str8PushCopy(arena, uri.fragment);
 
     return uri;
 }

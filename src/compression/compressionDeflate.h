@@ -3,7 +3,7 @@
 
 #include "base\baseCore.h"
 #include "base\baseMemory.h"
-#include "base\baseBitstream.h"
+#include "datastructures\bitstream.h"
 
 #define COMPRESSION_DEFLATE_WINDOW_SIZE 32768 // Maximum size of the sliding window
 #define COMPRESSION_DEFLATE_MAX_CODE_LENGTH 15 // Maximum length of a Huffman code
@@ -29,8 +29,8 @@ typedef struct CompressionDeflateDecodeHuffmanBlockInput
 }CompressionDeflateDecodeHuffmanBlockInput;
 
 void compressionDeflateGenerateHuffmanCodes(U8Array codeLengths, u32 *outCodes);
-u64 compressionDeflateDecodeHuffmanCode(BaseBitstream *stream, U8Array symbolLens, u32 *symbolCodes);
-u64 compressionDeflateDecodeHuffmanBlock(BaseBitstream *stream, CompressionDeflateDecodeHuffmanBlockInput input);
+u64 compressionDeflateDecodeHuffmanCode(Bitstream *stream, U8Array symbolLens, u32 *symbolCodes);
+u64 compressionDeflateDecodeHuffmanBlock(Bitstream *stream, CompressionDeflateDecodeHuffmanBlockInput input);
 
-CompressionDeflateUncompressedOutput compressionDeflateUncompress(BaseBitstream *inputStream, U8Array *outBuffer);
+CompressionDeflateUncompressedOutput compressionDeflateUncompress(Bitstream *inputStream, U8Array *outBuffer);
 #endif

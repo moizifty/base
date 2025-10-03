@@ -86,7 +86,7 @@
 
 #define Range3f(X, Y)    ((rangef){(X), (Y)})
 
-metagen_introspect()
+metagen_introspect(only: "x", "y")
 typedef struct vec2f
 {
     union

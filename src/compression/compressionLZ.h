@@ -89,7 +89,7 @@ typedef struct CompressionLZ4MSubByteDict
  * 
  * each blocks need a token at the start and 2 byte for offset at the end
 */
-U8Array compressionLZ4MCompress(BaseArena *arena, U8Array input, CompressOptions *options);
+U8Array compressionLZ4MCompress(Arena *arena, U8Array input, CompressOptions *options);
 bool compressionLZ4MUncompress(U8Array input, U8Array output);
 
 #endif

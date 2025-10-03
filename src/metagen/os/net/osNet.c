@@ -54,7 +54,7 @@ i64 OSNetSocketSendAll(OSHandle socketHandle, U8Array buf)
 
     return sentAmount;
 }
-U8ChunkList OSNetSocketRecieveAll(BaseArena *arena, OSHandle socketHandle)
+U8ChunkList OSNetSocketRecieveAll(Arena *arena, OSHandle socketHandle)
 {
     U8ChunkList retList = {.defaultCap = OS_NET_RECIEVE_ALL_BUFFER_SIZE};
 

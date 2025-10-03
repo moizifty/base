@@ -9,10 +9,10 @@ void bssParserError(BSSInterpretorState *iState, BssTok tok, char *msg, ...)
     baseColEPrintf("{Bu}%S (%lld: %lld)",tok.pos.ownerLexer->filePath, tok.pos.line, tok.pos.col);
     baseColEPrintf("{B}\n        --> Parser Error:\033[0m ");
 
-    BaseArenaTemp temp = baseTempBegin(&iState->parserArena, 1);
+    ArenaTemp temp = baseTempBegin(&iState->parserArena, 1);
     {
         i64 needed = stbsp_vsnprintf(null, 0, msg, args) + 1;
-        i8 *buf = baseArenaPush(temp.arena, needed);
+        i8 *buf = arenaPush(temp.arena, needed);
 
         stbsp_vsnprintf(buf, (int)needed, msg, args);
 
@@ -119,7 +119,7 @@ void bssParserProject(BSSInterpretorState *iState)
         endTok = startTok;
     }
 
-    ASTProject *project = baseArenaPushType(iState->parserArena, ASTProject);
+    ASTProject *project = arenaPushType(iState->parserArena, ASTProject);
     project->startTok = startTok;
     project->endTok = endTok;
     project->stmts = stmts;
@@ -302,7 +302,7 @@ ASTBlock *bssParserBlock(BSSInterpretorState *iState)
             bssParserError(iState, PARSER_CURR_TOK(iState), "Expected '}' to close block instead got '%S'", PARSER_CURR_TOK(iState).lexeme);
         }
 
-        block = baseArenaPushType(iState->parserArena, ASTBlock);
+        block = arenaPushType(iState->parserArena, ASTBlock);
         block->stmts = stmts;
         block->endTok = end;
         block->startTok = start;

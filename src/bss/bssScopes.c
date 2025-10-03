@@ -6,20 +6,20 @@
 BASE_CREATE_EFFICIENT_LL_DEFS(BssValueList, BssValue);
 BASE_CREATE_EFFICIENT_LL_DEFS(BssValueObjMembList, BssValueObjMemb);
 
-BssSymTable BssNewSymTable(BaseArena *arena)
+BssSymTable BssNewSymTable(Arena *arena)
 {
     const u64 slotCount = 13;
 
     BssSymTable symtable = {0};
-    symtable.slots.data = baseArenaPushArray(arena, BssSymTableSlot, slotCount);
+    symtable.slots.data = arenaPushArray(arena, BssSymTableSlot, slotCount);
     symtable.slots.len = slotCount;
 
     return symtable;
 }
 
-BssScope *bssNewScope(BaseArena *arena, BssScope *parent)
+BssScope *bssNewScope(Arena *arena, BssScope *parent)
 {
-    BssScope *scope = baseArenaPushType(arena, BssScope);
+    BssScope *scope = arenaPushType(arena, BssScope);
     scope->parent = parent;
     scope->table = BssNewSymTable(arena);
 
@@ -28,7 +28,7 @@ BssScope *bssNewScope(BaseArena *arena, BssScope *parent)
 
 u64 bssScopeCalculateInsertIndex(BssScope *bssScope, str8 s)
 {
-    u64 hash = hashDJB2(s.data, s.len);
+    u64 hash = baseHashDJB2(s.data, s.len);
     u64 index = hash % bssScope->table.slots.len;
 
     return index;
@@ -53,7 +53,7 @@ BssSymTableSlotEntry *bssScopeFindEntryFromName(BssScope *bssScope, bool checkPa
 
     BASE_LIST_FOREACH_EX(BssSymTableSlotEntry, entry, bssScope->table.slots.data[index], hashNext)
     {
-        if(baseStringsStrEquals(name, entry->name, 0))
+        if(Str8Equals(name, entry->name, 0))
         {
             found = entry;
             break;

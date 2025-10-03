@@ -7,8 +7,8 @@
 
 #include "bss\bssCore.h"
 
-void BssTokChunkListPushLast(BaseArena *arena, BssTokChunkList *l, BssTok tok);
-BssTokArray BssTokChunkListFlattenToArray(BaseArena *arena, BssTokChunkList *l);
+void BssTokChunkListPushLast(Arena *arena, BssTokChunkList *l, BssTok tok);
+BssTokArray BssTokChunkListFlattenToArray(Arena *arena, BssTokChunkList *l);
 
 bool bssLexerInitFromFile(struct BSSInterpretorState *iState, str8 filePath);
 bool bssLexerInitFromBuffer(struct BSSInterpretorState *iState, U8Array buffer);

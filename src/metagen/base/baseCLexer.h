@@ -77,15 +77,15 @@ typedef struct CLexerState
 CTokArray CTokArraySkip(CTokArray arr, u64 amount);
 
 i64 baseCLexerGetEscapeCharValue(str8 escapeCharString);
-str8 baseCLexerGetStr8RepFromTokLexeme(BaseArena *arena, CTok tok);
+str8 baseCLexerGetStr8RepFromTokLexeme(Arena *arena, CTok tok);
 
-void CTokChunkListPushLast(BaseArena *arena, CTokChunkList *l, CTok tok);
-CTokArray CTokChunkListFlattenToArray(BaseArena *arena, CTokChunkList *l);
+void CTokChunkListPushLast(Arena *arena, CTokChunkList *l, CTok tok);
+CTokArray CTokChunkListFlattenToArray(Arena *arena, CTokChunkList *l);
 
-CLexerState baseCLexerInitFromFile(BaseArena *arena, str8 filePath);
+CLexerState baseCLexerInitFromFile(Arena *arena, str8 filePath);
 CLexerState baseCLexerInitFromBuffer(U8Array buffer);
 
-CTokArray baseCLexerLexWholeBuffer(BaseArena *arena, CLexerState *lexerState);
+CTokArray baseCLexerLexWholeBuffer(Arena *arena, CLexerState *lexerState);
 
 bool baseCLexerAdvanceChar(CLexerState *lexerState);
 u8 baseCLexerPeekChar(CLexerState *lexerState);

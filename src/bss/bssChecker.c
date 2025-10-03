@@ -19,10 +19,10 @@ void bssCheckerError(BSSInterpretorState *iState, BssTok tok, char *msg, ...)
     baseColEPrintf("{Bu}%S (%lld: %lld)",tok.pos.ownerLexer->filePath, tok.pos.line, tok.pos.col);
     baseColEPrintf("{B}\n        --> Checker Error:\033[0m ");
 
-    BaseArenaTemp temp = baseTempBegin(&iState->checkerArena, 1);
+    ArenaTemp temp = baseTempBegin(&iState->checkerArena, 1);
     {
         i64 needed = stbsp_vsnprintf(null, 0, msg, args) + 1;
-        i8 *buf = baseArenaPush(temp.arena, needed);
+        i8 *buf = arenaPush(temp.arena, needed);
 
         stbsp_vsnprintf(buf, (int)needed, msg, args);
 
@@ -39,17 +39,17 @@ void bssCheckerInit(struct BSSInterpretorState *iState)
     iState->cState.rootScope = bssNewScope(iState->checkerArena, null);
     
     {
-        str8 cwdPath = baseStringsStrChopPastLastSlash(iState->lState.filePath);
-        if (baseStringsStrEquals(cwdPath, iState->lState.filePath, 0))
+        str8 cwdPath = Str8ChopPastLastSlash(iState->lState.filePath);
+        if (Str8Equals(cwdPath, iState->lState.filePath, 0))
         {
             cwdPath = STR8_LIT(".\\");
         }
 
-        BssSymTableSlotEntry *cwdVar = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
+        BssSymTableSlotEntry *cwdVar = arenaPushType(iState->checkerArena, BssSymTableSlotEntry);
         cwdVar->name = STR8_LIT("cwd");
         cwdVar->type = bssAllocTypeString(iState->checkerArena);
 
-        cwdVar->value = baseArenaPushType(iState->checkerArena, BssValue);
+        cwdVar->value = arenaPushType(iState->checkerArena, BssValue);
         cwdVar->value->type = cwdVar->type;
         cwdVar->value->hasBssValue = true;
         cwdVar->value->strRep = cwdPath;
@@ -64,11 +64,11 @@ void bssCheckerInit(struct BSSInterpretorState *iState)
         BssScope *s = bssNewScope(iState->checkerArena, null);
         BssType *runOutput = bssAllocTypeObj(iState->checkerArena, s);
 
-        BssSymTableSlotEntry *stdoutMemb = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
+        BssSymTableSlotEntry *stdoutMemb = arenaPushType(iState->checkerArena, BssSymTableSlotEntry);
         stdoutMemb->name = STR8_LIT("stdout");
         stdoutMemb->type = bssAllocTypeString(iState->checkerArena);
 
-        BssSymTableSlotEntry *stderrMemb = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
+        BssSymTableSlotEntry *stderrMemb = arenaPushType(iState->checkerArena, BssSymTableSlotEntry);
         stderrMemb->name = STR8_LIT("stderr");
         stderrMemb->type = bssAllocTypeString(iState->checkerArena);
 
@@ -82,15 +82,15 @@ void bssCheckerInit(struct BSSInterpretorState *iState)
         BssScope *s = bssNewScope(iState->checkerArena, null);
         BssType *projectDeclType = bssAllocTypeObj(iState->checkerArena, s);
 
-        BssSymTableSlotEntry *srcMemb = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
+        BssSymTableSlotEntry *srcMemb = arenaPushType(iState->checkerArena, BssSymTableSlotEntry);
         srcMemb->name = STR8_LIT("src");
         srcMemb->type = bssAllocTypeArray(iState->checkerArena, bssAllocTypeString(iState->checkerArena));
 
-        BssSymTableSlotEntry *objMemb = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
+        BssSymTableSlotEntry *objMemb = arenaPushType(iState->checkerArena, BssSymTableSlotEntry);
         objMemb->name = STR8_LIT("objs");
         objMemb->type = bssAllocTypeArray(iState->checkerArena, bssAllocTypeString(iState->checkerArena));
 
-        BssSymTableSlotEntry *libsMemb = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
+        BssSymTableSlotEntry *libsMemb = arenaPushType(iState->checkerArena, BssSymTableSlotEntry);
         libsMemb->name = STR8_LIT("libs");
         libsMemb->type = bssAllocTypeArray(iState->checkerArena, bssAllocTypeString(iState->checkerArena));
 
@@ -104,15 +104,15 @@ void bssCheckerInit(struct BSSInterpretorState *iState)
     //functions
     {
         BssScope *fs = bssNewScope(iState->checkerArena, null);
-        BssSymTableSlotEntry *p1 = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
+        BssSymTableSlotEntry *p1 = arenaPushType(iState->checkerArena, BssSymTableSlotEntry);
         p1->name = STR8_LIT("path");
         p1->type = bssAllocTypeString(iState->checkerArena);
 
-        BssSymTableSlotEntry *p2 = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
+        BssSymTableSlotEntry *p2 = arenaPushType(iState->checkerArena, BssSymTableSlotEntry);
         p2->name = STR8_LIT("pattern");
         p2->type = bssAllocTypeString(iState->checkerArena);
 
-        BssSymTableSlotEntry *p3 = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
+        BssSymTableSlotEntry *p3 = arenaPushType(iState->checkerArena, BssSymTableSlotEntry);
         p3->name = STR8_LIT("recursive");
         p3->type = bssAllocTypeBool(iState->checkerArena);
 
@@ -122,7 +122,7 @@ void bssCheckerInit(struct BSSInterpretorState *iState)
 
         BssType *r = bssAllocTypeArray(iState->checkerArena, bssAllocTypeString(iState->checkerArena));
 
-        BssSymTableSlotEntry *f = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
+        BssSymTableSlotEntry *f = arenaPushType(iState->checkerArena, BssSymTableSlotEntry);
         f->name = STR8_LIT("getfiles");
         f->type = bssAllocTypeFunc(iState->checkerArena, r, fs);
 
@@ -132,7 +132,7 @@ void bssCheckerInit(struct BSSInterpretorState *iState)
 
     {
         BssScope *fs = bssNewScope(iState->checkerArena, null);
-        BssSymTableSlotEntry *p1 = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
+        BssSymTableSlotEntry *p1 = arenaPushType(iState->checkerArena, BssSymTableSlotEntry);
         p1->name = STR8_LIT("str");
         p1->type = bssAllocTypeString(iState->checkerArena);
 
@@ -140,7 +140,7 @@ void bssCheckerInit(struct BSSInterpretorState *iState)
 
         BssType *r = bssAllocTypeString(iState->checkerArena);
 
-        BssSymTableSlotEntry *f = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
+        BssSymTableSlotEntry *f = arenaPushType(iState->checkerArena, BssSymTableSlotEntry);
         f->name = STR8_LIT("print");
         f->type = bssAllocTypeFunc(iState->checkerArena, r, fs);
 
@@ -150,7 +150,7 @@ void bssCheckerInit(struct BSSInterpretorState *iState)
 
     {
         BssScope *fs = bssNewScope(iState->checkerArena, null);
-        BssSymTableSlotEntry *p1 = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
+        BssSymTableSlotEntry *p1 = arenaPushType(iState->checkerArena, BssSymTableSlotEntry);
         p1->name = STR8_LIT("str");
         p1->type = bssAllocTypeString(iState->checkerArena);
 
@@ -158,7 +158,7 @@ void bssCheckerInit(struct BSSInterpretorState *iState)
 
         BssType *r = bssAllocTypeBool(iState->checkerArena);
 
-        BssSymTableSlotEntry *f = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
+        BssSymTableSlotEntry *f = arenaPushType(iState->checkerArena, BssSymTableSlotEntry);
         f->name = STR8_LIT("pathexists");
         f->type = bssAllocTypeFunc(iState->checkerArena, r, fs);
 
@@ -168,11 +168,11 @@ void bssCheckerInit(struct BSSInterpretorState *iState)
 
     {
         BssScope *fs = bssNewScope(iState->checkerArena, null);
-        BssSymTableSlotEntry *p1 = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
+        BssSymTableSlotEntry *p1 = arenaPushType(iState->checkerArena, BssSymTableSlotEntry);
         p1->name = STR8_LIT("arr");
         p1->type = bssAllocTypeArray(iState->checkerArena, bssAllocTypeString(iState->checkerArena));
 
-        BssSymTableSlotEntry *p2 = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
+        BssSymTableSlotEntry *p2 = arenaPushType(iState->checkerArena, BssSymTableSlotEntry);
         p2->name = STR8_LIT("sep");
         p2->type = bssAllocTypeString(iState->checkerArena);
 
@@ -181,7 +181,7 @@ void bssCheckerInit(struct BSSInterpretorState *iState)
 
         BssType *r = bssAllocTypeString(iState->checkerArena);
 
-        BssSymTableSlotEntry *f = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
+        BssSymTableSlotEntry *f = arenaPushType(iState->checkerArena, BssSymTableSlotEntry);
         f->name = STR8_LIT("join");
         f->type = bssAllocTypeFunc(iState->checkerArena, r, fs);
 
@@ -191,7 +191,7 @@ void bssCheckerInit(struct BSSInterpretorState *iState)
 
     {
         BssScope *fs = bssNewScope(iState->checkerArena, null);
-        BssSymTableSlotEntry *p1 = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
+        BssSymTableSlotEntry *p1 = arenaPushType(iState->checkerArena, BssSymTableSlotEntry);
         p1->name = STR8_LIT("arr");
         p1->type = bssAllocTypeArray(iState->checkerArena, bssAllocTypeString(iState->checkerArena));
 
@@ -199,7 +199,7 @@ void bssCheckerInit(struct BSSInterpretorState *iState)
 
         BssType *r = bssAllocTypeArray(iState->checkerArena, bssAllocTypeString(iState->checkerArena));
 
-        BssSymTableSlotEntry *f = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
+        BssSymTableSlotEntry *f = arenaPushType(iState->checkerArena, BssSymTableSlotEntry);
         f->name = STR8_LIT("quoteit");
         f->type = bssAllocTypeFunc(iState->checkerArena, r, fs);
 
@@ -209,7 +209,7 @@ void bssCheckerInit(struct BSSInterpretorState *iState)
 
     {
         BssScope *fs = bssNewScope(iState->checkerArena, null);
-        BssSymTableSlotEntry *p1 = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
+        BssSymTableSlotEntry *p1 = arenaPushType(iState->checkerArena, BssSymTableSlotEntry);
         p1->name = STR8_LIT("flag");
         p1->type = bssAllocTypeString(iState->checkerArena);
 
@@ -217,7 +217,7 @@ void bssCheckerInit(struct BSSInterpretorState *iState)
 
         BssType *r = bssAllocTypeBool(iState->checkerArena);
 
-        BssSymTableSlotEntry *f = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
+        BssSymTableSlotEntry *f = arenaPushType(iState->checkerArena, BssSymTableSlotEntry);
         f->name = STR8_LIT("hasflag");
         f->type = bssAllocTypeFunc(iState->checkerArena, r, fs);
 
@@ -227,7 +227,7 @@ void bssCheckerInit(struct BSSInterpretorState *iState)
 
     {
         BssScope *fs = bssNewScope(iState->checkerArena, null);
-        BssSymTableSlotEntry *p1 = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
+        BssSymTableSlotEntry *p1 = arenaPushType(iState->checkerArena, BssSymTableSlotEntry);
         p1->name = STR8_LIT("flag");
         p1->type = bssAllocTypeString(iState->checkerArena);
 
@@ -235,7 +235,7 @@ void bssCheckerInit(struct BSSInterpretorState *iState)
 
         BssType *r = bssAllocTypeBool(iState->checkerArena);
 
-        BssSymTableSlotEntry *f = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
+        BssSymTableSlotEntry *f = arenaPushType(iState->checkerArena, BssSymTableSlotEntry);
         f->name = STR8_LIT("addflag");
         f->type = bssAllocTypeFunc(iState->checkerArena, r, fs);
 
@@ -245,7 +245,7 @@ void bssCheckerInit(struct BSSInterpretorState *iState)
 
     {
         BssScope *fs = bssNewScope(iState->checkerArena, null);
-        BssSymTableSlotEntry *p1 = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
+        BssSymTableSlotEntry *p1 = arenaPushType(iState->checkerArena, BssSymTableSlotEntry);
         p1->name = STR8_LIT("env");
         p1->type = bssAllocTypeString(iState->checkerArena);
 
@@ -253,7 +253,7 @@ void bssCheckerInit(struct BSSInterpretorState *iState)
 
         BssType *r = bssAllocTypeString(iState->checkerArena);
 
-        BssSymTableSlotEntry *f = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
+        BssSymTableSlotEntry *f = arenaPushType(iState->checkerArena, BssSymTableSlotEntry);
         f->name = STR8_LIT("getenv");
         f->type = bssAllocTypeFunc(iState->checkerArena, r, fs);
 
@@ -291,7 +291,7 @@ void bssCheckerCheckStmt(struct BSSInterpretorState *iState, ASTStmt *stmt, BssS
             BssSymTableSlotEntry *entry = bssScopeFindEntryFromName(scope, true, name);
             if(entry == null)
             {
-                entry = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
+                entry = arenaPushType(iState->checkerArena, BssSymTableSlotEntry);
                 entry->name = name;
                 entry->type = iState->cState.projectType;
 
@@ -343,7 +343,7 @@ void bssCheckerCheckStmt(struct BSSInterpretorState *iState, ASTStmt *stmt, BssS
                 BssSymTableSlotEntry *entry = bssScopeFindEntryFromName(scope, true, name);
                 if(entry == null)
                 {
-                    entry = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
+                    entry = arenaPushType(iState->checkerArena, BssSymTableSlotEntry);
                     entry->name = name;
 
                     bssCheckerCheckExpr(iState, rhs, scope);
@@ -389,7 +389,7 @@ void bssCheckerCheckStmt(struct BSSInterpretorState *iState, ASTStmt *stmt, BssS
                 BssSymTableSlotEntry *entry = bssScopeFindEntryFromName(s, true, stmt->forStmt.item.lexeme);
                 if(entry == null)
                 {
-                    entry = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
+                    entry = arenaPushType(iState->checkerArena, BssSymTableSlotEntry);
                     entry->name = stmt->forStmt.item.lexeme;
                     entry->type = container->checkType->array.base;
 
@@ -665,7 +665,7 @@ void bssCheckerCheckExpr(struct BSSInterpretorState *iState, ASTExpr *expr, BssS
                 BssScope *s = bssNewScope(iState->checkerArena, null);
                 BASE_LIST_FOREACH(ASTNamedExpr, ne, expr->compoundLit.membs)
                 {
-                    BssSymTableSlotEntry *e = baseArenaPushType(iState->checkerArena, BssSymTableSlotEntry);
+                    BssSymTableSlotEntry *e = arenaPushType(iState->checkerArena, BssSymTableSlotEntry);
                     bssCheckerCheckExpr(iState, ne->exprRhs, scope);
 
                     e->name = ne->exprLhs->iden.lexeme;

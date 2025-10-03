@@ -7,23 +7,23 @@
 #include "baseMemory.h"
 #include "baseThreads.h"
 
-typedef struct BaseUriHierarchy
+typedef struct UriHierarchy
 {
     str8 userinfo;
     str8 host;
     str8 port;
     str8 path;
-}BaseUriHierarchy;
+}UriHierarchy;
 
-typedef struct BaseUri
+typedef struct Uri
 {
     str8 scheme;
-    BaseUriHierarchy hier;
+    UriHierarchy hier;
     str8 query;
     str8 fragment;
-}BaseUri;
+}Uri;
 
-BaseUri baseUriParseFromStr8(str8 str);
-BaseUri baseUriParseFromStr8Copy(BaseArena *arena, str8 str);
+Uri baseUriParseFromStr8(str8 str);
+Uri baseUriParseFromStr8Copy(Arena *arena, str8 str);
 
 #endif

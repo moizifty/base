@@ -102,9 +102,9 @@ typedef struct BssCheckerState
 
 typedef struct BSSInterpretorState
 {
-    BaseArena *lexerArena;
-    BaseArena *parserArena;
-    BaseArena *checkerArena;
+    Arena *lexerArena;
+    Arena *parserArena;
+    Arena *checkerArena;
     
     BssLexerState lState;
     BssParserState pState;
@@ -117,7 +117,7 @@ void bssInterpFile(BSSInterpretorState *iState, str8 path);
 void bssInterpBuffer(BSSInterpretorState *iState, U8Array buffer);
 
 i64 bssGetEscapeCharValue(str8 escapeCharString);
-str8 bssGetStr8RepFromTokLexeme(BaseArena *arena, BssTok tok);
+str8 bssGetStr8RepFromTokLexeme(Arena *arena, BssTok tok);
 
 bool bssHasFlag(BSSInterpretorState *iState, str8 flag);
 void bssAddFlag(BSSInterpretorState *iState, str8 flag);

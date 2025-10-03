@@ -10,6 +10,8 @@
 #define metagen_genprintstructmemb(...)
 #define metagen_embedfile(name, path, mode)
 
+#define basePrintStruct(T, S) basePrintStructEx(&(S), (g##T##MembDefsTable))
+
 typedef enum MetagenTypeKind
 {
     METAGEN_TYPE_u8,
@@ -45,8 +47,7 @@ typedef struct MetagenStructMemb
 
 BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(MetagenStructMembArray, MetagenStructMemb);
 
-void basePrintStruct(void *data, MetagenStructMembArray membs);
-
+void basePrintStructEx(void *data, MetagenStructMembArray membs);
 #include "base\baseMetagenCommon.gen.h"
 
 #endif

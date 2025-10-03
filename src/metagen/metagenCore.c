@@ -15,23 +15,25 @@ extern MetagenTypeDict gMetagenTypeDict = {0};
 
 BASE_CREATE_EFFICIENT_LL_DEFS(MetagenCStructMembList, MetagenCStructMemb)
 BASE_CREATE_EFFICIENT_LL_DEFS(MetagenTypeDictSlot, MetagenTypeDictSlotEntry)
+BASE_CREATE_EFFICIENT_LL_DEFS(MetagenCStructList, MetagenCStruct)
+BASE_CREATE_EFFICIENT_LL_DEFS(MetagenOutputList, MetagenOutput)
 
-void metagenInit(BaseArena *arena)
+void metagenInit(Arena *arena)
 {
-    gMetagenTypeDict.slots.data = baseArenaPushArray(arena, MetagenTypeDictSlot, 193);
+    gMetagenTypeDict.slots.data = arenaPushArray(arena, MetagenTypeDictSlot, 193);
     gMetagenTypeDict.slots.len = 193;
 }
 
-bool metagenTypeDictAddType(BaseArena *arena, MetagenTypeDict *dict, str8 type)
+bool metagenTypeDictAddType(Arena *arena, MetagenTypeDict *dict, MetagenCStruct *type)
 {
     bool existed = false;
-    u64 hash = hashDJB2(type.data, type.len);
+    u64 hash = baseHashDJB2(type->name.data, type->name.len);
 
     MetagenTypeDictSlotEntry *found = null;
     MetagenTypeDictSlot slot = dict->slots.data[hash % dict->slots.len];
     BASE_LIST_FOREACH(MetagenTypeDictSlotEntry, node, slot)
     {
-        if (baseStringsStrEquals(node->name, type, 0))
+        if (Str8Equals(node->type->name, type->name, 0))
         {
             found = node;
             existed = true;
@@ -41,8 +43,8 @@ bool metagenTypeDictAddType(BaseArena *arena, MetagenTypeDict *dict, str8 type)
 
     if (found == null)
     {
-        found = baseArenaPushType(arena, MetagenTypeDictSlotEntry);
-        found->name = type;
+        found = arenaPushType(arena, MetagenTypeDictSlotEntry);
+        found->type = type;
 
         BaseListNodePushLastEx(dict->slots.data[hash % dict->slots.len], found, hashPrev, hashNext);
         BaseListNodePushLast(*dict, found);
@@ -51,7 +53,23 @@ bool metagenTypeDictAddType(BaseArena *arena, MetagenTypeDict *dict, str8 type)
     return existed;
 }
 
-bool metagenHandleEmbedFile(BaseArena *arena, MetagenOutput *output, CTokArray nextToks)
+MetagenCStruct *metagenTypeDictFindTypeByName(MetagenTypeDict *dict, str8 name)
+{
+    u64 hash = baseHashDJB2(name.data, name.len);
+
+    MetagenTypeDictSlot slot = dict->slots.data[hash % dict->slots.len];
+    BASE_LIST_FOREACH(MetagenTypeDictSlotEntry, node, slot)
+    {
+        if (Str8Equals(node->type->name, name, 0))
+        {
+            return node->type;
+        }
+    }
+
+    return null;
+}
+
+bool metagenHandleEmbedFile(Arena *arena, MetagenOutput *output, CTokArray nextToks)
 {
     if (nextToks.len >= 7) // (mode, path) = 5 tokens
     {
@@ -155,7 +173,7 @@ bool metagenHandleEmbedFile(BaseArena *arena, MetagenOutput *output, CTokArray n
     return true;
 }
 
-MetagenCStruct metagenParseCStruct(BaseArena *arena, Str8List onlyList, CTokArray nextToks)
+MetagenCStruct metagenParseCStruct(Arena *arena, Str8List onlyList, CTokArray nextToks)
 {
     CTokArray temp = nextToks;
     MetagenCStruct parsed = {0};
@@ -216,6 +234,9 @@ MetagenCStruct metagenParseCStruct(BaseArena *arena, Str8List onlyList, CTokArra
                     if (METAGEN_TOK_MATCH_LEXEME(*nextToks.data, STR8_LIT("struct")) ||
                         METAGEN_TOK_MATCH_LEXEME(*nextToks.data, STR8_LIT("union")))
                     {
+                        bool isUnion = METAGEN_TOK_MATCH_LEXEME(*nextToks.data, STR8_LIT("union"));
+                        bool isStruct = !isUnion;
+
                         if (METAGEN_TOK_MATCH_KIND(nextToks.data[2], '*')) // handle member: struct somestruct *somemember;
                         {
                             nextToks = CTokArraySkip(nextToks, 1);
@@ -223,7 +244,7 @@ MetagenCStruct metagenParseCStruct(BaseArena *arena, Str8List onlyList, CTokArra
                         }
                         else
                         {
-                            // todo optimise, pass tmeo arena
+                            // todo optimise, pass tmp arena
                             MetagenCStruct innerParsed = metagenParseCStruct(arena, onlyList, nextToks);
                             nextToks = CTokArraySkip(nextToks, innerParsed.tokensAdvanced);
 
@@ -231,9 +252,13 @@ MetagenCStruct metagenParseCStruct(BaseArena *arena, Str8List onlyList, CTokArra
                             {
                                 if (!BASE_NULL_OR_EMPTY(innerParsed.name))
                                 {
+                                    MetagenCStructMemb *aggrMemb = arenaPushType(arena, MetagenCStructMemb);
+                                    aggrMemb->isUnion = isUnion;
+                                    aggrMemb->isStruct = isStruct;
+
                                     BASE_LIST_FOREACH(MetagenCStructMemb, membNode, innerParsed.membs)
                                     {
-                                        str8 name = baseStringsPushStr8Fmt(arena, "%S.%S", innerParsed.name, membNode->name);
+                                        str8 name = Str8PushFmt(arena, "%S.%S", innerParsed.name, membNode->name);
                                         if (BASE_ANY(onlyList))
                                         {
                                             skipMember = Str8ListFindFirst(&onlyList, name, 0) == onlyList.len;
@@ -241,37 +266,43 @@ MetagenCStruct metagenParseCStruct(BaseArena *arena, Str8List onlyList, CTokArra
 
                                         if (!skipMember)
                                         {
-                                            MetagenCStructMemb *memb = baseArenaPushType(arena, MetagenCStructMemb);
+                                            MetagenCStructMemb *memb = arenaPushType(arena, MetagenCStructMemb);
                                             *memb = *membNode;
                                             memb->name = name;
 
                                             memb->next = memb->prev = null;
 
-                                            MetagenCStructMembListPushNodeLast(&membs, memb);
+                                            MetagenCStructMembListPushNodeLast(&aggrMemb->aggrMembs, memb);
                                         }
+                                    }
+
+                                    if (BASE_ANY(aggrMemb->aggrMembs))
+                                    {
+                                        MetagenCStructMembListPushNodeLast(&membs, aggrMemb);
                                     }
                                 }
                                 else
                                 {
+                                    MetagenCStructMemb *aggrMemb = arenaPushType(arena, MetagenCStructMemb);
+                                    aggrMemb->isUnion = isUnion;
+                                    aggrMemb->isStruct = isStruct;
+
                                     BASE_LIST_FOREACH(MetagenCStructMemb, membNode, innerParsed.membs)
                                     {
-                                        str8 name = baseStringsPushStr8Fmt(arena, "%S", membNode->name);
-                                        
-                                        if (BASE_ANY(onlyList))
-                                        {
-                                            skipMember = Str8ListFindFirst(&onlyList, name, 0) == onlyList.len;
-                                        }
+                                        str8 name = Str8PushFmt(arena, "%S", membNode->name);
 
-                                        if (!skipMember)
-                                        {
-                                            MetagenCStructMemb *memb = baseArenaPushType(arena, MetagenCStructMemb);
-                                            *memb = *membNode;
-                                            memb->name = name;
+                                        MetagenCStructMemb *memb = arenaPushType(arena, MetagenCStructMemb);
+                                        *memb = *membNode;
+                                        memb->name = name;
 
-                                            memb->next = memb->prev = null;
+                                        memb->next = memb->prev = null;
 
-                                            MetagenCStructMembListPushNodeLast(&membs, memb);
-                                        }
+                                        MetagenCStructMembListPushNodeLast(&aggrMemb->aggrMembs, memb);
+                                    }
+
+                                    if (BASE_ANY(aggrMemb->aggrMembs))
+                                    {
+                                        MetagenCStructMembListPushNodeLast(&membs, aggrMemb);
                                     }
                                 }
                             }
@@ -305,7 +336,7 @@ MetagenCStruct metagenParseCStruct(BaseArena *arena, Str8List onlyList, CTokArra
 
                                 if (METAGEN_TOK_MATCH_KIND(*nextToks.data, CTOK_INT_LIT))
                                 {
-                                    memb.arrayLength = baseU64FromStr8(nextToks.data->lexeme);
+                                    memb.arrayLength = U64FromStr8(nextToks.data->lexeme);
                                     nextToks = CTokArraySkip(nextToks, 1);
                                 }
                                 else
@@ -325,7 +356,7 @@ MetagenCStruct metagenParseCStruct(BaseArena *arena, Str8List onlyList, CTokArra
 
                         if (!skipMember)
                         {
-                            MetagenCStructMemb *membNode = baseArenaPushType(arena, MetagenCStructMemb);
+                            MetagenCStructMemb *membNode = arenaPushType(arena, MetagenCStructMemb);
                             *membNode = memb;
 
                             MetagenCStructMembListPushNodeLast(&membs, membNode);
@@ -354,7 +385,7 @@ MetagenCStruct metagenParseCStruct(BaseArena *arena, Str8List onlyList, CTokArra
     return parsed;
 }
 
-bool metagenHandleIntrospect(BaseArena *arena, MetagenOutput *output, CTokArray nextToks)
+void metagenHandleIntrospect(Arena *arena, MetagenOutput *output, CTokArray nextToks, MetagenCStructList *out)
 {
     if (nextToks.len >= 2) // ()
     {
@@ -390,55 +421,50 @@ bool metagenHandleIntrospect(BaseArena *arena, MetagenOutput *output, CTokArray 
 
         if (BASE_ANY(nextToks))
         {
-            MetagenCStruct parsedStruct = metagenParseCStruct(arena, onlyList, nextToks);
+            MetagenCStruct *parsedStruct = arenaPushType(arena, MetagenCStruct);
+            *parsedStruct = metagenParseCStruct(arena, onlyList, nextToks);
+            parsedStruct->ownerOutput = output;
 
-            metagenTypeDictAddType(arena, &gMetagenTypeDict, parsedStruct.name);
-            Str8ListPushLastFmt(arena, &output->header.tables, "extern MetagenStructMembArray g%SMembDefsTable;\n", parsedStruct.name);
-            Str8ListPushLastFmt(arena, &output->impl.tables, "extern MetagenStructMembArray g%SMembDefsTable=\n", parsedStruct.name);
-            Str8ListPushLastFmt(arena, &output->impl.tables, "{\n");
-            Str8ListPushLastFmt(arena, &output->impl.tables, "\t.data=(MetagenStructMemb[%lld])\n", parsedStruct.membs.len);
-            Str8ListPushLastFmt(arena, &output->impl.tables, "\t\t{\n");
+            MetagenCStructListPushNodeLast(out, parsedStruct);
 
-            BASE_LIST_FOREACH(MetagenCStructMemb, membNode, parsedStruct.membs)
-            {
-                Str8ListPushLastFmt(arena, &output->impl.tables, "\t\t\t{.name = STR8_LIT_COMP_CONST(\"%S\"), .type = METAGEN_TYPE_%S, .size = sizeof(((%S*)(0))->%S), .offset = BASE_OFFSETOF(%S, %S),", membNode->name, membNode->type, parsedStruct.name, membNode->name, parsedStruct.name, membNode->name);
-                if (membNode->isArray)
-                {
-                    Str8ListPushLastFmt(arena, &output->impl.tables, ".isArray = true, .arrayLen = %lld,", membNode->arrayLength);
-                }
+            metagenTypeDictAddType(arena, &gMetagenTypeDict, parsedStruct);
+            // Str8ListPushLastFmt(arena, &output->header.tables, "extern MetagenStructMembArray g%SMembDefsTable;\n", parsedStruct.name);
+            // Str8ListPushLastFmt(arena, &output->impl.tables, "extern MetagenStructMembArray g%SMembDefsTable=\n", parsedStruct.name);
+            // Str8ListPushLastFmt(arena, &output->impl.tables, "{\n");
+            // Str8ListPushLastFmt(arena, &output->impl.tables, "\t.data=(MetagenStructMemb[%lld])\n", parsedStruct.membs.len);
+            // Str8ListPushLastFmt(arena, &output->impl.tables, "\t\t{\n");
 
-                if (membNode->isPointer)
-                {
-                    Str8ListPushLastFmt(arena, &output->impl.tables, ".isPointer = true,");
-                }
+            // BASE_LIST_FOREACH(MetagenCStructMemb, membNode, parsedStruct.membs)
+            // {
+            //     Str8ListPushLastFmt(arena, &output->impl.tables, "\t\t\t{.name = STR8_LIT_COMP_CONST(\"%S\"), .type = METAGEN_TYPE_%S, .size = sizeof(((%S*)(0))->%S), .offset = BASE_OFFSETOF(%S, %S),", membNode->name, membNode->type, parsedStruct.name, membNode->name, parsedStruct.name, membNode->name);
+            //     if (membNode->isArray)
+            //     {
+            //         Str8ListPushLastFmt(arena, &output->impl.tables, ".isArray = true, .arrayLen = %lld,", membNode->arrayLength);
+            //     }
 
-                Str8ListPushLastFmt(arena, &output->impl.tables, "},\n");
-            }
+            //     if (membNode->isPointer)
+            //     {
+            //         Str8ListPushLastFmt(arena, &output->impl.tables, ".isPointer = true,");
+            //     }
+
+            //     Str8ListPushLastFmt(arena, &output->impl.tables, "},\n");
+            // }
             
-            Str8ListPushLastFmt(arena, &output->impl.tables, "\t\t},\n");
-            Str8ListPushLastFmt(arena, &output->impl.tables, "\t.len=%lld\n", parsedStruct.membs.len);
-            Str8ListPushLastFmt(arena, &output->impl.tables, "};\n");
-
-            
-            basePrintf("struct %S\n", parsedStruct.name);
-            BASE_LIST_FOREACH(MetagenCStructMemb, membNode, parsedStruct.membs)
-            {
-                basePrintf("\t%S %S\n", membNode->type, membNode->name);
-            }
+            // Str8ListPushLastFmt(arena, &output->impl.tables, "\t\t},\n");
+            // Str8ListPushLastFmt(arena, &output->impl.tables, "\t.len=%lld\n", parsedStruct.membs.len);
+            // Str8ListPushLastFmt(arena, &output->impl.tables, "};\n");
         }
     }
-
-    return true;
 }
 
-Str8List metagenFindFilesToProcess(BaseArena *arena, str8 path)
+Str8List metagenFindFilesToProcess(Arena *arena, str8 path)
 {
     Str8List ret = {0};
 
-    if (baseStringsStrEndsWith(path, STR8_LIT(".c"), STR_MATCHFLAGS_CASE_INSENSITIVE) ||
-        baseStringsStrEndsWith(path, STR8_LIT(".h"), STR_MATCHFLAGS_CASE_INSENSITIVE))
+    if (Str8EndsWith(path, STR8_LIT(".c"), STR_MATCHFLAGS_CASE_INSENSITIVE) ||
+        Str8EndsWith(path, STR8_LIT(".h"), STR_MATCHFLAGS_CASE_INSENSITIVE))
     {
-        Str8ListPushLast(arena, &ret, baseStringsPushStr8Copy(arena, path));
+        Str8ListPushLast(arena, &ret, Str8PushCopy(arena, path));
         return ret;
     }
 
@@ -450,29 +476,32 @@ Str8List metagenFindFilesToProcess(BaseArena *arena, str8 path)
         struct FindTask *prev;
     }FindTask;
 
-    FindTask initialTask = {.path = baseStringsPushStr8Fmt(arena, "%S", path)};
+    FindTask initialTask = {.path = Str8PushFmt(arena, "%S", path)};
 
     FindTask *firstTask = &initialTask;
     FindTask *lastTask = &initialTask;
 
     for(FindTask *task = firstTask; task != null; task = task->next)
     {
-        OSFileFindIter *iter = OSFindFileBegin(arena, baseStringsPushStr8Fmt(arena, "%S\\*", task->path), null);
+        OSFileFindIter *iter = OSFindFileBegin(arena, Str8PushFmt(arena, "%S\\*", task->path), null);
         if (iter != null)
         {
             for(OSFileInfo fileInfo = {0}; OSFindFileNext(arena, iter, &fileInfo); )
             {
                 if (fileInfo.attrs & OS_FILEATTR_DIR)
                 {
-                    FindTask *t = baseArenaPushType(arena, FindTask);
-                    t->path = baseStringsPushStr8Fmt(arena, "%S\\%S", task->path, fileInfo.name);
+                    if (!Str8EndsWith(fileInfo.name, STR8_LIT("metagen"), STR_MATCHFLAGS_CASE_INSENSITIVE))
+                    {
+                        FindTask *t = arenaPushType(arena, FindTask);
+                        t->path = Str8PushFmt(arena, "%S\\%S", task->path, fileInfo.name);
 
-                    BaseDllNodePushLast(firstTask, lastTask, t);
+                        BaseDllNodePushLast(firstTask, lastTask, t);
+                    }
                 }
-                else if (baseStringsStrEndsWith(fileInfo.name, STR8_LIT(".c"), STR_MATCHFLAGS_CASE_INSENSITIVE) ||
-                         baseStringsStrEndsWith(fileInfo.name, STR8_LIT(".h"), STR_MATCHFLAGS_CASE_INSENSITIVE))
+                else if (Str8EndsWith(fileInfo.name, STR8_LIT(".c"), STR_MATCHFLAGS_CASE_INSENSITIVE) ||
+                         Str8EndsWith(fileInfo.name, STR8_LIT(".h"), STR_MATCHFLAGS_CASE_INSENSITIVE))
                 {
-                    Str8ListPushLast(arena, &ret, baseStringsPushStr8Fmt(arena, "%S\\%S", task->path, fileInfo.name));
+                    Str8ListPushLast(arena, &ret, Str8PushFmt(arena, "%S\\%S", task->path, fileInfo.name));
                 }
             }
 
@@ -481,4 +510,283 @@ Str8List metagenFindFilesToProcess(BaseArena *arena, str8 path)
     }
 
     return ret;
+}
+
+bool metagenTryGetAggregateTypeInfoForMemb(Arena *arena, MetagenCStructMemb memb, MetagenTypeDict *dict, MetagenCTypeInfo *info)
+{
+    info->alignment = 1;
+    info->size = 0;
+
+    if (memb.isUnion)
+    {
+        BASE_LIST_FOREACH(MetagenCStructMemb, unionMemb, memb.aggrMembs)
+        {
+            MetagenCTypeInfo unionMembTypeInfo = {0};
+            if (metagenTryGetTypeInfoForMemb(arena, *unionMemb, dict, &unionMemb->typeInfo))
+            {
+                info->alignment = BASE_CLAMP(BASE_MAX(info->alignment, unionMembTypeInfo.alignment), 0, 8);
+                info->size = BASE_MAX(info->size, unionMembTypeInfo.size);
+
+                unionMemb->offset = memb.offset;
+            }
+        }
+    }
+    else if (memb.isStruct)
+    {
+        BASE_LIST_FOREACH(MetagenCStructMemb, structMemb, memb.aggrMembs)
+        {
+            if(metagenTryGetTypeInfoForMemb(arena, *structMemb, dict, &structMemb->typeInfo))
+            {
+                if (structMemb->typeInfo.alignment > info->alignment)
+                {
+                    info->alignment = BASE_CLAMP(structMemb->typeInfo.alignment, 0, 8);
+                }
+
+                while(info->size % structMemb->typeInfo.alignment != 0)
+                {
+                    info->size++;
+                }
+
+                structMemb->offset = memb.offset + info->size;
+                info->size += structMemb->typeInfo.size;
+            }
+        }
+
+        while(info->size % info->alignment != 0)
+        {
+            info->size++;
+        }
+    }
+    else if (memb.isArray)
+    {
+        bool success = false;
+
+        MetagenCStruct *baseType = metagenTypeDictFindTypeByName(dict, memb.type);
+        if (baseType != null)
+        {
+            success = metagenCheckType(arena, baseType, dict);
+            *info = baseType->typeInfo;
+        }
+        else if (!metagenTryGetNonAggregateTypeInfoForMemb(memb, info))
+        {
+            success = metagenTryGetAggregateTypeInfoForMemb(arena, memb, dict, info);
+        }
+
+        info->size *= memb.arrayLength;
+        return success;
+    }
+    else
+    {
+        return false;
+    }
+
+    return true;
+}
+
+bool metagenTryGetNonAggregateTypeInfoForMemb(MetagenCStructMemb memb, MetagenCTypeInfo *info)
+{
+    *info = (MetagenCTypeInfo){0};
+
+    if (memb.isPointer)
+    {
+        info->size = 8;
+        info->alignment = 8;
+        return true;
+    }
+    else if (memb.isUnion)
+    {
+        return false;
+    }
+    else if (Str8Equals(STR8_LIT("u8"), memb.type, 0))
+    {
+        info->size = sizeof(u8);
+        info->alignment = BASE_ALIGNOF(u8);
+    }
+    else if (Str8Equals(STR8_LIT("u16"), memb.type, 0))
+    {
+        info->size = sizeof(u16);
+        info->alignment = BASE_ALIGNOF(u16);
+    }
+    else if (Str8Equals(STR8_LIT("u32"), memb.type, 0))
+    {
+        info->size = sizeof(u32);
+        info->alignment = BASE_ALIGNOF(u32);
+    }
+    else if (Str8Equals(STR8_LIT("u64"), memb.type, 0))
+    {
+        info->size = sizeof(u64);
+        info->alignment = BASE_ALIGNOF(u64);
+    }
+    else if (Str8Equals(STR8_LIT("i8"), memb.type, 0))
+    {
+        info->size = sizeof(i8);
+        info->alignment = BASE_ALIGNOF(i8);
+    }
+    else if (Str8Equals(STR8_LIT("i16"), memb.type, 0))
+    {
+        info->size = sizeof(i16);
+        info->alignment = BASE_ALIGNOF(i16);
+    }
+    else if (Str8Equals(STR8_LIT("i32"), memb.type, 0))
+    {
+        info->size = sizeof(i32);
+        info->alignment = BASE_ALIGNOF(i32);
+    }
+    else if (Str8Equals(STR8_LIT("i64"), memb.type, 0))
+    {
+        info->size = sizeof(i64);
+        info->alignment = BASE_ALIGNOF(i64);
+    }
+    else if (Str8Equals(STR8_LIT("f32"), memb.type, 0))
+    {
+        info->size = sizeof(f32);
+        info->alignment = BASE_ALIGNOF(f32);
+    }
+    else if (Str8Equals(STR8_LIT("f64"), memb.type, 0))
+    {
+        info->size = sizeof(f64);
+        info->alignment = BASE_ALIGNOF(f64);
+    }
+    else if (Str8Equals(STR8_LIT("bool"), memb.type, 0))
+    {
+        info->size = sizeof(bool);
+        info->alignment = BASE_ALIGNOF(bool);
+    }
+    else if (Str8Equals(STR8_LIT("str8"), memb.type, 0))
+    {
+        info->size = sizeof(str8);
+        info->alignment = BASE_ALIGNOF(str8);
+    }
+    else if (Str8Equals(STR8_LIT("int"), memb.type, 0))
+    {
+        info->size = sizeof(int);
+        info->alignment = BASE_ALIGNOF(int);
+    }
+    else if (Str8Equals(STR8_LIT("float"), memb.type, 0))
+    {
+        info->size = sizeof(float);
+        info->alignment = BASE_ALIGNOF(float);
+    }
+    else
+    {
+        return false;
+    }
+
+    return true;
+}
+
+bool metagenTryGetTypeInfoForMemb(Arena *arena, MetagenCStructMemb memb, MetagenTypeDict *dict, MetagenCTypeInfo *info)
+{
+    bool success = true;
+    MetagenCStruct *membType = metagenTypeDictFindTypeByName(dict, memb.type);
+    if (membType != null && !memb.isPointer && !memb.isUnion)
+    {
+        success = metagenCheckType(arena, membType, dict);
+        *info = membType->typeInfo;
+    }
+    else if (!metagenTryGetNonAggregateTypeInfoForMemb(memb, info))
+    {
+        success = metagenTryGetAggregateTypeInfoForMemb(arena, memb, dict, info);
+    }
+    
+    if (!success)
+    {
+        baseEPrintf("{r}Type '%S' cannot be found. If this is a struct/union please mark it as 'metagen_introspect'\n", memb.type);
+    }
+
+    return success;
+}
+
+u64 metagenGetTotalMembersIncludingAnonStructAndUnion(MetagenCStructMembList membs)
+{
+    u64 total = membs.len;
+    BASE_LIST_FOREACH(MetagenCStructMemb, memb, membs)
+    {
+        if (memb->isUnion || memb->isStruct)
+        {
+            total += metagenGetTotalMembersIncludingAnonStructAndUnion(memb->aggrMembs);
+
+            total -= 1; //minus 1 for the actual anonymous struct which is counted in membs.len
+        }
+    }
+
+    return total;
+}
+void metagenFillFlattenedMemb(Arena *arena, MetagenCStruct *type, MetagenCStructMembList membs, bool first)
+{
+    if (first)
+    {
+        type->flattenedMembs.data = arenaPushArray(arena, MetagenCStructMemb, metagenGetTotalMembersIncludingAnonStructAndUnion(type->membs));
+        type->flattenedMembs.len = 0;
+
+        metagenFillFlattenedMemb(arena, type, type->membs, false);
+    }
+    else 
+    {
+        BASE_LIST_FOREACH(MetagenCStructMemb, memb, membs)
+        {
+            if (memb->isUnion || memb->isStruct)
+            {
+                metagenFillFlattenedMemb(arena, type, memb->aggrMembs, false);
+            }
+            else
+            {
+                type->flattenedMembs.data[type->flattenedMembs.len++] = *memb;
+            }
+        }
+    }
+}
+bool metagenCheckType(Arena *arena, MetagenCStruct *type, MetagenTypeDict *dict)
+{
+    // so we dont get divide by 0 errors later
+    type->typeInfo.alignment = 1;
+    switch (type->checkStatus)
+    {
+        case METAGEN_TYPECHECK_STATUS_NONE:
+        {
+            type->checkStatus = METAGEN_TYPECHECK_STATUS_CHECKING;
+            BASE_LIST_FOREACH(MetagenCStructMemb, memb, type->membs)
+            {
+                if(metagenTryGetTypeInfoForMemb(arena, *memb, dict, &memb->typeInfo))
+                {
+                    if (memb->typeInfo.alignment > type->typeInfo.alignment)
+                    {
+                        type->typeInfo.alignment = BASE_CLAMP(memb->typeInfo.alignment, 0, 8);
+                    }
+
+                    while(type->typeInfo.size % memb->typeInfo.alignment != 0)
+                    {
+                        type->typeInfo.size++;
+                    }
+                    memb->offset = type->typeInfo.size;
+                    type->typeInfo.size += memb->typeInfo.size;
+                }
+                else
+                {
+                    return false;
+                }
+            }
+
+            while(type->typeInfo.size % type->typeInfo.alignment != 0)
+            {
+                type->typeInfo.size++;
+            }
+
+            metagenFillFlattenedMemb(arena, type, type->membs, true);
+            type->checkStatus = METAGEN_TYPECHECK_STATUS_DONE;
+            return true;
+        }break;
+        case METAGEN_TYPECHECK_STATUS_DONE:
+        {
+            return true;
+        }break;
+        case METAGEN_TYPECHECK_STATUS_CHECKING:
+        {
+            baseEPrintf("{r}Encountered cyclical type dependency.\n");
+            return false;
+        }break;
+    }
+
+    baseEPrintf("unhandled case in check type '.\n");
+    return false;
 }

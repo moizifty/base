@@ -66,11 +66,11 @@ u64 gOSWin32OSKeyToVKTable[OS_KEY_COUNT] =
     [OS_KEY_Y] = 'Y',
     [OS_KEY_Z] = 'Z',
 };
-OSState *OSInit(BaseArena *arena)
+OSState *OSInit(Arena *arena)
 {
     if (gOSState == null)
     {
-        gOSState = baseArenaPush(arena, sizeof(OSState));
+        gOSState = arenaPush(arena, sizeof(OSState));
         // todo: set properly if need be
         gOSState->platformSpecific = null;
         gOSState->thisProcState = (OSProcessState)
@@ -80,7 +80,7 @@ OSState *OSInit(BaseArena *arena)
             // and if passed null it does this process.
             .binaryPath = OSGetProgramPath(arena),
             .logDirPath = OSGetProgramLogsDirectory(arena),
-            //.logArena = baseArenaAlloc(BASE_GIGABYTES(2)),
+            //.logArena = arenaAlloc(BASE_GIGABYTES(2)),
         };
 
         //gOSState->thisProcState.processLog = logCreate(arena);
@@ -134,7 +134,7 @@ OSHandle OSFileOpen(str8 path, bool createLeadingDir, OSFileAccessFlags accessFl
 {
     if (createLeadingDir)
     {
-        str8 dirName = baseStringsStrChopPastLastSlash(path);
+        str8 dirName = Str8ChopPastLastSlash(path);
 
         if(!OSPathExists(dirName))
         {
@@ -203,9 +203,9 @@ void OSFileWriteFmt(OSHandle fileHandle, char *fmt, ...)
     va_list va;
     va_start(va, fmt);
 
-    BaseArenaTemp temp = baseTempBegin(null, 0);
+    ArenaTemp temp = baseTempBegin(null, 0);
     {
-        str8 s = baseStringsPushStr8FmtV(temp.arena, fmt, va);
+        str8 s = Str8PushFmtV(temp.arena, fmt, va);
 
         OSFileWriteStr8(fileHandle, s);
     }
@@ -213,7 +213,7 @@ void OSFileWriteFmt(OSHandle fileHandle, char *fmt, ...)
 
     va_end(va);
 }
-U8Array OSFileReadAll(BaseArena *arena, str8 path)
+U8Array OSFileReadAll(Arena *arena, str8 path)
 {
     HANDLE fileHandle = CreateFileA((char *)path.data, 
                                     FILE_GENERIC_READ, 
@@ -229,7 +229,7 @@ U8Array OSFileReadAll(BaseArena *arena, str8 path)
     }
 
     u64 fileSize = OSGetFileSizeFromHandle((OSHandle){(u64)fileHandle});
-    u8 *data = baseArenaPushNoZero(arena, fileSize);
+    u8 *data = arenaPushNoZero(arena, fileSize);
     ReadFile(fileHandle, data, (u32)fileSize, null, null);
     CloseHandle(fileHandle);
 
@@ -244,9 +244,9 @@ void OSFileClose(OSHandle handle)
 bool OSPathExists(str8 path)
 {
     DWORD dwAttrib = 0;
-    BaseArenaTemp temp = baseTempBegin(null, 0);
+    ArenaTemp temp = baseTempBegin(null, 0);
     {
-        str16 widePath = baseStr16FromFromStr8(temp.arena, path);
+        str16 widePath = Str16FromFromStr8(temp.arena, path);
         dwAttrib = GetFileAttributes(widePath.data);
     }
     baseTempEnd(temp);
@@ -278,13 +278,13 @@ u64 OSGetFileSizeFromHandle(OSHandle handle)
 
     return l.QuadPart;
 }
-str8 OSGetFullPath(struct BaseArena *arena, str8 path)
+str8 OSGetFullPath(struct Arena *arena, str8 path)
 {
     i8 buf[1];
     i64 needed = GetFullPathNameA((LPCSTR) path.data, 1, buf, null);
 
     str8 ret = {0};
-    ret.data = baseArenaPush(arena, needed);
+    ret.data = arenaPush(arena, needed);
     ret.len = needed - 1;
 
     GetFullPathNameA((LPSTR) path.data, (DWORD) needed, (LPSTR) ret.data, null);
@@ -294,9 +294,9 @@ str8 OSGetFullPath(struct BaseArena *arena, str8 path)
 bool OSCreateDirectory(str8 path, bool createIntermediateDirs)
 {
     bool result = true;
-    BaseArenaTemp temp = baseTempBegin(null, 0);
+    ArenaTemp temp = baseTempBegin(null, 0);
     {
-        str16 widePath = baseStr16FromFromStr8(temp.arena, path);
+        str16 widePath = Str16FromFromStr8(temp.arena, path);
 
         if(createIntermediateDirs)
         {
@@ -325,9 +325,9 @@ OSFileAttributeFlags OSFileAttributesFromWin32(DWORD fileAttr)
 
     return flags;
 }
-OSFileFindIter *OSFindFileBegin(struct BaseArena *arena, str8 path, OSFileFindOptionalParams *opt)
+OSFileFindIter *OSFindFileBegin(struct Arena *arena, str8 path, OSFileFindOptionalParams *opt)
 {
-    OSFindFileIterWin32 *findFileData = baseArenaPush(arena, sizeof(OSFindFileIterWin32));
+    OSFindFileIterWin32 *findFileData = arenaPush(arena, sizeof(OSFindFileIterWin32));
     OSFileFindIter *findIter = (OSFileFindIter *) findFileData;
     findFileData->optParams = (opt == null) ? (OSFileFindOptionalParams){0} : *opt;
 
@@ -338,7 +338,7 @@ OSFileFindIter *OSFindFileBegin(struct BaseArena *arena, str8 path, OSFileFindOp
     return findIter;
 }
 
-bool OSFindFileNext(struct BaseArena *arena, OSFileFindIter *iter, OSFileInfo *out)
+bool OSFindFileNext(struct Arena *arena, OSFileFindIter *iter, OSFileInfo *out)
 {
     bool result = false;
     OSFindFileIterWin32 *win32Iter = (OSFindFileIterWin32 *) iter;
@@ -371,7 +371,7 @@ bool OSFindFileNext(struct BaseArena *arena, OSFileFindIter *iter, OSFileInfo *o
 
     if (result)
     {
-        out->name = baseStringsPushStr8Fmt(arena, "%s", win32Iter->findData.cFileName);
+        out->name = Str8PushFmt(arena, "%s", win32Iter->findData.cFileName);
         out->attrs = OSFileAttributesFromWin32(win32Iter->findData.dwFileAttributes);
     }
 
@@ -386,11 +386,11 @@ void OSFindFileEnd(OSFileFindIter *iter)
     }
 }
 
-Str8List OSGetFilePaths(BaseArena *arena, str8 dir, str8 pattern, bool recursive)
+Str8List OSGetFilePaths(Arena *arena, str8 dir, str8 pattern, bool recursive)
 {
     Str8List ret = {0};
 
-    str8 searchPath = (recursive) ? baseStringsPushStr8Fmt(arena, "%S\\*", dir) : baseStringsPushStr8Fmt(arena, "%S\\%S", dir, pattern);
+    str8 searchPath = (recursive) ? Str8PushFmt(arena, "%S\\*", dir) : Str8PushFmt(arena, "%S\\%S", dir, pattern);
 
     OSFileFindIter *findIter = OSFindFileBegin(arena, searchPath, null);
     for(OSFileInfo fileInfo = {0}; OSFindFileNext(arena, findIter, &fileInfo); )
@@ -399,7 +399,7 @@ Str8List OSGetFilePaths(BaseArena *arena, str8 dir, str8 pattern, bool recursive
         {
             if (recursive)
             {
-                str8 subDirPath = baseStringsPushStr8Fmt(arena, "%S\\%S", dir, fileInfo.name);
+                str8 subDirPath = Str8PushFmt(arena, "%S\\%S", dir, fileInfo.name);
                 Str8List subDirList = OSGetFilePaths(arena, subDirPath, pattern, recursive);
 
                 Str8ListPushListLast(arena, &ret, &subDirList);
@@ -425,30 +425,30 @@ Str8List OSGetFilePaths(BaseArena *arena, str8 dir, str8 pattern, bool recursive
 }
 
 //process
-str8 OSGetProgramPath(BaseArena *arena)
+str8 OSGetProgramPath(Arena *arena)
 {
     str8 ret = {0};
-    BaseArenaTemp temp = baseTempBegin(&arena, 1);
+    ArenaTemp temp = baseTempBegin(&arena, 1);
     {
         u64 bufSize = BASE_KILOBYTES(4);
-        u8 *buf = baseArenaPush(temp.arena, bufSize);
+        u8 *buf = arenaPush(temp.arena, bufSize);
         GetModuleFileNameA(NULL, (i8 *) buf, (DWORD) bufSize);
 
-        ret = baseStringsPushStr8Fmt(arena, "%s", buf);
+        ret = Str8PushFmt(arena, "%s", buf);
     }
 
     baseTempEnd(temp);
 
     return ret;
 }
-str8 OSGetProgramDirectory(BaseArena *arena)
+str8 OSGetProgramDirectory(Arena *arena)
 {
     str8 ret = OSGetProgramPath(arena);
-    ret = baseStringsStrChopPastLastSlash(ret);
+    ret = Str8ChopPastLastSlash(ret);
 
     return ret;
 }
-str8 OSGetProgramLogsDirectory(BaseArena *arena)
+str8 OSGetProgramLogsDirectory(Arena *arena)
 {
     str8 dir = OSGetProgramDirectory(arena);
 
@@ -457,7 +457,7 @@ str8 OSGetProgramLogsDirectory(BaseArena *arena)
 
     return Str8ListJoin(arena, &strs, null);
 }
-bool OSRunProcessEx(BaseArena *arena, str8 app, str8 args, void *peb, str8 *outStr, str8 *errStr)
+bool OSRunProcessEx(Arena *arena, str8 app, str8 args, void *peb, str8 *outStr, str8 *errStr)
 {
     SECURITY_ATTRIBUTES sa = 
     {
@@ -532,7 +532,7 @@ bool OSRunProcessEx(BaseArena *arena, str8 app, str8 args, void *peb, str8 *outS
             {
 
                 str8 s = {0};
-                s.data = baseArenaPushNoZero(arena, readSize + 1);
+                s.data = arenaPushNoZero(arena, readSize + 1);
                 s.len = readSize;
 
                 ReadFile(stdoutPread, s.data, readSize, &readSize, NULL);
@@ -560,7 +560,7 @@ bool OSRunProcessEx(BaseArena *arena, str8 app, str8 args, void *peb, str8 *outS
             {
 
                 str8 s = {0};
-                s.data = baseArenaPushNoZero(arena, readSize + 1);
+                s.data = arenaPushNoZero(arena, readSize + 1);
                 s.len = readSize;
 
                 ReadFile(stderrPread, s.data, readSize, &readSize, NULL);
@@ -651,14 +651,14 @@ u64 OSGetPerformanceCounter(void)
 }
 
 //env
-str8 OSGetEnvironmentVar(BaseArena *arena, str8 var)
+str8 OSGetEnvironmentVar(Arena *arena, str8 var)
 {
     str8 val = STR8_LIT("");
 
     i64 size = GetEnvironmentVariableA((i8*)var.data, null, 0);
     if(size > 0)
     {
-        val.data = baseArenaPushArray(arena, u8, size);
+        val.data = arenaPushArray(arena, u8, size);
         val.len = size;
 
         GetEnvironmentVariableA((i8*)var.data, (i8*)val.data, (DWORD)val.len);
@@ -715,9 +715,9 @@ void OSSetThreadDebuggerName(OSHandle thread, str8 name)
 {
     HANDLE threadHandle = (HANDLE)thread._u64;
 
-    BaseArenaTemp temp = baseTempBegin(null, 0);
+    ArenaTemp temp = baseTempBegin(null, 0);
     {
-        str16 name16 = baseStr16FromFromStr8(temp.arena, name);
+        str16 name16 = Str16FromFromStr8(temp.arena, name);
         SetThreadDescription(threadHandle, name16.data);
     }
 

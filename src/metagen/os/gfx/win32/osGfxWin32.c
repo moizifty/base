@@ -4,7 +4,7 @@
 #include "base\baseThreads.h"
 #include "osGfxWin32.h"
 
-threadlocal BaseArena *gOSWin32TLEventsArena = null;
+threadlocal Arena *gOSWin32TLEventsArena = null;
 threadlocal OSEventList gOSWin32TLEvents = {0};
 
 global OSKey gOSWin32VKToOSKeyTable[256];
@@ -12,16 +12,16 @@ global OSKey gOSWin32VKToOSKeyTable[256];
 global OSKeyState gOSGfxFrameKeyStates[OS_KEY_COUNT];
 global OSKeyState gOSGfxPrevFrameKeyStates[OS_KEY_COUNT];
 
-OSGfxState *OSGfxInitEx(BaseArena *arena, void *extra)
+OSGfxState *OSGfxInitEx(Arena *arena, void *extra)
 {
     UNREFERENCED_PARAMETER(extra);
 
-    OSGfxStateWin32 *gfxState = baseArenaPush(arena, sizeof(OSGfxStateWin32));
+    OSGfxStateWin32 *gfxState = arenaPush(arena, sizeof(OSGfxStateWin32));
     gOSWin32TLEventsArena = arena;
 
     return (OSGfxState *) gfxState;
 }
-OSGfxState *OSGfxInit(BaseArena *arena)
+OSGfxState *OSGfxInit(Arena *arena)
 {
     WNDCLASS class = OS_GFX_WIN32_DEFAULT_CLASS;
 
@@ -42,9 +42,9 @@ OSHandle OSGfxWindowOpen(str8 title, vec2i size, vec2i pos)
     i64 sy = (i64) ((size.y < 0) ? CW_USEDEFAULT : size.y);
 
     OSHandle h = {0};
-    BaseArenaTemp temp = baseTempBegin(null, 0);
+    ArenaTemp temp = baseTempBegin(null, 0);
     {
-        str16 str16 = baseStr16FromFromStr8(temp.arena, title);
+        str16 str16 = Str16FromFromStr8(temp.arena, title);
         HWND wnd = CreateWindow(OS_GFX_WIN32_DEFAULT_CLASS_NAME, str16.data, WS_OVERLAPPEDWINDOW, (int)x, (int)y, (int)sx, (int)sy, null, null, HINST_THIS, null);
         h = (OSHandle){(u64)wnd};
     }
@@ -61,7 +61,7 @@ void OSGfxWindowFirstPaint(OSHandle wnd)
     UpdateWindow(wndHandle);
 }
 
-OSEventList OSGfxProcessEvents(BaseArena *arena)
+OSEventList OSGfxProcessEvents(Arena *arena)
 {
     UNREFERENCED_PARAMETER(arena);
 
@@ -74,7 +74,7 @@ OSEventList OSGfxProcessEvents(BaseArena *arena)
     return gOSWin32TLEvents;
 }
 
-bool OSGfxProcessInputEvents(BaseArena *arena)
+bool OSGfxProcessInputEvents(Arena *arena)
 {
     BASE_UNUSED_PARAM(arena);
 
@@ -123,7 +123,7 @@ LRESULT OSGfxWin32WindowProc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
     {
         case WM_CLOSE:
         {
-            event = baseArenaPush(gOSWin32TLEventsArena, sizeof(OSEvent));
+            event = arenaPush(gOSWin32TLEventsArena, sizeof(OSEvent));
             event->kind = OS_EVENT_WINDOW_CLOSE;
 
             result = 0;
@@ -131,7 +131,7 @@ LRESULT OSGfxWin32WindowProc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
         
         case WM_KILLFOCUS:
         {
-            event = baseArenaPush(gOSWin32TLEventsArena, sizeof(OSEvent));
+            event = arenaPush(gOSWin32TLEventsArena, sizeof(OSEvent));
             event->kind = OS_EVENT_WINDOW_LOST_FOCUS;
 
             result = 0;
@@ -153,7 +153,7 @@ LRESULT OSGfxWin32WindowProc(HWND wnd, UINT msg, WPARAM wParam, LPARAM lParam)
                     key = gOSWin32VKToOSKeyTable[wParam];
                 }
 
-                event = baseArenaPush(gOSWin32TLEventsArena, sizeof(OSEvent));
+                event = arenaPush(gOSWin32TLEventsArena, sizeof(OSEvent));
                 event->kind = (isUp) ? OS_EVENT_KEY_RELEASE : OS_EVENT_KEY_PRESS;
                 event->key = key;
             }

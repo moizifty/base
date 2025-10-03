@@ -457,7 +457,7 @@ typedef struct range2i
 
 // 3-dimension range
 
-metagen_introspect()
+metagen_introspect(only: "start", "end")
 typedef struct range3f
 {
     union

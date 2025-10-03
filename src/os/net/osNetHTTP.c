@@ -26,9 +26,9 @@ str8 OSNetHttpGetNextTokenFromStr8(str8 str)
     return tok;
 }
 
-OSNetHttpHeader OSNetHttpHeaderFromStr8(BaseArena *arena, str8 str);
-OSNetHttpHeaderList OSNetHttpHeaderListFromStr8(BaseArena *arena, str8 str);
-OSNetHttpPacket OSNetHttpPacketFromStr8(BaseArena *arena, str8 str)
+OSNetHttpHeader OSNetHttpHeaderFromStr8(Arena *arena, str8 str);
+OSNetHttpHeaderList OSNetHttpHeaderListFromStr8(Arena *arena, str8 str);
+OSNetHttpPacket OSNetHttpPacketFromStr8(Arena *arena, str8 str)
 {
     OSNetHttpPacket request = {0};
 
@@ -37,16 +37,16 @@ OSNetHttpPacket OSNetHttpPacketFromStr8(BaseArena *arena, str8 str)
         str8 firstToken = OSNetHttpGetNextTokenFromStr8(str);
         if (!BASE_NULL_OR_EMPTY(firstToken))
         {
-            str = baseStringsStrSkip(str, firstToken.len);
+            str = Str8Skip(str, firstToken.len);
 
-            bool isResponse = baseStringsStrStartsWith(firstToken, STR8_LIT("HTTP"), STR_MATCHFLAGS_CASE_INSENSITIVE);
+            bool isResponse = Str8StartsWith(firstToken, STR8_LIT("HTTP"), STR_MATCHFLAGS_CASE_INSENSITIVE);
             
             if (!isResponse)
             {
-                request.method = baseStringsPushStr8Copy(arena, firstToken);
+                request.method = Str8PushCopy(arena, firstToken);
                 if (str.data[0] == ' ')
                 {
-                    str = baseStringsStrSkip(str, 1);
+                    str = Str8Skip(str, 1);
 
                     if (str.data[0] == '*')
                     {
@@ -61,24 +61,24 @@ OSNetHttpPacket OSNetHttpPacketFromStr8(BaseArena *arena, str8 str)
                         if (resource.len > 0)
                         {
                             resource.data = str.data;
-                            request.resource = baseStringsPushStr8Copy(arena, resource);
+                            request.resource = Str8PushCopy(arena, resource);
                         }
                     }
 
-                    str = baseStringsStrSkip(str, request.resource.len);
+                    str = Str8Skip(str, request.resource.len);
 
                     if (str.data[0] == ' ')
                     {
-                        str = baseStringsStrSkip(str, 1);
-                        if(baseStringsStrEquals(OSNetHttpGetNextTokenFromStr8(str), STR8_LIT("HTTP"), STR_MATCHFLAGS_CASE_INSENSITIVE))
+                        str = Str8Skip(str, 1);
+                        if(Str8Equals(OSNetHttpGetNextTokenFromStr8(str), STR8_LIT("HTTP"), STR_MATCHFLAGS_CASE_INSENSITIVE))
                         {
-                            str = baseStringsStrSkip(str, 4);
+                            str = Str8Skip(str, 4);
                             if (str.data[0] == '/')
                             {
-                                str = baseStringsStrSkip(str, 1);
-                                request.httpVersion = baseStringsPushStr8Copy(arena, OSNetHttpGetNextTokenFromStr8(str));
+                                str = Str8Skip(str, 1);
+                                request.httpVersion = Str8PushCopy(arena, OSNetHttpGetNextTokenFromStr8(str));
 
-                                str = baseStringsStrSkip(str, request.httpVersion.len);
+                                str = Str8Skip(str, request.httpVersion.len);
                             }
                         }
                     }
@@ -88,53 +88,53 @@ OSNetHttpPacket OSNetHttpPacketFromStr8(BaseArena *arena, str8 str)
             {
                 if (str.data[0] == '/')
                 {
-                    str = baseStringsStrSkip(str, 1);
-                    request.httpVersion = baseStringsPushStr8Copy(arena, OSNetHttpGetNextTokenFromStr8(str));
+                    str = Str8Skip(str, 1);
+                    request.httpVersion = Str8PushCopy(arena, OSNetHttpGetNextTokenFromStr8(str));
 
-                    str = baseStringsStrSkip(str, request.httpVersion.len);
+                    str = Str8Skip(str, request.httpVersion.len);
                     
                     if (str.data[0] == ' ')
                     {
-                        str = baseStringsStrSkip(str, 1);
-                        request.status = (u16)baseU64FromStr8(baseStringsStrSubStr8(str, 0, 3));
-                        str = baseStringsStrSkip(str, 3);
+                        str = Str8Skip(str, 1);
+                        request.status = (u16)U64FromStr8(Str8SubStr8(str, 0, 3));
+                        str = Str8Skip(str, 3);
 
                         if (str.data[0] == ' ')
                         {
-                            str = baseStringsStrSkip(str, 1);
+                            str = Str8Skip(str, 1);
                             if (str.data[0] != '\r')
                             {
-                                u64 crlfIndex = baseStringsStrFindSubStr8(str, STR8_LIT("\r\n"), 0, STR_MATCHFLAGS_CASE_INSENSITIVE);
-                                request.statusReason = baseStringsPushStr8Copy(arena, baseStringsStrSubStr8(str, 0, crlfIndex));
+                                u64 crlfIndex = Str8FindSubStr8(str, STR8_LIT("\r\n"), 0, STR_MATCHFLAGS_CASE_INSENSITIVE);
+                                request.statusReason = Str8PushCopy(arena, Str8SubStr8(str, 0, crlfIndex));
 
-                                str = baseStringsStrSkip(str, request.statusReason.len);
+                                str = Str8Skip(str, request.statusReason.len);
                             }
                         }
                     }
                 }
             }
 
-            while(baseStringsStrStartsWith(str, STR8_LIT("\r\n"), 0))
+            while(Str8StartsWith(str, STR8_LIT("\r\n"), 0))
             {
-                str = baseStringsStrSkip(str, STR8_LIT("\r\n").len);
+                str = Str8Skip(str, STR8_LIT("\r\n").len);
 
-                if(baseStringsStrStartsWith(str, STR8_LIT("\r\n"), 0))
+                if(Str8StartsWith(str, STR8_LIT("\r\n"), 0))
                 {
                     //msg body
-                    str = baseStringsStrSkip(str, STR8_LIT("\r\n").len);
+                    str = Str8Skip(str, STR8_LIT("\r\n").len);
                     break;
                 }
 
                 str8 fieldName = OSNetHttpGetNextTokenFromStr8(str);
                 if(!BASE_NULL_OR_EMPTY(fieldName))
                 {
-                    OSNetHttpHeader *header = baseArenaPushType(arena, OSNetHttpHeader);
-                    header->name = baseStringsPushStr8Copy(arena, fieldName);
+                    OSNetHttpHeader *header = arenaPushType(arena, OSNetHttpHeader);
+                    header->name = Str8PushCopy(arena, fieldName);
                     
-                    str = baseStringsStrSkip(str, fieldName.len);
+                    str = Str8Skip(str, fieldName.len);
                     if (str.data[0] == ':')
                     {
-                        str = baseStringsStrSkip(str, 1);
+                        str = Str8Skip(str, 1);
 
                         str8 value = {0};
                         for(; value.len < str.len && str.data[value.len] != '\r'; value.len++);
@@ -142,10 +142,10 @@ OSNetHttpPacket OSNetHttpPacketFromStr8(BaseArena *arena, str8 str)
                         if (value.len > 0)
                         {
                             value.data = str.data;
-                            str = baseStringsStrSkip(str, value.len);
+                            str = Str8Skip(str, value.len);
 
-                            value = baseStringsStrTrim(value);
-                            header->value = baseStringsPushStr8Copy(arena, value);
+                            value = Str8Trim(value);
+                            header->value = Str8PushCopy(arena, value);
 
                         }
 
@@ -157,7 +157,7 @@ OSNetHttpPacket OSNetHttpPacketFromStr8(BaseArena *arena, str8 str)
             if (str.len > 0)
             {
                 // set remaining msg as the body
-                str8 msg = baseStringsPushStr8Copy(arena, str);
+                str8 msg = Str8PushCopy(arena, str);
                 request.messageBody.data = msg.data;
                 request.messageBody.len = msg.len;
             }

@@ -1,32 +1,32 @@
 #include "bssTypes.h"
 #include "bssScopes.h"
 
-BssType *bssAllocType(BaseArena *arena, BssTypeKind kind)
+BssType *bssAllocType(Arena *arena, BssTypeKind kind)
 {
-    BssType *t = baseArenaPushType(arena, BssType);
+    BssType *t = arenaPushType(arena, BssType);
     t->kind = kind;
 
     return t;
 }
-BssType *bssAllocTypeInt(BaseArena *arena)
+BssType *bssAllocTypeInt(Arena *arena)
 {
     BssType *t = bssAllocType(arena, BSS_TYPE_INT);
 
     return t;
 }
-BssType *bssAllocTypeBool(BaseArena *arena)
+BssType *bssAllocTypeBool(Arena *arena)
 {
     BssType *t = bssAllocType(arena, BSS_TYPE_BOOL);
 
     return t;
 }
-BssType *bssAllocTypeString(BaseArena *arena)
+BssType *bssAllocTypeString(Arena *arena)
 {
     BssType *t = bssAllocType(arena, BSS_TYPE_STRING);
 
     return t;
 }
-BssType *bssAllocTypeFunc(BaseArena *arena, BssType *ret, struct BssScope *scope)
+BssType *bssAllocTypeFunc(Arena *arena, BssType *ret, struct BssScope *scope)
 {
     BssType *t = bssAllocType(arena, BSS_TYPE_FUNC);
     t->func.ret = ret;
@@ -34,14 +34,14 @@ BssType *bssAllocTypeFunc(BaseArena *arena, BssType *ret, struct BssScope *scope
 
     return t;
 }
-BssType *bssAllocTypeArray(BaseArena *arena, BssType *base)
+BssType *bssAllocTypeArray(Arena *arena, BssType *base)
 {
     BssType *t = bssAllocType(arena, BSS_TYPE_ARRAY);
     t->array.base = base;
 
     return t;
 }
-BssType *bssAllocTypeObj(BaseArena *arena, struct BssScope *scope)
+BssType *bssAllocTypeObj(Arena *arena, struct BssScope *scope)
 {
     BssType *t = bssAllocType(arena, BSS_TYPE_OBJ);
     t->obj.membScope = scope;

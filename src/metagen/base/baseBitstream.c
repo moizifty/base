@@ -1,20 +1,20 @@
 #include "base\baseBitstream.h"
 
-bool baseBitstreamPopBit(BaseBitstream *stream, u8 *out)
+bool bitstreamPopBit(Bitstream *stream, u8 *out)
 {
-    bool result = baseBitstreamPeekBit(stream, out);
-    baseBitstreamConsumeBits(stream, 1);
+    bool result = bitstreamPeekBit(stream, out);
+    bitstreamConsumeBits(stream, 1);
 
     return result;
 }
-bool baseBitstreamPopBitsAsU8Impl(BaseBitstream *stream, u8 n, u8 *out)
+bool bitstreamPopBitsAsU8Impl(Bitstream *stream, u8 n, u8 *out)
 {
     *out = 0;
 
     for(u64 i = 0; i < n; i++)
     {
         u8 b;
-        if (!baseBitstreamPopBit(stream, &b))
+        if (!bitstreamPopBit(stream, &b))
         {
             return false;
         }
@@ -24,28 +24,28 @@ bool baseBitstreamPopBitsAsU8Impl(BaseBitstream *stream, u8 n, u8 *out)
 
     return true;
 }
-bool baseBitstreamPopBitsReversedAsU8Impl(BaseBitstream *stream, u8 n, u8 *out)
+bool bitstreamPopBitsReversedAsU8Impl(Bitstream *stream, u8 n, u8 *out)
 {
-    bool r = baseBitstreamPeekBitsReversedAsU8(stream, n, out);
-    baseBitstreamConsumeBits(stream, n);
+    bool r = bitstreamPeekBitsReversedAsU8(stream, n, out);
+    bitstreamConsumeBits(stream, n);
 
     return r;
 }
-bool baseBitstreamPopBitsReversedAsU64Impl(BaseBitstream *stream, u64 n, u64 *out)
+bool bitstreamPopBitsReversedAsU64Impl(Bitstream *stream, u64 n, u64 *out)
 {
-    bool r = baseBitstreamPeekBitsReversedAsU64(stream, n, out);
-    baseBitstreamConsumeBits(stream, n);
+    bool r = bitstreamPeekBitsReversedAsU64(stream, n, out);
+    bitstreamConsumeBits(stream, n);
 
     return r;
 }
 
-bool baseBitstreamPopBitsAsU64Impl(BaseBitstream *stream, u64 n, u64 *out)
+bool bitstreamPopBitsAsU64Impl(Bitstream *stream, u64 n, u64 *out)
 {
     *out = 0;
     for(u64 i = 0; i < n; i++)
     {
         u8 b;
-        if (!baseBitstreamPopBit(stream, &b))
+        if (!bitstreamPopBit(stream, &b))
         {
             return false;
         }
@@ -56,10 +56,10 @@ bool baseBitstreamPopBitsAsU64Impl(BaseBitstream *stream, u64 n, u64 *out)
     return true;
 }
 
-bool baseBitstreamPopU8(BaseBitstream *stream, u8 *out)
+bool bitstreamPopU8(Bitstream *stream, u8 *out)
 {
     u8 b1 = 0;
-    if(!baseBitstreamPopBitsAsU8(stream, 8, &b1))
+    if(!bitstreamPopBitsAsU8(stream, 8, &b1))
     {
         return false;
     }
@@ -68,11 +68,11 @@ bool baseBitstreamPopU8(BaseBitstream *stream, u8 *out)
 
     return true;
 }
-bool baseBitstreamPopU16LE(BaseBitstream *stream, u16 *out)
+bool bitstreamPopU16LE(Bitstream *stream, u16 *out)
 {
     u64 b1, b2;
-    if(!baseBitstreamPopBitsAsU64(stream, 8, &b1) ||
-       !baseBitstreamPopBitsAsU64(stream, 8, &b2))
+    if(!bitstreamPopBitsAsU64(stream, 8, &b1) ||
+       !bitstreamPopBitsAsU64(stream, 8, &b2))
     {
         return false;
     }
@@ -81,11 +81,11 @@ bool baseBitstreamPopU16LE(BaseBitstream *stream, u16 *out)
 
     return true;
 }
-bool baseBitstreamPopU16BE(BaseBitstream *stream, u16 *out)
+bool bitstreamPopU16BE(Bitstream *stream, u16 *out)
 {
     u64 b1, b2;
-    if(!baseBitstreamPopBitsAsU64(stream, 8, &b1) ||
-       !baseBitstreamPopBitsAsU64(stream, 8, &b2))
+    if(!bitstreamPopBitsAsU64(stream, 8, &b1) ||
+       !bitstreamPopBitsAsU64(stream, 8, &b2))
     {
         return false;
     }
@@ -94,11 +94,11 @@ bool baseBitstreamPopU16BE(BaseBitstream *stream, u16 *out)
 
     return true;
 }
-bool baseBitstreamPopU32LE(BaseBitstream *stream, u32 *out)
+bool bitstreamPopU32LE(Bitstream *stream, u32 *out)
 {
     u16 s1, s2;
-    if(!baseBitstreamPopU16LE(stream, &s1) ||
-       !baseBitstreamPopU16LE(stream, &s2))
+    if(!bitstreamPopU16LE(stream, &s1) ||
+       !bitstreamPopU16LE(stream, &s2))
     {
         return false;
     }
@@ -107,11 +107,11 @@ bool baseBitstreamPopU32LE(BaseBitstream *stream, u32 *out)
 
     return true;
 }
-bool baseBitstreamPopU32BE(BaseBitstream *stream, u32 *out)
+bool bitstreamPopU32BE(Bitstream *stream, u32 *out)
 {
     u16 s1, s2;
-    if(!baseBitstreamPopU16BE(stream, &s1) ||
-       !baseBitstreamPopU16BE(stream, &s2))
+    if(!bitstreamPopU16BE(stream, &s1) ||
+       !bitstreamPopU16BE(stream, &s2))
     {
         return false;
     }
@@ -120,11 +120,11 @@ bool baseBitstreamPopU32BE(BaseBitstream *stream, u32 *out)
 
     return true;
 }
-bool baseBitstreamPopU64LE(BaseBitstream *stream, u64 *out)
+bool bitstreamPopU64LE(Bitstream *stream, u64 *out)
 {
     u32 w1, w2;
-    if(!baseBitstreamPopU32LE(stream, &w1) ||
-       !baseBitstreamPopU32LE(stream, &w2))
+    if(!bitstreamPopU32LE(stream, &w1) ||
+       !bitstreamPopU32LE(stream, &w2))
     {
         return false;
     }
@@ -133,11 +133,11 @@ bool baseBitstreamPopU64LE(BaseBitstream *stream, u64 *out)
 
     return true;
 }
-bool baseBitstreamPopU64BE(BaseBitstream *stream, u64 *out)
+bool bitstreamPopU64BE(Bitstream *stream, u64 *out)
 {
     u32 w1, w2;
-    if(!baseBitstreamPopU32BE(stream, &w1) ||
-       !baseBitstreamPopU32BE(stream, &w2))
+    if(!bitstreamPopU32BE(stream, &w1) ||
+       !bitstreamPopU32BE(stream, &w2))
     {
         return false;
     }
@@ -147,19 +147,19 @@ bool baseBitstreamPopU64BE(BaseBitstream *stream, u64 *out)
     return true;
 }
 
-void baseBitstreamPopTillNextByte(BaseBitstream *stream)
+void bitstreamPopTillNextByte(Bitstream *stream)
 {
     while(stream->bitIndex % 8 != 0)
     {
-        baseBitstreamConsumeBits(stream, 1);
+        bitstreamConsumeBits(stream, 1);
     }
 }
 
-void baseBitstreamConsumeBits(BaseBitstream *stream, u64 n)
+void bitstreamConsumeBits(Bitstream *stream, u64 n)
 {
     stream->bitIndex += n;
 }
-bool baseBitstreamPeekBit(BaseBitstream *stream, u8 *out)
+bool bitstreamPeekBit(Bitstream *stream, u8 *out)
 {
     u64 bitIndex = stream->bitIndex;
 
@@ -175,7 +175,7 @@ bool baseBitstreamPeekBit(BaseBitstream *stream, u8 *out)
 
     return true;
 }
-bool baseBitstreamPeekBitsAsU8Impl(BaseBitstream *stream, u8 n, u8 *out)
+bool bitstreamPeekBitsAsU8Impl(Bitstream *stream, u8 n, u8 *out)
 {
     bool result = true;
 
@@ -185,7 +185,7 @@ bool baseBitstreamPeekBitsAsU8Impl(BaseBitstream *stream, u8 n, u8 *out)
     for(i = 0; i < n; i++)
     {
         u8 b;
-        if (!baseBitstreamPeekBit(stream, &b))
+        if (!bitstreamPeekBit(stream, &b))
         {
             result = false;
             break;
@@ -198,7 +198,7 @@ bool baseBitstreamPeekBitsAsU8Impl(BaseBitstream *stream, u8 n, u8 *out)
     stream->bitIndex -= i;
     return result;
 }
-bool baseBitstreamPeekBitsAsU64Impl(BaseBitstream *stream, u64 n, u64 *out)
+bool bitstreamPeekBitsAsU64Impl(Bitstream *stream, u64 n, u64 *out)
 {
     bool result = true;
 
@@ -208,7 +208,7 @@ bool baseBitstreamPeekBitsAsU64Impl(BaseBitstream *stream, u64 n, u64 *out)
     for(i = 0; i < n; i++)
     {
         u8 b;
-        if (!baseBitstreamPeekBit(stream, &b))
+        if (!bitstreamPeekBit(stream, &b))
         {
             result = false;
             break;
@@ -222,10 +222,10 @@ bool baseBitstreamPeekBitsAsU64Impl(BaseBitstream *stream, u64 n, u64 *out)
     return result;
 }
 
-bool baseBitstreamPeekBitsReversedAsU8Impl(BaseBitstream *stream, u8 n, u8 *out)
+bool bitstreamPeekBitsReversedAsU8Impl(Bitstream *stream, u8 n, u8 *out)
 {
     u8 code = 0;
-    if(baseBitstreamPeekBitsAsU8Impl(stream, n, &code))
+    if(bitstreamPeekBitsAsU8Impl(stream, n, &code))
     {
         *out = 0;
         for(u64 i = 0; i < n; i++)
@@ -240,10 +240,10 @@ bool baseBitstreamPeekBitsReversedAsU8Impl(BaseBitstream *stream, u8 n, u8 *out)
 
     return false;
 }
-bool baseBitstreamPeekBitsReversedAsU64Impl(BaseBitstream *stream, u64 n, u64 *out)
+bool bitstreamPeekBitsReversedAsU64Impl(Bitstream *stream, u64 n, u64 *out)
 {
     u64 code = 0;
-    if(baseBitstreamPeekBitsAsU64Impl(stream, n, &code))
+    if(bitstreamPeekBitsAsU64Impl(stream, n, &code))
     {
         *out = 0;
         for(u64 i = 0; i < n; i++)

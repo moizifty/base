@@ -87,16 +87,16 @@ void compressionDeflateGenerateHuffmanCodes(U8Array codeLengths, u32 *outCodes)
         }
     }
 }
-u64 compressionDeflateDecodeHuffmanCode(BaseBitstream *stream, U8Array symbolLens, u32 *symbolCodes)
+u64 compressionDeflateDecodeHuffmanCode(Bitstream *stream, U8Array symbolLens, u32 *symbolCodes)
 {
     for(u64 i = 0; i < symbolLens.len; i++)
     {
         u64 code = 0;
-        if(symbolLens.data[i] != 0 && baseBitstreamPeekBitsReversedAsU64(stream, symbolLens.data[i], &code))
+        if(symbolLens.data[i] != 0 && bitstreamPeekBitsReversedAsU64(stream, symbolLens.data[i], &code))
         {
             if(symbolCodes[i] == code)
             {
-                baseBitstreamConsumeBits(stream, symbolLens.data[i]);
+                bitstreamConsumeBits(stream, symbolLens.data[i]);
                 return i;
             }
         }
@@ -104,7 +104,7 @@ u64 compressionDeflateDecodeHuffmanCode(BaseBitstream *stream, U8Array symbolLen
 
     return 0;
 }
-u64 compressionDeflateDecodeHuffmanBlock(BaseBitstream *stream, CompressionDeflateDecodeHuffmanBlockInput input)
+u64 compressionDeflateDecodeHuffmanBlock(Bitstream *stream, CompressionDeflateDecodeHuffmanBlockInput input)
 {
     u64 bytesWritten = 0;
     while(true)
@@ -124,13 +124,13 @@ u64 compressionDeflateDecodeHuffmanBlock(BaseBitstream *stream, CompressionDefla
         {
             u8 extraLengthBits = gDeflateLengthExtraBits[c];
             u64 extraLength = 0;
-            baseBitstreamPopBitsAsU64(stream, extraLengthBits, &extraLength);
+            bitstreamPopBitsAsU64(stream, extraLengthBits, &extraLength);
             u64 length = gDeflateLengthBase[c] + extraLength;
 
             u64 d = compressionDeflateDecodeHuffmanCode(stream, input.distSymsLens, input.distSymsCodes);
             u16 extraDistBits = gDeflateDistancesExtraBits[d];
             u64 extraDist = 0;
-            baseBitstreamPopBitsAsU64(stream, extraDistBits, &extraDist);
+            bitstreamPopBitsAsU64(stream, extraDistBits, &extraDist);
             u64 dist = gDeflateDistancesBase[d] + extraDist;
             u64 bytesWrittenBefore = input.writeOffset + bytesWritten;
             for(u64 i = 0; i < length; i++)
@@ -150,7 +150,7 @@ u64 compressionDeflateDecodeHuffmanBlock(BaseBitstream *stream, CompressionDefla
     return bytesWritten;
 }
 
-CompressionDeflateUncompressedOutput compressionDeflateUncompress(BaseBitstream *inputStream, U8Array *outBuffer)
+CompressionDeflateUncompressedOutput compressionDeflateUncompress(Bitstream *inputStream, U8Array *outBuffer)
 {
     CompressionDeflateUncompressedOutput output = {0};
 
@@ -159,21 +159,21 @@ CompressionDeflateUncompressedOutput compressionDeflateUncompress(BaseBitstream 
     u8 compressionType;
     do
     {
-        baseBitstreamPopBitsAsU8(inputStream, 1, &finalBlock);
-        baseBitstreamPopBitsAsU8(inputStream, 2, &compressionType);
+        bitstreamPopBitsAsU8(inputStream, 1, &finalBlock);
+        bitstreamPopBitsAsU8(inputStream, 2, &compressionType);
         
         switch(compressionType)
         {
             // no compression
             case 0:
             {
-                baseBitstreamPopTillNextByte(inputStream);
+                bitstreamPopTillNextByte(inputStream);
 
                 u16 blockLen;
-                baseBitstreamPopU16LE(inputStream, &blockLen);
+                bitstreamPopU16LE(inputStream, &blockLen);
 
                 u16 blockLenComplement;
-                baseBitstreamPopU16LE(inputStream, &blockLenComplement);
+                bitstreamPopU16LE(inputStream, &blockLenComplement);
 
                 u64 byteIndex = inputStream->bitIndex / 8;
                 BASE_MEMCPY(outBuffer->data + bytesWritten, inputStream->bytes.data + byteIndex, blockLen);
@@ -210,9 +210,9 @@ CompressionDeflateUncompressedOutput compressionDeflateUncompress(BaseBitstream 
             case 2:
             {
                 u8 hlit, hdist, uclen;
-                baseBitstreamPopBitsAsU8(inputStream, 5, &hlit);
-                baseBitstreamPopBitsAsU8(inputStream, 5, (&hdist));
-                baseBitstreamPopBitsAsU8(inputStream, 4, (&uclen));
+                bitstreamPopBitsAsU8(inputStream, 5, &hlit);
+                bitstreamPopBitsAsU8(inputStream, 5, (&hdist));
+                bitstreamPopBitsAsU8(inputStream, 4, (&uclen));
 
                 u32 numLiteralCodes = (u32)hlit + 257;
                 u32 numDistCodes = (u32)hdist + 1;
@@ -228,7 +228,7 @@ CompressionDeflateUncompressedOutput compressionDeflateUncompress(BaseBitstream 
                 for(u64 i = 0; i < numCLCodes; i++)
                 {
                     u8 c = 0;
-                    baseBitstreamPopBitsAsU8(inputStream, 3, &c);
+                    bitstreamPopBitsAsU8(inputStream, 3, &c);
                     clSymLengths[clLengthsIndexRedirect[i]] = c;
                 }
 
@@ -251,19 +251,19 @@ CompressionDeflateUncompressedOutput compressionDeflateUncompress(BaseBitstream 
                     else if(c == 16)
                     {
                         repeatVal = literalDistSymsLengthsArray.data[literalDistSymsLengthsArray.len - 1];
-                        baseBitstreamPopBitsAsU8(inputStream, 2, &repeatCount);
+                        bitstreamPopBitsAsU8(inputStream, 2, &repeatCount);
                         repeatCount += 3;
                     }
                     else if(c == 17)
                     {
                         repeatVal = 0;
-                        baseBitstreamPopBitsAsU8(inputStream, 3, &repeatCount);
+                        bitstreamPopBitsAsU8(inputStream, 3, &repeatCount);
                         repeatCount += 3;
                     }
                     else if(c == 18)
                     {
                         repeatVal = 0;
-                        baseBitstreamPopBitsAsU8(inputStream, 7, &repeatCount);
+                        bitstreamPopBitsAsU8(inputStream, 7, &repeatCount);
                         repeatCount += 11;
                     }
 

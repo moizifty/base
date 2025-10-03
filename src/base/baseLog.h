@@ -49,27 +49,27 @@ typedef struct Log
     LogEntryChunkList entries;
 }Log;
 
-str8 logFormatLogEntryMsg(BaseArena *arena, LogEntry msg);
+str8 logFormatLogEntryMsg(Arena *arena, LogEntry msg);
 void LogEntryChunkListPushNodeLast(LogEntryChunkList *l, LogEntryChunkNode *node);
 void LogEntryChunkListPushNodeFirst(LogEntryChunkList *l, LogEntryChunkNode *node);
 void LogEntryChunkListInsertNode(LogEntryChunkList *l, LogEntryChunkNode *prev, LogEntryChunkNode *node);
-void LogEntryChunkListPush(BaseArena *arena, LogEntryChunkList *l, LogEntry msg);
+void LogEntryChunkListPush(Arena *arena, LogEntryChunkList *l, LogEntry msg);
 
-str8 LogEntryChunkListJoin(BaseArena *arena, LogEntryChunkList *l);
-LogEntryArray LogEntryChunkListFlattenToArray(BaseArena *arena, LogEntryChunkList *l);
+str8 LogEntryChunkListJoin(Arena *arena, LogEntryChunkList *l);
+LogEntryArray LogEntryChunkListFlattenToArray(Arena *arena, LogEntryChunkList *l);
 
-Log *logCreate(BaseArena *arena);
+Log *logCreate(Arena *arena);
 void logClear(Log *log);
 
-str8 logOutputToFile(BaseArena *arena, Log *log, str8 path);
+str8 logOutputToFile(Arena *arena, Log *log, str8 path);
 void logOutputToConsole(Log *log);
 
-void logPrintFmtV(BaseArena *arena, Log *log, LogSeverityKind severity, bool outputToConsole, char *fmt, va_list va);
-void logPrintFmt(BaseArena *arena, Log *log, LogSeverityKind severity, char *fmt, ...);
-void logErrorFmt(BaseArena *arena, Log *log, char *fmt, ...);
-void logWarningFmt(BaseArena *arena, Log *log, char *fmt, ...);
-void logInfoFmt(BaseArena *arena, Log *log, char *fmt, ...);
-void logDebugFmt(BaseArena *arena, Log *log, char *fmt, ...);
+void logPrintFmtV(Arena *arena, Log *log, LogSeverityKind severity, bool outputToConsole, char *fmt, va_list va);
+void logPrintFmt(Arena *arena, Log *log, LogSeverityKind severity, char *fmt, ...);
+void logErrorFmt(Arena *arena, Log *log, char *fmt, ...);
+void logWarningFmt(Arena *arena, Log *log, char *fmt, ...);
+void logInfoFmt(Arena *arena, Log *log, char *fmt, ...);
+void logDebugFmt(Arena *arena, Log *log, char *fmt, ...);
 
 str8 logThreadOutputToFile(void);
 void logThreadOutputToConsole(void);

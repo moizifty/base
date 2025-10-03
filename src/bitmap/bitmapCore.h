@@ -15,12 +15,12 @@
 
 BitmapFileKind bitmapFileKindFromPath(str8 path);
 
-Bitmap bitmapFromPath(BaseArena *arena, str8 file);
+Bitmap bitmapFromPath(Arena *arena, str8 file);
 
-Bitmap bitmapFromBMPRaw(BaseArena *arena, u8 *rawBytes, u64 byteLen);
-Bitmap bitmapFromBMPPath(BaseArena *arena, str8 file);
+Bitmap bitmapFromBMPRaw(Arena *arena, u8 *rawBytes, u64 byteLen);
+Bitmap bitmapFromBMPPath(Arena *arena, str8 file);
 
-Bitmap bitmapFromTGARaw(BaseArena *arena, u8 *rawBytes, u64 byteLen);
-Bitmap bitmapFromTGAPath(BaseArena *arena, str8 file);
+Bitmap bitmapFromTGARaw(Arena *arena, u8 *rawBytes, u64 byteLen);
+Bitmap bitmapFromTGAPath(Arena *arena, str8 file);
 
 #endif

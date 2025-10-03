@@ -4,17 +4,17 @@
 #include "base\baseCoreTypes.h"
 #include "base\baseMath.h"
 
-#ifndef baseArenaReserveImpl
-#define baseArenaReserveImpl OSReserveMemory
+#ifndef arenaReserveImpl
+#define arenaReserveImpl OSReserveMemory
 #endif
-#ifndef baseArenaCommitImpl
-#define baseArenaCommitImpl OSCommitMemory
+#ifndef arenaCommitImpl
+#define arenaCommitImpl OSCommitMemory
 #endif
-#ifndef baseArenaDecommitImpl
-#define baseArenaDecommitImpl OSDecommitMemory
+#ifndef arenaDecommitImpl
+#define arenaDecommitImpl OSDecommitMemory
 #endif
-#ifndef baseArenaFreeImpl
-#define baseArenaFreeImpl OSFreeMemory
+#ifndef arenaFreeImpl
+#define arenaFreeImpl OSFreeMemory
 #endif
 
 #define LOG_FOLDER_NAME STR8_LIT("logs")
@@ -24,7 +24,7 @@ typedef struct OSProcessState
     str8 binaryPath;
     str8 logDirPath;
 
-    // BaseArena *logArena;
+    // Arena *logArena;
     // struct Log *processLog;
 }OSProcessState;
 
@@ -138,11 +138,11 @@ typedef struct OSExceptionInfo
 #error Platform not defined
 #endif
 
-OSState *OSInit(BaseArena *arena);
+OSState *OSInit(Arena *arena);
 OSState *OSGetState(void);
 
 bool OSHandleEquals(OSHandle a, OSHandle b);
-
+bool OSIsHandleValid(OSHandle handle);
 void* OSReserveMemory(u64 size);
 void OSCommitMemory(void *ptr, u64 size);
 void OSDecommitMemory(void *ptr, u64 size);
@@ -158,7 +158,7 @@ void OSFileWriteU32(OSHandle fileHandle, u32 n);
 void OSFileWriteU64(OSHandle fileHandle, u64 n);
 void OSFileWriteFmt(OSHandle fileHandle, char *fmt, ...);
 
-U8Array OSFileReadAll(struct BaseArena *arena, str8 path);
+U8Array OSFileReadAll(struct Arena *arena, str8 path);
 bool OSFileWriteAll(str8 path, U8Array bytes, bool createLeadingDir, bool overwrite);
 bool OSFileWriteAllStr8(str8 path, str8 str, bool createLeadingDir, bool overwrite);
 
@@ -168,21 +168,24 @@ bool OSPathExists(str8 path);
 bool OSPathIsDirectory(str8 path);
 u64 OSGetFileSize(str8 path);
 u64 OSGetFileSizeFromHandle(OSHandle handle);
-str8 OSGetFullPath(struct BaseArena *arena, str8 path);
+str8 OSGetFullPath(struct Arena *arena, str8 path);
 
 bool OSCreateDirectory(str8 path, bool createIntermediateDirs);
 
-OSFileFindIter *OSFindFileBegin(struct BaseArena *arena, str8 path, OSFileFindOptionalParams *opt);
-bool OSFindFileNext(struct BaseArena *arena, OSFileFindIter *iter, OSFileInfo *out);
+OSFileFindIter *OSFindFileBegin(struct Arena *arena, str8 path, OSFileFindOptionalParams *opt);
+bool OSFindFileNext(struct Arena *arena, OSFileFindIter *iter, OSFileInfo *out);
 void OSFindFileEnd(OSFileFindIter *iter);
 
-Str8List OSGetFilePaths(BaseArena *arena, str8 dir, str8 pattern, bool recursive);
+Str8List OSGetFilePaths(Arena *arena, str8 dir, str8 pattern, bool recursive);
 
 // process
-str8 OSGetProgramPath(BaseArena *arena);
-str8 OSGetProgramDirectory(BaseArena *arena);
-str8 OSGetProgramLogsDirectory(BaseArena *arena);
-bool OSRunProcessEx(struct BaseArena *arena, str8 app, str8 args, void *peb, str8 *outStr, str8 *errStr);
+str8 OSGetProgramPath(Arena *arena);
+str8 OSGetProgramDirectory(Arena *arena);
+str8 OSGetProgramLogsDirectory(Arena *arena);
+bool OSRunProcessEx(struct Arena *arena, str8 app, str8 args, void *peb, str8 *outStr, str8 *errStr);
+
+OSHandle OSLoadDynamicLibrary(str8 name);
+void *OSGetExportAddressFromDynamicLibrary(OSHandle dynLib, str8 name);
 
 // Date and time
 DateTime OSGetSytemTime(void);
@@ -193,7 +196,7 @@ u64 OSGetPerformanceFrequency(void);
 
 f64 OSConvertPerformanceCounterToMillisecondsF64(u64 counter);
 //env
-str8 OSGetEnvironmentVar(BaseArena *arena, str8 var);
+str8 OSGetEnvironmentVar(Arena *arena, str8 var);
 
 // other
 vec2i OSScreenCoordToClientCoord(OSHandle wndHandle, vec2i screen);

@@ -11,10 +11,10 @@ void bssInterpError(BSSInterpretorState *iState, BssTok start, BssTok end, char 
     baseColEPrintf("{Bu}%S (%lld: %lld)",start.pos.ownerLexer->filePath, start.pos.line, start.pos.col);
     baseColEPrintf("{B}\n        --> Runtime Error:\033[0m ");
 
-    BaseArenaTemp temp = baseTempBegin(&iState->checkerArena, 1);
+    ArenaTemp temp = baseTempBegin(&iState->checkerArena, 1);
     {
         i64 needed = stbsp_vsnprintf(null, 0, msg, args) + 1;
-        i8 *buf = baseArenaPush(temp.arena, needed);
+        i8 *buf = arenaPush(temp.arena, needed);
 
         stbsp_vsnprintf(buf, (int)needed, msg, args);
 
@@ -111,7 +111,7 @@ Str8List bssInterpProcessFormatString(struct BSSInterpretorState *iState, ASTExp
     
     U8ChunkList charList = {0};
 
-    BaseArenaTemp temp = baseTempBegin(&iState->checkerArena, 1);
+    ArenaTemp temp = baseTempBegin(&iState->checkerArena, 1);
 
     {
         u64 i;
@@ -187,13 +187,13 @@ Str8List bssInterpProcessFormatString(struct BSSInterpretorState *iState, ASTExp
     return out;    
 }
 
-BssValueList BssValueListFromStr8List(BaseArena *arena, Str8List list)
+BssValueList BssValueListFromStr8List(Arena *arena, Str8List list)
 {
     BssValueList ret = {0};
 
     BASE_LIST_FOREACH(Str8ListNode, sN, list)
     {
-        BssValue *value = baseArenaPushType(arena, BssValue);
+        BssValue *value = arenaPushType(arena, BssValue);
         value->hasBssValue = true;
         value->type = bssAllocTypeString(arena);
         Str8ListPushLast(arena, &value->str.val, sN->val);
@@ -216,7 +216,7 @@ void bssInterpExpr(struct BSSInterpretorState *iState, ASTExpr *expr)
                 {
                     i64 i = atoll((i8*)expr->lit.lexeme.data);
 
-                    expr->value = baseArenaPushType(iState->checkerArena, BssValue);
+                    expr->value = arenaPushType(iState->checkerArena, BssValue);
                     expr->value->type = expr->checkType;
                     expr->value->hasBssValue = true;
                     expr->value->integer.val = i;
@@ -227,12 +227,12 @@ void bssInterpExpr(struct BSSInterpretorState *iState, ASTExpr *expr)
                 case BSS_TYPE_BOOL:
                 {
                     bool value = true;
-                    if (baseStringsStrEquals(expr->lit.lexeme, STR8_LIT("false"), 0))
+                    if (Str8Equals(expr->lit.lexeme, STR8_LIT("false"), 0))
                     {
                         value = false;
                     }
 
-                    expr->value = baseArenaPushType(iState->checkerArena, BssValue);
+                    expr->value = arenaPushType(iState->checkerArena, BssValue);
                     expr->value->type = expr->checkType;
                     expr->value->hasBssValue = true;
                     expr->value->boolean.val = value;
@@ -251,7 +251,7 @@ void bssInterpExpr(struct BSSInterpretorState *iState, ASTExpr *expr)
                         list = bssInterpProcessFormatString(iState, expr, str);
                     }
                     
-                    expr->value = baseArenaPushType(iState->checkerArena, BssValue);
+                    expr->value = arenaPushType(iState->checkerArena, BssValue);
                     expr->value->type = expr->checkType;
                     expr->value->hasBssValue = true;
                     expr->value->str.val = list;
@@ -264,7 +264,7 @@ void bssInterpExpr(struct BSSInterpretorState *iState, ASTExpr *expr)
         {
             if (expr->idenEntry->value == null)
             {
-                expr->idenEntry->value = baseArenaPushType(iState->checkerArena, BssValue);
+                expr->idenEntry->value = arenaPushType(iState->checkerArena, BssValue);
                 expr->idenEntry->value->type = expr->checkType;
                 expr->idenEntry->value->hasBssValue = false;
             }
@@ -278,7 +278,7 @@ void bssInterpExpr(struct BSSInterpretorState *iState, ASTExpr *expr)
             BssValueObjMemb *memb = null;
             BASE_LIST_FOREACH(BssValueObjMemb, m, expr->membAccess.lhs->value->obj.val)
             {
-                if(baseStringsStrEquals(m->name, expr->membAccess.memb.lexeme, 0))
+                if(Str8Equals(m->name, expr->membAccess.memb.lexeme, 0))
                 {
                     memb = m;
                     break;
@@ -289,7 +289,7 @@ void bssInterpExpr(struct BSSInterpretorState *iState, ASTExpr *expr)
             {
                 if(memb->val == null)
                 {
-                    memb->val = baseArenaPushType(iState->checkerArena, BssValue);
+                    memb->val = arenaPushType(iState->checkerArena, BssValue);
                     memb->val->type = expr->checkType;
                     memb->val->hasBssValue = false;
                 }
@@ -327,7 +327,7 @@ void bssInterpExpr(struct BSSInterpretorState *iState, ASTExpr *expr)
         case AST_EXPR_COMPOUND_LIT:
         {
             BssValue *value = null;
-            value = baseArenaPushType(iState->checkerArena, BssValue);
+            value = arenaPushType(iState->checkerArena, BssValue);
             value->type = expr->checkType;
             value->hasBssValue = true;
 
@@ -350,7 +350,7 @@ void bssInterpExpr(struct BSSInterpretorState *iState, ASTExpr *expr)
                 {
                     bssInterpExpr(iState, ne->exprRhs);
 
-                    BssValueObjMemb *memb = baseArenaPushType(iState->checkerArena, BssValueObjMemb);
+                    BssValueObjMemb *memb = arenaPushType(iState->checkerArena, BssValueObjMemb);
                     memb->name = ne->exprLhs->iden.lexeme;
 
                     // todo: fix eerror, since ne->exprLhs->value might be a value from identifier
@@ -377,7 +377,7 @@ void bssInterpExpr(struct BSSInterpretorState *iState, ASTExpr *expr)
             }
 
             str8 funcName = expr->funcCall.func->iden.lexeme;
-            if (baseStringsStrEquals(funcName, STR8_LIT("print"), 0))
+            if (Str8Equals(funcName, STR8_LIT("print"), 0))
             {
                 BssValue *p1 = expr->funcCall.args.first->exprLhs->value;
                 
@@ -385,7 +385,7 @@ void bssInterpExpr(struct BSSInterpretorState *iState, ASTExpr *expr)
 
                 baseColPrintf("%S", joined);
             }
-            else if (baseStringsStrEquals(funcName, STR8_LIT("getfiles"), 0))
+            else if (Str8Equals(funcName, STR8_LIT("getfiles"), 0))
             {
                 str8 path = expr->funcCall.args.first->exprLhs->value->strRep;
                 str8 pattern = expr->funcCall.args.first->next->exprLhs->value->strRep;
@@ -401,7 +401,7 @@ void bssInterpExpr(struct BSSInterpretorState *iState, ASTExpr *expr)
                                     "No files found in directory '%S', with pattern '%S'.\n", path, pattern);
                 }
 
-                BssValue *val = baseArenaPushType(iState->checkerArena, BssValue);
+                BssValue *val = arenaPushType(iState->checkerArena, BssValue);
                 val->hasBssValue = true;
                 val->type = expr->checkType;
                 val->arr.val = BssValueListFromStr8List(iState->checkerArena, paths);
@@ -409,7 +409,7 @@ void bssInterpExpr(struct BSSInterpretorState *iState, ASTExpr *expr)
 
                 expr->value = val;
             }
-            else if (baseStringsStrEquals(funcName, STR8_LIT("quoteit"), 0))
+            else if (Str8Equals(funcName, STR8_LIT("quoteit"), 0))
             {
                 BssValue *arrVal = expr->funcCall.args.first->exprLhs->value;
 
@@ -420,7 +420,7 @@ void bssInterpExpr(struct BSSInterpretorState *iState, ASTExpr *expr)
                     Str8ListPushLastFmt(iState->checkerArena, &list, "\"%S\"", v->strRep);
                 }
 
-                BssValue *val = baseArenaPushType(iState->checkerArena, BssValue);
+                BssValue *val = arenaPushType(iState->checkerArena, BssValue);
                 val->hasBssValue = true;
                 val->type = expr->checkType;
                 val->arr.val = BssValueListFromStr8List(iState->checkerArena, list);
@@ -428,7 +428,7 @@ void bssInterpExpr(struct BSSInterpretorState *iState, ASTExpr *expr)
 
                 expr->value = val;
             }
-            else if (baseStringsStrEquals(funcName, STR8_LIT("join"), 0))
+            else if (Str8Equals(funcName, STR8_LIT("join"), 0))
             {
                 BssValue *arrVal = expr->funcCall.args.first->exprLhs->value;
                 str8 sep = expr->funcCall.args.first->next->exprLhs->value->strRep;
@@ -440,7 +440,7 @@ void bssInterpExpr(struct BSSInterpretorState *iState, ASTExpr *expr)
                     Str8ListPushLast(iState->checkerArena, &list, v->strRep);
                 }
 
-                BssValue *val = baseArenaPushType(iState->checkerArena, BssValue);
+                BssValue *val = arenaPushType(iState->checkerArena, BssValue);
                 val->hasBssValue = true;
                 val->type = expr->checkType;
 
@@ -449,11 +449,11 @@ void bssInterpExpr(struct BSSInterpretorState *iState, ASTExpr *expr)
 
                 expr->value = val;
             }
-            else if (baseStringsStrEquals(funcName, STR8_LIT("hasflag"), 0))
+            else if (Str8Equals(funcName, STR8_LIT("hasflag"), 0))
             {
                 str8 flag = expr->funcCall.args.first->exprLhs->value->strRep;
 
-                BssValue *val = baseArenaPushType(iState->checkerArena, BssValue);
+                BssValue *val = arenaPushType(iState->checkerArena, BssValue);
                 val->hasBssValue = true;
                 val->type = expr->checkType;
                 val->boolean.val = bssHasFlag(iState, flag);
@@ -461,12 +461,12 @@ void bssInterpExpr(struct BSSInterpretorState *iState, ASTExpr *expr)
 
                 expr->value = val;
             }
-            else if (baseStringsStrEquals(funcName, STR8_LIT("addflag"), 0))
+            else if (Str8Equals(funcName, STR8_LIT("addflag"), 0))
             {
                 str8 flag = expr->funcCall.args.first->exprLhs->value->strRep;
                 bssAddFlag(iState, flag);
 
-                BssValue *val = baseArenaPushType(iState->checkerArena, BssValue);
+                BssValue *val = arenaPushType(iState->checkerArena, BssValue);
                 val->hasBssValue = true;
                 val->type = expr->checkType;
                 val->boolean.val = false;
@@ -474,12 +474,12 @@ void bssInterpExpr(struct BSSInterpretorState *iState, ASTExpr *expr)
 
                 expr->value = val;
             }
-            else if (baseStringsStrEquals(funcName, STR8_LIT("getenv"), 0))
+            else if (Str8Equals(funcName, STR8_LIT("getenv"), 0))
             {
                 str8 env = expr->funcCall.args.first->exprLhs->value->strRep;
                 str8 envVal = OSGetEnvironmentVar(iState->checkerArena, env);
 
-                BssValue *val = baseArenaPushType(iState->checkerArena, BssValue);
+                BssValue *val = arenaPushType(iState->checkerArena, BssValue);
                 val->hasBssValue = true;
                 val->type = expr->checkType;
                 Str8ListPushLast(iState->checkerArena, &val->str.val, envVal);
@@ -498,19 +498,19 @@ void bssInterpExpr(struct BSSInterpretorState *iState, ASTExpr *expr)
             bssInterpExpr(iState, expr->run.expr);
 
             str8 runString = expr->run.expr->value->strRep;
-            str8 command = baseStringsPushStr8Fmt(iState->checkerArena, "cmd.exe /q /k \"@echo off && %S\"", runString);
+            str8 command = Str8PushFmt(iState->checkerArena, "cmd.exe /q /k \"@echo off && %S\"", runString);
 
             str8 out = {0}, err = {0};
             OSRunProcessEx(iState->checkerArena, STR8_LIT(""), command, null, &out, &err);
 
-            BssValue *val = baseArenaPushType(iState->checkerArena, BssValue);
+            BssValue *val = arenaPushType(iState->checkerArena, BssValue);
             val->hasBssValue = true;
             val->type = expr->checkType;
             
             {
-                BssValueObjMemb *stdoutMemb = baseArenaPushType(iState->checkerArena, BssValueObjMemb);
+                BssValueObjMemb *stdoutMemb = arenaPushType(iState->checkerArena, BssValueObjMemb);
                 stdoutMemb->name = STR8_LIT("stdout");
-                stdoutMemb->val = baseArenaPushType(iState->checkerArena, BssValue);
+                stdoutMemb->val = arenaPushType(iState->checkerArena, BssValue);
                 stdoutMemb->val->type = val->type->obj.membScope->table.first->type;
                 stdoutMemb->val->hasBssValue = true;
                 Str8ListPushLast(iState->checkerArena, &stdoutMemb->val->str.val, out);
@@ -521,9 +521,9 @@ void bssInterpExpr(struct BSSInterpretorState *iState, ASTExpr *expr)
             }
 
             {
-                BssValueObjMemb *stderrMemb = baseArenaPushType(iState->checkerArena, BssValueObjMemb);
+                BssValueObjMemb *stderrMemb = arenaPushType(iState->checkerArena, BssValueObjMemb);
                 stderrMemb->name = STR8_LIT("stderr");
-                stderrMemb->val = baseArenaPushType(iState->checkerArena, BssValue);
+                stderrMemb->val = arenaPushType(iState->checkerArena, BssValue);
                 stderrMemb->val->type = val->type->obj.membScope->table.first->next->type;
                 stderrMemb->val->hasBssValue = true;
                 Str8ListPushLast(iState->checkerArena, &stderrMemb->val->str.val, err);
@@ -542,21 +542,21 @@ void bssInterpExpr(struct BSSInterpretorState *iState, ASTExpr *expr)
 
             if(bssIsTypeArray(expr->binaryOp.lhs->checkType) && bssIsTypeArray(expr->binaryOp.rhs->checkType))
             {
-                BssValue *val = baseArenaPushType(iState->checkerArena, BssValue);
+                BssValue *val = arenaPushType(iState->checkerArena, BssValue);
                 val->hasBssValue = true;
                 val->type = expr->checkType;
 
                 BssValueList vals = {0};
                 BASE_LIST_FOREACH(BssValue, v, expr->binaryOp.lhs->value->arr.val)
                 {
-                    BssValue *vcopy = baseArenaPushType(iState->checkerArena, BssValue);
+                    BssValue *vcopy = arenaPushType(iState->checkerArena, BssValue);
                     *vcopy= *v;
 
                     BssValueListPushNodeLast(&vals, vcopy);
                 }
                 BASE_LIST_FOREACH(BssValue, v, expr->binaryOp.rhs->value->arr.val)
                 {
-                    BssValue *vcopy = baseArenaPushType(iState->checkerArena, BssValue);
+                    BssValue *vcopy = arenaPushType(iState->checkerArena, BssValue);
                     *vcopy= *v;
 
                     BssValueListPushNodeLast(&vals, vcopy);
@@ -575,7 +575,7 @@ void bssInterpExpr(struct BSSInterpretorState *iState, ASTExpr *expr)
             {
                 if (bssIsTypeString(expr->binaryOp.lhs->checkType) && bssIsTypeString(expr->binaryOp.rhs->checkType))
                 {
-                    BssValue *val = baseArenaPushType(iState->checkerArena, BssValue);
+                    BssValue *val = arenaPushType(iState->checkerArena, BssValue);
                     val->hasBssValue = true;
                     val->type = expr->checkType;
                     Str8ListPushLast(iState->checkerArena, &val->str.val, expr->binaryOp.lhs->value->strRep);

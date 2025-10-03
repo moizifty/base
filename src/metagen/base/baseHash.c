@@ -1,6 +1,6 @@
 #include "baseHash.h"
 
-u64 hashDJB2(u8 *bytes, u64 len)
+u64 baseHashDJB2(u8 *bytes, u64 len)
 {
     u64 hash = 5381;
 

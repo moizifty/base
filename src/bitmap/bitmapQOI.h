@@ -6,7 +6,7 @@
 #include "base\baseMemory.h"
 #include "base\baseStrings.h"
 #include "base\baseThreads.h"
-#include "base\baseBitstream.h"
+#include "datastructures\bitstream.h"
 #include "os\core\osCore.h"
 #include "bitmapCoreTypes.h"
 
@@ -29,7 +29,7 @@ typedef enum QOITagKind
     QOI_TAG_RUN = 0b11,
 }QOITagKind;
 
-Bitmap bitmapFromQOIRaw(BaseArena *arena, u8 *rawBytes, u64 byteLen);
-Bitmap bitmapFromQOIPath(BaseArena *arena, str8 file);
+Bitmap bitmapFromQOIRaw(Arena *arena, u8 *rawBytes, u64 byteLen);
+Bitmap bitmapFromQOIPath(Arena *arena, str8 file);
 
 #endif

@@ -90,7 +90,7 @@ void bitmapDDSCalculateColorsFromDXT5Block(DDSDXT5Block block, vec3u8 colTable[4
     colTable[3] = col3;
 }
 
-DDSUncompressedData bitmapDDSUncompress(BaseArena *arena, DDSCompressedData input)
+DDSUncompressedData bitmapDDSUncompress(Arena *arena, DDSCompressedData input)
 {
     DDSUncompressedData uncompressed = {0};
 
@@ -113,7 +113,7 @@ DDSUncompressedData bitmapDDSUncompress(BaseArena *arena, DDSCompressedData inpu
 
     uncompressed.fmt = BITMAP_FORMAT_RGBA_8;
     uncompressed.bytesPerPixel = 4; //rgba
-    uncompressed.pixels = baseArenaPush(arena, input.w * input.h * uncompressed.bytesPerPixel);
+    uncompressed.pixels = arenaPush(arena, input.w * input.h * uncompressed.bytesPerPixel);
     
     for(u64 bY = 0; bY < input.h; bY += 4)
     {
@@ -240,7 +240,7 @@ DDSUncompressedData bitmapDDSUncompress(BaseArena *arena, DDSCompressedData inpu
     return uncompressed;
 }
 
-Bitmap bitmapFromDDSRaw(BaseArena *arena, u8 *rawBytes, u64 byteLen)
+Bitmap bitmapFromDDSRaw(Arena *arena, u8 *rawBytes, u64 byteLen)
 {
     Bitmap bm = {0};
 
@@ -297,7 +297,7 @@ Bitmap bitmapFromDDSRaw(BaseArena *arena, u8 *rawBytes, u64 byteLen)
                 bm.bytesPerPixel = bitCount / 8;
 
                 u64 dataSize = bm.size.w * bm.size.h * bm.bytesPerPixel;
-                bm.pixels = baseArenaPushNoZero(arena, dataSize);
+                bm.pixels = arenaPushNoZero(arena, dataSize);
                 BASE_MEMCPY(bm.pixels, currBytePtr, dataSize);
             }
             else if(isCompressed)
@@ -337,10 +337,10 @@ Bitmap bitmapFromDDSRaw(BaseArena *arena, u8 *rawBytes, u64 byteLen)
     bm.srcFile = BITMAP_FILE_KIND_DDS;
     return bm;
 }
-Bitmap bitmapFromDDSPath(BaseArena *arena, str8 file)
+Bitmap bitmapFromDDSPath(Arena *arena, str8 file)
 {
     Bitmap bm = {0};
-    BaseArenaTemp temp = baseTempBegin(&arena, 1);
+    ArenaTemp temp = baseTempBegin(&arena, 1);
     {
         U8Array fileBytes = OSFileReadAll(temp.arena, file);
 

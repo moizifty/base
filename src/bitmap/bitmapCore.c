@@ -17,7 +17,7 @@ BitmapFileKind bitmapFileKindFromPath(str8 path)
     {
         BitmapFileKindTableEntry entry = gBitmapFileKindsTable[i];
         
-        if (baseStringsStrEndsWith(path, entry.ext, STR_MATCHFLAGS_CASE_INSENSITIVE))
+        if (Str8EndsWith(path, entry.ext, STR_MATCHFLAGS_CASE_INSENSITIVE))
         {
             return entry.kind;
         }
@@ -27,7 +27,7 @@ BitmapFileKind bitmapFileKindFromPath(str8 path)
     // open the file and check the magic number
 
     BitmapFileKind fallBackKind = BITMAP_FILE_KIND_UNKNOWN;
-    BaseArenaTemp temp = baseTempBegin(null, 0);
+    ArenaTemp temp = baseTempBegin(null, 0);
     {
         U8Array fileBytes = OSFileReadAll(temp.arena, path);
 
@@ -58,10 +58,10 @@ BitmapFileKind bitmapFileKindFromPath(str8 path)
     return fallBackKind;
 }
 
-Bitmap bitmapFromPath(BaseArena *arena, str8 file)
+Bitmap bitmapFromPath(Arena *arena, str8 file)
 {
     Bitmap bm = {0};
-    BaseArenaTemp temp = baseTempBegin(&arena, 1);
+    ArenaTemp temp = baseTempBegin(&arena, 1);
     {
         BitmapFileKind kind = bitmapFileKindFromPath(file);
         switch(kind)
@@ -85,8 +85,8 @@ Bitmap bitmapFromPath(BaseArena *arena, str8 file)
     return bm;
 }
 
-Bitmap bitmapFromBMPRaw(BaseArena *arena, u8 *rawBytes, u64 byteLen);
-Bitmap bitmapFromBMPPath(BaseArena *arena, str8 file);
+Bitmap bitmapFromBMPRaw(Arena *arena, u8 *rawBytes, u64 byteLen);
+Bitmap bitmapFromBMPPath(Arena *arena, str8 file);
 
-Bitmap bitmapFromTGARaw(BaseArena *arena, u8 *rawBytes, u64 byteLen);
-Bitmap bitmapFromTGAPath(BaseArena *arena, str8 file);
+Bitmap bitmapFromTGARaw(Arena *arena, u8 *rawBytes, u64 byteLen);
+Bitmap bitmapFromTGAPath(Arena *arena, str8 file);

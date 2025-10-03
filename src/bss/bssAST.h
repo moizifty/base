@@ -183,25 +183,25 @@ typedef struct ASTProject
     ASTStmtList stmts;
 }ASTProject;
 
-ASTStmt *bssAllocASTStmt(BaseArena *arena, ASTStmtKind kind, BssTok startTok, BssTok endTok);
-ASTStmt *bssAllocASTStmtAssign(BaseArena *arena, ASTExpr *lhs, ASTExpr *rhs);
-ASTStmt *bssAllocASTStmtExpr(BaseArena *arena, ASTExpr *expr);
-ASTStmt *bssAllocASTStmtProjDecl(BaseArena *arena, BssTok iden, ASTExpr *expr);
-ASTStmt *bssAllocASTStmtBuild(BaseArena *arena, ASTExpr *expr, ASTExpr *buildArgs);
-ASTStmt *bssAllocASTStmtIf(BaseArena *arena, ASTExpr *cond, ASTBlock *thenBlock, ASTBlock *elseBlock);
-ASTStmt *bssAllocASTStmtFor(BaseArena *arena, BssTok iden, ASTExpr *container, ASTBlock *block);
-ASTStmt *bssAllocASTStmtBlock(BaseArena *arena, ASTBlock *block);
+ASTStmt *bssAllocASTStmt(Arena *arena, ASTStmtKind kind, BssTok startTok, BssTok endTok);
+ASTStmt *bssAllocASTStmtAssign(Arena *arena, ASTExpr *lhs, ASTExpr *rhs);
+ASTStmt *bssAllocASTStmtExpr(Arena *arena, ASTExpr *expr);
+ASTStmt *bssAllocASTStmtProjDecl(Arena *arena, BssTok iden, ASTExpr *expr);
+ASTStmt *bssAllocASTStmtBuild(Arena *arena, ASTExpr *expr, ASTExpr *buildArgs);
+ASTStmt *bssAllocASTStmtIf(Arena *arena, ASTExpr *cond, ASTBlock *thenBlock, ASTBlock *elseBlock);
+ASTStmt *bssAllocASTStmtFor(Arena *arena, BssTok iden, ASTExpr *container, ASTBlock *block);
+ASTStmt *bssAllocASTStmtBlock(Arena *arena, ASTBlock *block);
 
-ASTExpr *bssAllocASTExpr(BaseArena *arena, ASTExprKind kind, BssTok startTok, BssTok endTok);
-ASTExpr *bssAllocASTExprIden(BaseArena *arena, BssTok iden);
-ASTExpr *bssAllocASTExprLit(BaseArena *arena, BssTok lit);
-ASTExpr *bssAllocASTExprMembAccess(BaseArena *arena, BssTok startTok, BssTok endTok, ASTExpr *lhs, BssTok memb);
-ASTExpr *bssAllocASTExprIndex(BaseArena *arena, BssTok startTok, BssTok endTok, ASTExpr *lhs, ASTExpr *index);
-ASTExpr *bssAllocASTExprBinary(BaseArena *arena, BssTok startTok, BssTok endTok, BssTok op, ASTExpr *lhs, ASTExpr *rhs);
-ASTExpr *bssAllocASTExprFunc(BaseArena *arena, BssTok startTok, BssTok endTok, ASTExpr *expr, ASTNamedExprList args);
-ASTExpr *bssAllocASTExprCompound(BaseArena *arena, BssTok startTok, BssTok endTok, ASTNamedExprList exprs);
-ASTExpr *bssAllocASTExprRun(BaseArena *arena, BssTok startTok, BssTok endTok, ASTExpr *expr);
+ASTExpr *bssAllocASTExpr(Arena *arena, ASTExprKind kind, BssTok startTok, BssTok endTok);
+ASTExpr *bssAllocASTExprIden(Arena *arena, BssTok iden);
+ASTExpr *bssAllocASTExprLit(Arena *arena, BssTok lit);
+ASTExpr *bssAllocASTExprMembAccess(Arena *arena, BssTok startTok, BssTok endTok, ASTExpr *lhs, BssTok memb);
+ASTExpr *bssAllocASTExprIndex(Arena *arena, BssTok startTok, BssTok endTok, ASTExpr *lhs, ASTExpr *index);
+ASTExpr *bssAllocASTExprBinary(Arena *arena, BssTok startTok, BssTok endTok, BssTok op, ASTExpr *lhs, ASTExpr *rhs);
+ASTExpr *bssAllocASTExprFunc(Arena *arena, BssTok startTok, BssTok endTok, ASTExpr *expr, ASTNamedExprList args);
+ASTExpr *bssAllocASTExprCompound(Arena *arena, BssTok startTok, BssTok endTok, ASTNamedExprList exprs);
+ASTExpr *bssAllocASTExprRun(Arena *arena, BssTok startTok, BssTok endTok, ASTExpr *expr);
 
-ASTNamedExpr *bssAllocASTNamedExpr(BaseArena *arena, BssTok startTok, BssTok endTok, bool hasName, ASTExpr *lhs, ASTExpr *rhs);
+ASTNamedExpr *bssAllocASTNamedExpr(Arena *arena, BssTok startTok, BssTok endTok, bool hasName, ASTExpr *lhs, ASTExpr *rhs);
 
 #endif

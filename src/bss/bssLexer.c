@@ -22,13 +22,13 @@ str8 gBssBssTokLexemeTable[] =
     [TOK_END_INPUT] = STR8_LIT_COMP_CONST("END OF INPUT"),
 };
 
-void BssTokChunkListPushLast(BaseArena *arena, BssTokChunkList *l, BssTok tok)
+void BssTokChunkListPushLast(Arena *arena, BssTokChunkList *l, BssTok tok)
 {
     if(!BASE_ANY_PTR(l) || (l->last->chunk.len >= l->last->cap))
     {
-        BssTokChunkListNode *n = baseArenaPushType(arena, BssTokChunkListNode);
+        BssTokChunkListNode *n = arenaPushType(arena, BssTokChunkListNode);
         n->cap = 50;
-        n->chunk.data = baseArenaPushArray(arena, BssTok, n->cap);
+        n->chunk.data = arenaPushArray(arena, BssTok, n->cap);
         n->chunk.len = 0;
 
         BasePtrListNodePushLast(l, n);
@@ -38,7 +38,7 @@ void BssTokChunkListPushLast(BaseArena *arena, BssTokChunkList *l, BssTok tok)
     l->last->chunk.len += 1;
     l->totalLen += 1;
 }
-BssTokArray BssTokChunkListFlattenToArray(BaseArena *arena, BssTokChunkList *l)
+BssTokArray BssTokChunkListFlattenToArray(Arena *arena, BssTokChunkList *l)
 {
     BssTokArray flattened = {0};
 
@@ -47,7 +47,7 @@ BssTokArray BssTokChunkListFlattenToArray(BaseArena *arena, BssTokChunkList *l)
         return flattened;
     }
 
-    flattened.data = baseArenaPushArray(arena, BssTok, l->totalLen);
+    flattened.data = arenaPushArray(arena, BssTok, l->totalLen);
     flattened.len = l->totalLen;
 
     u64 i = 0;
@@ -91,7 +91,7 @@ BssTokArray bssLexerLexWholeBuffer(struct BSSInterpretorState *iState)
 {
     BssTokChunkList tokChunks = {0};
 
-    BaseArenaTemp temp = baseTempBegin(&iState->lexerArena, 1);
+    ArenaTemp temp = baseTempBegin(&iState->lexerArena, 1);
     {
         while((iState->lState.tok = bssLexerNextFromBuffer(iState)).kind != TOK_END_INPUT)
         {
@@ -266,7 +266,7 @@ LEX_START:
                 if(charsLeftInBuffer >= gBssBssTokLexemeTable[i].len)
                 {
                     str8 l = baseStr8(iState->lState.currLocInBuffer - 1, gBssBssTokLexemeTable[i].len);
-                    if(baseStringsStrEquals(l, gBssBssTokLexemeTable[i], 0) && (l.len > longestMatch))
+                    if(Str8Equals(l, gBssBssTokLexemeTable[i], 0) && (l.len > longestMatch))
                     {
                         // for it to match with a keyword identifier,
                         // it should be a token, forexample
@@ -306,7 +306,7 @@ LEX_START:
             lexeme.data =  iState->lState.currLocInBuffer - 1;
             lexeme.len = tokLen;
 
-            if(baseStringsStrEquals(STR8_LIT("false"), lexeme, 0) || baseStringsStrEquals(STR8_LIT("true"), lexeme, 0))
+            if(Str8Equals(STR8_LIT("false"), lexeme, 0) || Str8Equals(STR8_LIT("true"), lexeme, 0))
             {
                 tokKind = TOK_BOOL_LIT;
             }
