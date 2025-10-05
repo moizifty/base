@@ -1,7 +1,7 @@
 /**********************************************************************/
 /* GENERATED FILE
 /* Input: .\src\base\baseCoreTypes.h
-/* Date-Time: 3/10/2025 - 01:13
+/* Date-Time: 3/10/2025 - 21:01
 /**********************************************************************/
 
 #include "baseCoreTypes.gen.h"
@@ -19,5 +19,5 @@ extern MetagenStructMembArray gDateTimeMembDefsTable=
 		{.name = STR8_LIT_COMP_CONST("sec"), .type = METAGEN_TYPE_u8, .size=1, .offset=7,},
 		{.name = STR8_LIT_COMP_CONST("milli"), .type = METAGEN_TYPE_u16, .size=2, .offset=8,},
 	},
-	.len=8
+	.len=8,
 };

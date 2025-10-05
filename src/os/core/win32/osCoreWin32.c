@@ -695,9 +695,9 @@ str8 OSGetEnvironmentVar(Arena *arena, str8 var)
     if(size > 0)
     {
         val.data = arenaPushArray(arena, u8, size);
-        val.len = size;
+        GetEnvironmentVariableA((i8*)var.data, (i8*)val.data, (DWORD)size);
 
-        GetEnvironmentVariableA((i8*)var.data, (i8*)val.data, (DWORD)val.len);
+        val.len = size - 1;
     }
 
     return val;

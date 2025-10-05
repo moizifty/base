@@ -521,11 +521,10 @@ bool metagenTryGetAggregateTypeInfoForMemb(Arena *arena, MetagenCStructMemb memb
     {
         BASE_LIST_FOREACH(MetagenCStructMemb, unionMemb, memb.aggrMembs)
         {
-            MetagenCTypeInfo unionMembTypeInfo = {0};
             if (metagenTryGetTypeInfoForMemb(arena, *unionMemb, dict, &unionMemb->typeInfo))
             {
-                info->alignment = BASE_CLAMP(BASE_MAX(info->alignment, unionMembTypeInfo.alignment), 0, 8);
-                info->size = BASE_MAX(info->size, unionMembTypeInfo.size);
+                info->alignment = BASE_CLAMP(BASE_MAX(info->alignment, unionMemb->typeInfo.alignment), 0, 8);
+                info->size = BASE_MAX(info->size, unionMemb->typeInfo.size);
 
                 unionMemb->offset = memb.offset;
             }

@@ -205,7 +205,7 @@ void ProgramMain(CmdLineHashMap *opts)
         OSFileWriteFmt(outputFile, "#define METAGEN_PRINT_MEMB_CUSTOM \\\n");
         BASE_LIST_FOREACH(MetagenTypeDictSlotEntry, entryNode, gMetagenTypeDict)
         {
-            OSFileWriteFmt(outputFile, "         case METAGEN_TYPE_%S: basePrintStruct(((u8*)(member) + (size*i)), g%SMembDefsTable); break;\\\n", entryNode->type->name, entryNode->type->name, entryNode->type->name);
+            OSFileWriteFmt(outputFile, "         case METAGEN_TYPE_%S: basePrintStructEx(((u8*)(member) + (size*i)), g%SMembDefsTable); break;\\\n", entryNode->type->name, entryNode->type->name, entryNode->type->name);
         }
 
         OSFileClose(outputFile);
