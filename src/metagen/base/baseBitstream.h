@@ -1,7 +1,7 @@
 #ifndef BASE_BITSTREAM_H
 #define BASE_BITSTREAM_H
 
-#include "base\baseCore.h"
+#include "base/baseCore.h"
 
 typedef struct Bitstream
 {

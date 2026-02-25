@@ -1,6 +1,6 @@
-#include "base\baseMemory.h"
-#include "base\baseThreads.h"
-#include "os\core\osCore.h"
+#include "base/baseMemory.h"
+#include "base/baseThreads.h"
+#include "os/core/osCore.h"
 #include "bssInterp.h"
 
 void bssInterpError(BSSInterpretorState *iState, BssTok start, BssTok end, char *msg, ...)

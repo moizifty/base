@@ -7,14 +7,15 @@
 #include "baseThreads.h"
 #include "baseStrings.h"
 #include "baseCmdLine.h"
-#include "..\os\core\osCore.h"
+#include "baseLog.h"
+#include "../os/core/osCore.h"
 
 #define STB_SPRINTF_IMPLEMENTATION
-#include "thirdparty\ts_stb_sprintf.h"
+#include "thirdparty/ts_stb_sprintf.h"
 
 BASE_CREATE_LL_DEFS(U8ArrayList, U8Array);
 
-void U8ChunkListPushLast(Arena *arena, U8ChunkList *l, u8 u)
+void U8ChunkListPushLast(struct Arena *arena, U8ChunkList *l, u8 u)
 {
     if(!BASE_ANY_PTR(l) || (l->last->chunk.len >= l->last->cap))
     {
@@ -30,7 +31,7 @@ void U8ChunkListPushLast(Arena *arena, U8ChunkList *l, u8 u)
     l->last->chunk.len += 1;
     l->totalLen += 1;
 }
-void U8ChunkListPushStr8Last(Arena *arena, U8ChunkList *l, str8 str)
+void U8ChunkListPushStr8Last(struct Arena *arena, U8ChunkList *l, str8 str)
 {
     for(u64 i = 0; i < str.len; i++)
     {
@@ -38,7 +39,7 @@ void U8ChunkListPushStr8Last(Arena *arena, U8ChunkList *l, str8 str)
     }
 }
 
-U8Array U8ChunkListFlattenToArray(Arena *arena, U8ChunkList *l)
+U8Array U8ChunkListFlattenToArray(struct Arena *arena, U8ChunkList *l)
 {
     U8Array flattened = {0};
 
@@ -64,9 +65,6 @@ U8Array U8ChunkListFlattenToArray(Arena *arena, U8ChunkList *l)
 
 void BaseMainThreadEntry(ProgramMainFunc programMain, i64 argc, i8 **argv)
 {
-    BASE_UNUSED_PARAM(argc);
-    BASE_UNUSED_PARAM(argv);
-    
     setlocale(LC_ALL, ".utf8");
     OSEnableVirtualTerminalSequenceProcessing();
 
@@ -92,7 +90,6 @@ void BaseMainThreadEntry(ProgramMainFunc programMain, i64 argc, i8 **argv)
 
     logThreadOutputToFile();
 }
-
 i64 baseColFprintf(FILE *fp, const char *fmt, ...)
 {
     va_list list;

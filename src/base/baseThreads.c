@@ -15,7 +15,6 @@ BaseThreadCtx baseThreadsCreateCtx(void)
     
     ctx.threadLogArena = arenaAlloc(BASE_THREADS_DEFAULT_ARENA_ALLOC_SIZE);
     ctx.threadLog = logCreate(ctx.threadLogArena);
-    
     return ctx;
 }
 BaseThreadCtx *baseThreadsGetCtx(void)

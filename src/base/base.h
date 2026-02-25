@@ -1,5 +1,5 @@
 #ifndef BASE_H
-#define BASe_H
+#define BASE_H
 
 #include "baseCtxCrack.h"
 #include "baseCoreTypes.h"

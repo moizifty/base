@@ -1,9 +1,9 @@
 #ifndef BSS_CORE_H
 #define BSS_CORE_H
 
-#include "base\baseCore.h"
-#include "base\baseMemory.h"
-#include "base\baseStrings.h"
+#include "base/baseCore.h"
+#include "base/baseMemory.h"
+#include "base/baseStrings.h"
 
 typedef enum BssTokKind
 {

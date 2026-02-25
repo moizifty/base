@@ -5,7 +5,7 @@
 #include "..\..\..\base\baseStrings.h"
 #include "..\..\..\base\baseMemory.h"
 #include "..\..\..\base\baseThreads.h"
-#include "base\baseLog.h"
+#include "base/baseLog.h"
 
 global OSKey gOSWin32VKToOSKeyTable[256] = 
 {

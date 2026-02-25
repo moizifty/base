@@ -1,7 +1,7 @@
 #ifndef BASE_METAGEN_H
 #define BASE_METAGEN_H
 
-#include "base\baseCore.h"
+#include "base/baseCore.h"
 
 // metagen commands
 #define metagen_gentable(...)
@@ -48,6 +48,6 @@ typedef struct MetagenStructMemb
 BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(MetagenStructMembArray, MetagenStructMemb);
 
 void basePrintStructEx(void *data, MetagenStructMembArray membs);
-#include "base\baseMetagenCommon.gen.h"
+#include "base/baseMetagenCommon.gen.h"
 
 #endif

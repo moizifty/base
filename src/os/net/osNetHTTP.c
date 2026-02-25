@@ -1,5 +1,5 @@
-#include "base\baseUri.h"
-#include "os\net\osNetHTTP.h"
+#include "base/baseUri.h"
+#include "os/net/osNetHTTP.h"
 
 BASE_CREATE_EFFICIENT_LL_DEFS(OSNetHttpHeaderList, OSNetHttpHeader);
 

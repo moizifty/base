@@ -1,6 +1,6 @@
 /**********************************************************************/
-/* GENERATED FILE
-/* Date-Time: 3/10/2025 - 21:01
+// GENERATED FILE
+// Date-Time: 3/10/2025 - 21:01
 /**********************************************************************/
 
 extern MetagenStructMembArray gDateTimeMembDefsTable;

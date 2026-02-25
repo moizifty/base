@@ -1,16 +1,16 @@
 #ifndef OS_NET_H
 #define OS_NET_H
 
-#include "base\baseCore.h"
-#include "base\baseStrings.h"
-#include "base\baseLog.h"
-#include "base\baseMath.h"
-#include "base\baseThreads.h"
-#include "base\baseMemory.h"
-#include "os\core\osCore.h"
+#include "base/baseCore.h"
+#include "base/baseStrings.h"
+#include "base/baseLog.h"
+#include "base/baseMath.h"
+#include "base/baseThreads.h"
+#include "base/baseMemory.h"
+#include "os/core/osCore.h"
 
-#ifdef OS_WIN32
-#include "win32\osNetWin32.h"
+#if OS_WIN32
+#include "win32/osNetWin32.h"
 #else
 #error Platform not defined
 #endif

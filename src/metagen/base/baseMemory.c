@@ -1,4 +1,4 @@
-#include "base\baseMemory.h"
+#include "base/baseMemory.h"
 
 #ifndef arenaReserveImpl
 #error arenaReserveImpl is not defined.
@@ -15,6 +15,7 @@
 
 Arena *arenaAlloc(u64 size)
 {
+    static u8 buf[9000];
     u64 sizeToReserve = sizeof(Arena) + size;
     void *block = arenaReserveImpl(sizeToReserve);
 

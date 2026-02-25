@@ -1,13 +1,13 @@
-#include "base\base.h"
+#include "base/base.h"
 
-#include "os\os.h"
+#include "os/os.h"
 #include "bss\bss.h"
 
-#include "base\base.c"
-#include "os\os.c"
+#include "base/base.c"
+#include "os/os.c"
 #include "bss\bss.c"
 
-#include "os\core\osEntryPoint.c"
+#include "os/core/osEntryPoint.c"
 
 void ProgramMain(CmdLineHashMap *cmdline)
 {

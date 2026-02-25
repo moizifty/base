@@ -1,8 +1,8 @@
 #ifndef OS_CORE_H
 #define OS_CORE_H
 
-#include "base\baseCoreTypes.h"
-#include "base\baseMath.h"
+#include "base/baseCoreTypes.h"
+#include "base/baseMath.h"
 
 #ifndef arenaReserveImpl
 #define arenaReserveImpl OSReserveMemory
@@ -132,8 +132,10 @@ typedef struct OSExceptionInfo
     u32 _placeholder;
 }OSExceptionInfo;
 
-#ifdef OS_WIN32
-#include "win32\osCoreWin32.h"
+#if OS_WIN32 == 1
+#include "win32/osCoreWin32.h"
+#elif OS_LINUX == 1
+#include "linux/osCoreLinux.h"
 #else
 #error Platform not defined
 #endif

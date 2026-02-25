@@ -1,8 +1,8 @@
 #ifndef RENDERER_H
 #define RENDERER_H
 
-#include "base\baseCore.h"
-#include "base\baseMemory.h"
+#include "base/baseCore.h"
+#include "base/baseMemory.h"
 
 #if RENDERER_BACKEND == RENDERER_D3D11
 #include "d3d11\rendererD3D11.h"

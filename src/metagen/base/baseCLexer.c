@@ -1,6 +1,6 @@
-#include "base\baseCLexer.h"
+#include "base/baseCLexer.h"
 
-#include "os\core\osCore.h"
+#include "os/core/osCore.h"
 
 str8 gBaseCTokLexemeTable[] =
 {

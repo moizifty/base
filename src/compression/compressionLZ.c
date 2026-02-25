@@ -1,6 +1,6 @@
 #include "compressionLZ.h"
-#include "base\baseMath.h"
-#include "base\baseHash.h"
+#include "base/baseMath.h"
+#include "base/baseHash.h"
 
 CompressBackReference compressionLZ4NaiveLinearBackRefMatch(U8Array backRefWindow, U8Array lookaheadWindow)
 {
@@ -392,7 +392,7 @@ bool compressionLZ4MUncompress(U8Array input, U8Array output)
 
         u16 offset = input.data[bytesRead++];  
         offset |= (input.data[bytesRead++] << 8);
-        u64 matchlen = (tokByte & 0b0000'1111) + COMPRESSION_LZ4M_MINIMUM_MATCHLEN;
+        u64 matchlen = (tokByte & 0b00001111) + COMPRESSION_LZ4M_MINIMUM_MATCHLEN;
         if(matchlen == (15 + COMPRESSION_LZ4M_MINIMUM_MATCHLEN))
         {
             while(input.data[bytesRead] == 255)

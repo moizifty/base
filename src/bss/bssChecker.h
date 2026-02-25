@@ -1,7 +1,7 @@
 #ifndef BSS_CHECKER_H
 #define BSS_CHECKER_H
 
-#include "base\baseCore.h"
+#include "base/baseCore.h"
 #include "bssLexer.h"
 #include "bssAST.h"
 #include "bssParser.h"

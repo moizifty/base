@@ -15,7 +15,7 @@ str8 logFormatLogEntryMsg(Arena *arena, LogEntry msg)
 
     Str8ListPushLastFmt(arena, 
                         &list,
-                        "[%02d/%02d/%04d <-> %02d:%02d:%2d][%s]: ", 
+                        "[%02d/%02d/%04d <-> %02d:%02d:%02d][%s]: ", 
                         time.day, 
                         time.month, 
                         time.year,
@@ -232,7 +232,7 @@ str8 logThreadOutputToFile(void)
     BaseThreadCtx *threadCtx = baseThreadsGetCtx();
 
     str8 logDir = OSGetState()->thisProcState.logDirPath;
-    str8 logPath = Str8PushFmt(threadCtx->threadLogArena, "%S\\[%S]_log.txt", logDir, baseThreadsGetName());
+    str8 logPath = Str8PushFmt(threadCtx->threadLogArena, "%S/[%S]_log.txt", logDir, baseThreadsGetName());
 
     return logOutputToFile(threadCtx->threadLogArena, threadCtx->threadLog, logPath);
 }

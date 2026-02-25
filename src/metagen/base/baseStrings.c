@@ -457,7 +457,7 @@ DecodeCodePointInfo baseStringsDecodeCodepointFromUtf8(u8 *bytes, u64 remainingL
     BASE_UNUSED_PARAM(remainingLen);
 
     DecodeCodePointInfo dp = {0};
-    if (bytes[0] < 0b1000'0000)
+    if (bytes[0] < 0b10000000)
     {
         dp.advance = 1;
         dp.codepoint = bytes[0];

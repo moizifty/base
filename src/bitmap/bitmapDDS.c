@@ -8,10 +8,10 @@ vec3u8 bitmapDDSCalculateColorFromU16(u16 col)
     col0.r = (col >> 11);
     col0.r = (col0.r << 3) | (col0.r >> 2);
 
-    col0.g = (col & 0b00000'111111'00000) >> 5;
+    col0.g = (col & 0b0000011111100000) >> 5;
     col0.g = (col0.g << 2) | (col0.g >> 4);
 
-    col0.b = (col &  0b00000'000000'11111);
+    col0.b = (col &  0b0000000000011111);
     col0.b = (col0.b << 3) | (col0.b >> 2);
 
     return col0;

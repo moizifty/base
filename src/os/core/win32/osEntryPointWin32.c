@@ -1,5 +1,5 @@
 #include "osCoreWin32.h"
-#include "base\baseLog.h"
+#include "base/baseLog.h"
 
 typedef struct CmdLineHashMap CmdLineHashMap;
 void ProgramMain(CmdLineHashMap *);

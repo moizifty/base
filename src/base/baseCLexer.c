@@ -1,6 +1,6 @@
-#include "base\baseCLexer.h"
+#include "base/baseCLexer.h"
 
-#include "os\core\osCore.h"
+#include "os/core/osCore.h"
 
 str8 gBaseCTokLexemeTable[] =
 {
@@ -14,7 +14,7 @@ CTokArray CTokArraySkip(CTokArray arr, u64 amount)
 
 i64 baseCLexerGetEscapeCharValue(str8 escapeCharString)
 {
-     if(escapeCharString.data[0] != '\\')
+    if(escapeCharString.data[0] != '\\')
     {
         return -1;
     }

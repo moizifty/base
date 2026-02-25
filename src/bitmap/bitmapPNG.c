@@ -1,5 +1,5 @@
 #include "bitmap\bitmapPNG.h"
-#include "base\baseLog.h"
+#include "base/baseLog.h"
 
 u8 gBitmapPNGColorTypeComponentsTable[PNG_COLOR_TYPE_COUNT] = 
 {

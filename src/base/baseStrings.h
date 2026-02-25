@@ -92,6 +92,7 @@ bool Str8StartsWith(str8 str, str8 startsWith, StrMatchFlags flags);
 bool Str8EndsWith(str8 str, str8 endsWith, StrMatchFlags flags);
 str8 Str8Skip(str8 str, i64 amount);
 Str8List Str8Split(Arena *arena, str8 str, str8 splitWith, StrMatchFlags matchFlags, StrSplitFlags splitFlags);
+u64 Str8CountOccurance(str8 str, str8 needle, StrMatchFlags matchFlags);
 
 str8 Str8Lower(Arena *arena, str8 str);
 
@@ -103,8 +104,8 @@ str8 Str8ChopPastLastSlash(str8 str);
 str8 Str8ChopBefore(str8 str, str8 before, StrMatchFlags flags);
 
 // conversions
-BASE_CREATE_LL_DECLS_DEFS(U16List, u16);
-BASE_CREATE_LL_DECLS_DEFS(U8List, u8);
+BASE_CREATE_LL_DECLS(U16List, u16);
+BASE_CREATE_LL_DECLS(U8List, u8);
 
 typedef struct DecodeCodePointInfo
 {

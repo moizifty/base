@@ -7,7 +7,7 @@
 #include <ctype.h>
 
 #include "baseCoreTypes.h"
-#include "thirdparty\ts_stb_sprintf.h"
+#include "thirdparty/ts_stb_sprintf.h"
 
 // General
 
@@ -143,12 +143,13 @@ typedef struct NAME \
 	u64 len; \
 	u64 totalSize; \
 }NAME; \
-inline void NAME##PushNodeLast(NAME *l, NODENAME *node); \
-inline void NAME##PushNodeFirst(NAME *l, NODENAME *node); \
-inline void NAME##InsertNode(NAME *l, NODENAME *prev, NODENAME *node); \
-inline void NAME##PushLast(struct Arena *arena, NAME *l, ELEM value); \
-inline void NAME##PushFirst(struct Arena *arena, NAME *l, ELEM value); \
-inline void NAME##PushInsert(struct Arena *arena, NAME *l, NODENAME *prev, ELEM value); \
+void NAME##PushNodeLast(NAME *l, NODENAME *node); \
+void NAME##PushNodeFirst(NAME *l, NODENAME *node); \
+void NAME##InsertNode(NAME *l, NODENAME *prev, NODENAME *node); \
+void NAME##PushLast(struct Arena *arena, NAME *l, ELEM value); \
+void NAME##PushFirst(struct Arena *arena, NAME *l, ELEM value); \
+void NAME##PushInsert(struct Arena *arena, NAME *l, NODENAME *prev, ELEM value); \
+ArrayView NAME##FlattenToArray(struct Arena *arena, NAME *l); \
 
 #define BASE_CREATE_LL_JUST_NODE_DECLS_EX(NAME, NODENAME, ELEM) \
 typedef struct NAME NAME; \
@@ -183,25 +184,25 @@ inline void NAME##InsertNode(NAME *l, NODENAME *prev, NODENAME *node) \
 	l->len += 1; \
 	l->totalSize += sizeof(node->val); \
 } \
-inline void NAME##PushLast(Arena *arena, NAME *l, ELEM value) \
+inline void NAME##PushLast(struct Arena *arena, NAME *l, ELEM value) \
 { \
 	NODENAME *n = arenaPush(arena, sizeof(NODENAME)); \
 	n->val = value; \
 	NAME##PushNodeLast(l, n); \
 } \
-inline void NAME##PushFirst(Arena *arena, NAME *l, ELEM value) \
+inline void NAME##PushFirst(struct Arena *arena, NAME *l, ELEM value) \
 { \
 	NODENAME *n = arenaPush(arena, sizeof(NODENAME)); \
 	n->val = value; \
 	NAME##PushNodeFirst(l, n); \
 } \
-inline void NAME##PushInsert(Arena *arena, NAME *l, NODENAME *prev, ELEM value) \
+inline void NAME##PushInsert(struct Arena *arena, NAME *l, NODENAME *prev, ELEM value) \
 { \
 	NODENAME *n = arenaPush(arena, sizeof(NODENAME)); \
 	n->val = value; \
 	NAME##InsertNode(l, prev, n); \
 } \
-inline ArrayView NAME##FlattenToArray(Arena *arena, NAME *l) \
+inline ArrayView NAME##FlattenToArray(struct Arena *arena, NAME *l) \
 { \
 	ArrayView view = {0}; \
 	view.data = arenaPushNoZero(arena, l->totalSize); \
@@ -305,6 +306,8 @@ typedef struct U8ChunkList
 // disable this dumb warning
 #pragma warning( push )
 #pragma warning( disable : 4115)
+
+typedef struct Arena Arena;
 void U8ChunkListPushLast(struct Arena *arena, U8ChunkList *l, u8 n);
 void U8ChunkListPushStr8Last(struct Arena *arena, U8ChunkList *l, str8 str);
 U8Array U8ChunkListFlattenToArray(struct Arena *arena, U8ChunkList *l);

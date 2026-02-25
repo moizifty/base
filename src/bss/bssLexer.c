@@ -1,5 +1,5 @@
-#include "base\baseThreads.h"
-#include "os\core\osCore.h"
+#include "base/baseThreads.h"
+#include "os/core/osCore.h"
 
 #include "bss\bssLexer.h"
 

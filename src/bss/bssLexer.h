@@ -1,9 +1,9 @@
 #ifndef BSS_LEXER_H
 #define BSS_LEXER_H
 
-#include "base\baseCore.h"
-#include "base\baseStrings.h"
-#include "base\baseMemory.h"
+#include "base/baseCore.h"
+#include "base/baseStrings.h"
+#include "base/baseMemory.h"
 
 #include "bss\bssCore.h"
 

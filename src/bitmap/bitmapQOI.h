@@ -1,13 +1,13 @@
 #ifndef BITMAP_QOI_H
 #define BITMAP_QOI_H
 
-#include "base\baseCore.h"
-#include "base\baseMath.h"
-#include "base\baseMemory.h"
-#include "base\baseStrings.h"
-#include "base\baseThreads.h"
+#include "base/baseCore.h"
+#include "base/baseMath.h"
+#include "base/baseMemory.h"
+#include "base/baseStrings.h"
+#include "base/baseThreads.h"
 #include "datastructures\bitstream.h"
-#include "os\core\osCore.h"
+#include "os/core/osCore.h"
 #include "bitmapCoreTypes.h"
 
 typedef struct QOIHeader

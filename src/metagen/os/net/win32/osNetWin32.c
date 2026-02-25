@@ -1,4 +1,4 @@
-#include "os\net\osNet.h"
+#include "os/net/osNet.h"
 #include "osNetWin32.h"
 
 OSNetAddrKind OSNetWin32AddrFamilyToAddrKind(int addrKind)

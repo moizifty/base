@@ -1,10 +1,10 @@
 #ifndef COMPRESSION_LZ_H
 #define COMPRESSION_LZ_H
 
-#include "base\baseCore.h"
-#include "base\baseStrings.h"
-#include "base\baseMemory.h"
-#include "base\baseThreads.h"
+#include "base/baseCore.h"
+#include "base/baseStrings.h"
+#include "base/baseMemory.h"
+#include "base/baseThreads.h"
 
 #define COMPRESSION_LZ4M_MINIMUM_MATCHLEN 4
 

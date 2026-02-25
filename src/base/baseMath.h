@@ -289,6 +289,7 @@ typedef struct vec4u8
     union
     {
         u8 v[4];
+        u32 asU32;
         struct
         {
             u8 x;

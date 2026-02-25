@@ -1,9 +1,9 @@
 #ifndef BITMAP_CORE_TYPES
 #define BITMAP_CORE_TYPES
 
-#include "base\baseCore.h"
-#include "base\baseStrings.h"
-#include "base\baseMath.h"
+#include "base/baseCore.h"
+#include "base/baseStrings.h"
+#include "base/baseMath.h"
 
 #define BITMAP_MAX_MAGIC_BYTES 10
 typedef enum BitmapFileKind

@@ -1,11 +1,11 @@
 #ifndef BITMAP_DDS_H
 #define BITMAP_DDS_H
 
-#include "base\baseCore.h"
-#include "base\baseStrings.h"
-#include "base\baseMemory.h"
-#include "base\baseThreads.h"
-#include "base\baseMath.h"
+#include "base/baseCore.h"
+#include "base/baseStrings.h"
+#include "base/baseMemory.h"
+#include "base/baseThreads.h"
+#include "base/baseMath.h"
 
 #include "bitmap\bitmapCoreTypes.h"
 

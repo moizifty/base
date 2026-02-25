@@ -1,8 +1,8 @@
 #ifndef COMPRESSION_DEFLATE_H
 #define COMPRESSION_DEFLATE_H
 
-#include "base\baseCore.h"
-#include "base\baseMemory.h"
+#include "base/baseCore.h"
+#include "base/baseMemory.h"
 #include "datastructures\bitstream.h"
 
 #define COMPRESSION_DEFLATE_WINDOW_SIZE 32768 // Maximum size of the sliding window

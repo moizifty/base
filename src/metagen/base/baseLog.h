@@ -1,10 +1,10 @@
 #ifndef BASE_LOG_H
 #define BASE_LOG_H
 
-#include "base\baseMemory.h"
-#include "base\baseStrings.h"
-#include "base\baseThreads.h"
-#include "os\core\osCore.h"
+#include "base/baseMemory.h"
+#include "base/baseStrings.h"
+#include "base/baseThreads.h"
+#include "os/core/osCore.h"
 
 #define LOG_ENTRY_CHUNK_SIZE 50
 

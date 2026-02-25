@@ -1,7 +1,7 @@
 #ifndef BSS_SCOPES_H
 #define BSS_SCOPES_H
 
-#include "base\baseCore.h"
+#include "base/baseCore.h"
 #include "bssTypes.h"
 
 #define BSS_VALUE_TRYINT(v, i)    (((v) && (v)->hasBssValue && bssIsTypeInt((v)->type)) ? (((i) = (v)->integer.val), true) : (((i) = 0), false))

@@ -1,10 +1,10 @@
 #ifndef BASE_PATH_H
 #define BASE_PATH_H
 
-#include "base\baseCore.h"
-#include "base\baseStrings.h"
-#include "base\baseMemory.h"
-#include "base\baseThreads.h"
+#include "base/baseCore.h"
+#include "base/baseStrings.h"
+#include "base/baseMemory.h"
+#include "base/baseThreads.h"
 
 typedef struct Path
 {

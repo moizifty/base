@@ -1,7 +1,7 @@
 #ifndef BSS_TYPES_H
 #define BSS_TYPES_H
 
-#include "base\baseCore.h"
+#include "base/baseCore.h"
 #include "bssLexer.h"
 
 typedef enum BssTypeKind BssTypeKind;

@@ -1,10 +1,10 @@
 #ifndef BASE_C_LEXER_H
 #define BASE_C_LEXER_H
 
-#include "base\baseCore.h"
-#include "base\baseMemory.h"
-#include "base\baseThreads.h"
-#include "base\baseStrings.h"
+#include "base/baseCore.h"
+#include "base/baseMemory.h"
+#include "base/baseThreads.h"
+#include "base/baseStrings.h"
 
 typedef enum CTokKind
 {

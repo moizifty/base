@@ -1,7 +1,7 @@
 #include "..\osGfx.h"
 
-#include "base\baseStrings.h"
-#include "base\baseThreads.h"
+#include "base/baseStrings.h"
+#include "base/baseThreads.h"
 #include "osGfxWin32.h"
 
 threadlocal Arena *gOSWin32TLEventsArena = null;

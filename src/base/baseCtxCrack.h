@@ -211,9 +211,11 @@
 #if !defined(RENDERER_BACKEND)
 # if OS_WIN32
 #  define RENDERER_BACKEND RENDERER_D3D11
-# else
-#  error No renderer backend exists
 # endif
 #endif
+
+// # else
+// #  warning No renderer backend exists
+// # endif
 
 #endif // BASE_CTX_CRACK_H

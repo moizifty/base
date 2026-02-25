@@ -1,7 +1,7 @@
 #include "osCore.h"
 
-#ifdef OS_WIN32
-#include "win32\osCoreWin32.c"
+#if OS_WIN32
+#include "win32/osCoreWin32.c"
 #else
 #error Platform not defined
 #endif

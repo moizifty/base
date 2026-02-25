@@ -1,8 +1,8 @@
 #ifndef BSS_AST_H
 #define BSS_AST_H
 
-#include "base\baseCore.h"
-#include "base\baseMemory.h"
+#include "base/baseCore.h"
+#include "base/baseMemory.h"
 #include "bssCore.h"
 #include "bssTypes.h"
 

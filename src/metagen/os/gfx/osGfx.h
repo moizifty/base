@@ -1,13 +1,13 @@
 #ifndef OS_GFX_H
 #define OS_GFX_H
 
-#include "base\baseCore.h"
-#include "base\baseMath.h"
-#include "base\baseMemory.h"
-#include "os\core\osCore.h"
+#include "base/baseCore.h"
+#include "base/baseMath.h"
+#include "base/baseMemory.h"
+#include "os/core/osCore.h"
 
-#ifdef OS_WIN32
-#include "win32\osGfxWin32.h"
+#if OS_WIN32
+#include "win32/osGfxWin32.h"
 #else
 #error Platform not defined
 #endif

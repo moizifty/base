@@ -17,7 +17,7 @@
 #include <memoryapi.h>
 #include <Shlwapi.h>
 
-#include "base\baseCoreTypes.h"
+#include "base/baseCoreTypes.h"
 
 #include <ShlObj.h>
 

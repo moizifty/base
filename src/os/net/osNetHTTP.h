@@ -1,9 +1,9 @@
 #ifndef OS_NET_HTTP_H
 #define OS_NET_HTTP_H
-#include "base\baseCore.h"
-#include "base\baseStrings.h"
-#include "base\baseMemory.h"
-#include "base\baseThreads.h"
+#include "base/baseCore.h"
+#include "base/baseStrings.h"
+#include "base/baseMemory.h"
+#include "base/baseThreads.h"
 
 typedef struct OSNetHttpHeader
 {

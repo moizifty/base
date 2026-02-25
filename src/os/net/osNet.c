@@ -1,7 +1,7 @@
 #include "osNet.h"
 
-#ifdef OS_WIN32
-#include "win32\osNetWin32.c"
+#if OS_WIN32
+#include "win32/osNetWin32.c"
 #else
 #error Platform not defined
 #endif

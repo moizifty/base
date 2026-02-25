@@ -4,7 +4,7 @@
 #ifndef OS_GFX_WIN32_H
 #define OS_GFX_WIN32_H
 
-#include "os\core\win32\osCoreWin32.h"
+#include "os/core/win32\osCoreWin32.h"
 
 #define OS_GFX_WIN32_DEFAULT_CLASS_NAMEA "AppWindowClass"
 #define OS_GFX_WIN32_DEFAULT_CLASS_NAMEW L"AppWindowClass"
