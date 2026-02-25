@@ -1,5 +1,3 @@
-#include <stdio.h>
-
 #define BASE_USE_EXCEPTION_HANDLER
 #include "..\base\base.h"
 #include "..\os\os.h"

@@ -279,7 +279,7 @@ BASE_CREATE_ARRAY_VIEW_DEFS(NAME, ELEM)
 #define ARRAY_VIEW_LIT_FROM_SIZED(T, ARRAY)		((T){ARRAY, .len = BASE_ARRAY_SIZE(ARRAY)})
 #define ARRAY_VIEW_LIT(T, ARRAY, SIZE)			((T){ARRAY, .len = SIZE})
 
-BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(U8Array, u8);
+BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(U8Array, u8)
 
 
 #define BASE_U8CHUNKLIST_DEFAULT_CAP	128
@@ -304,22 +304,22 @@ typedef struct U8ChunkList
 }U8ChunkList;
 
 // disable this dumb warning
-#pragma warning( push )
-#pragma warning( disable : 4115)
+// #pragma warning( push )
+// #pragma warning( disable : 4115)
 
 typedef struct Arena Arena;
 void U8ChunkListPushLast(struct Arena *arena, U8ChunkList *l, u8 n);
 void U8ChunkListPushStr8Last(struct Arena *arena, U8ChunkList *l, str8 str);
 U8Array U8ChunkListFlattenToArray(struct Arena *arena, U8ChunkList *l);
-BASE_CREATE_LL_DECLS(U8ArrayList, U8Array);
-#pragma warning( pop ) 
+BASE_CREATE_LL_DECLS(U8ArrayList, U8Array)
+// #pragma warning( pop ) 
 
 
 // program entry related
 typedef struct CmdLineHashMap CmdLineHashMap;
 typedef void(*ProgramMainFunc)(CmdLineHashMap *);
 
-void BaseMainThreadEntry(ProgramMainFunc programMain, i64 argc, i8 **argv);
+void BaseMainThreadEntry(ProgramMainFunc programMain, i64 argc, char **argv);
 
 i64 baseColFprintf(FILE *fp, const char *fmt, ...);
 

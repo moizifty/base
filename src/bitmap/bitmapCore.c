@@ -1,4 +1,4 @@
-#include "bitmap\bitmapCore.h"
+#include "bitmap/bitmapCore.h"
 
 // assumes little endian
 BitmapFileKindTableEntry gBitmapFileKindsTable[BITMAP_FILE_KIND_COUNT] = 

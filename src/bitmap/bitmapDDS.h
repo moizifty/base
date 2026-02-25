@@ -7,7 +7,7 @@
 #include "base/baseThreads.h"
 #include "base/baseMath.h"
 
-#include "bitmap\bitmapCoreTypes.h"
+#include "bitmap/bitmapCoreTypes.h"
 
 #define DDSD_CAPS 0x1
 #define DDSD_HEIGHT	0x2

@@ -1,3 +1,11 @@
+#if COMPILER_CLANG == 1
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wall"
+#pragma clang diagnostic ignored "-Wextra"
+#pragma clang diagnostic ignored "-Wpedantic"
+#pragma clang diagnostic ignored "-Wshadow"
+#pragma clang diagnostic ignored "-Wsign-conversion"
+#endif
 // NOTE(rjf): This library has been modified for the Telescope codebase.
 
 // stb_sprintf - v1.09 - public domain snprintf() implementation
@@ -1907,3 +1915,6 @@ ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 ------------------------------------------------------------------------------
 */
+#if COMPILER_CLANG == 1
+#pragma clang diagnostic pop
+#endif

@@ -203,15 +203,15 @@ str8 OSGetEnvironmentVar(Arena *arena, str8 var);
 // other
 vec2i OSScreenCoordToClientCoord(OSHandle wndHandle, vec2i screen);
 range2i OSClientRectFromWindow(OSHandle handle);
-vec2i OSGetCursorScreenCoordPos();
+vec2i OSGetCursorScreenCoordPos(void);
 vec2i OSGetCursorClientCoordPos(OSHandle wndHandle);
 
 //threading
-OSHandle OSGetCurrentThread();
+OSHandle OSGetCurrentThread(void);
 void OSSetThreadDebuggerName(OSHandle thread, str8 name);
 str8 OSGetThreadDebuggerName(OSHandle thread);
 
-BASE_CREATE_EFFICIENT_LL_DECLS(OSHandleList, OSHandle);
+BASE_CREATE_EFFICIENT_LL_DECLS(OSHandleList, OSHandle)
 
 global u64 gOSPerformanceFreq;
 global OSState *gOSState;

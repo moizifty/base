@@ -34,7 +34,7 @@ void* OSReserveMemory(u64 size)
 }
 void OSCommitMemory(void *ptr, u64 size)
 {
-    int err = mprotect(ptr, size, PROT_READ | PROT_WRITE);
+    mprotect(ptr, size, PROT_READ | PROT_WRITE);
 }
 void OSDecommitMemory(void *ptr, u64 size)
 {
@@ -61,12 +61,12 @@ str8 OSGetProgramPath(Arena *arena)
         while (!OSPathExists(path))
         {
             path = (str8){.data = arenaPushArray(temp.arena, u8, path.len + 255), .len = path.len + 255};
-            numRead = readlink("/proc/self/exe", path.data, path.len);
+            numRead = readlink("/proc/self/exe", (char*)path.data, path.len);
             path.data[numRead] = '\0';
             path.len = numRead;
         }
         
-        pathToRet = Str8PushFmt(arena, "%s", path.data);
+        pathToRet = Str8PushFmt(arena, "%S", path);
     }
     baseTempEnd(temp);
 
@@ -209,7 +209,7 @@ void OSFileWrite(OSHandle fileHandle, u8 *bytes, u64 numBytes)
     write(handle, bytes, numBytes);
 }
 
-OSHandle OSGetCurrentThread()
+OSHandle OSGetCurrentThread(void)
 {
     OSHandle handle = {._u64 = (u64)syscall(SYS_gettid)};
 
@@ -217,7 +217,8 @@ OSHandle OSGetCurrentThread()
 }
 void OSSetThreadDebuggerName(OSHandle thread, str8 name)
 {
-    
+    BASE_UNUSED_PARAM(thread);
+    BASE_UNUSED_PARAM(name);
 }
 
 DateTime OSGetLocalTime(void)

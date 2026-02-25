@@ -45,7 +45,7 @@ typedef struct MetagenStructMemb
     u64 arrayLen;
 }MetagenStructMemb;
 
-BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(MetagenStructMembArray, MetagenStructMemb);
+BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(MetagenStructMembArray, MetagenStructMemb)
 
 void basePrintStructEx(void *data, MetagenStructMembArray membs);
 #include "base/baseMetagenCommon.gen.h"

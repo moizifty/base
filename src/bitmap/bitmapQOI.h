@@ -6,7 +6,7 @@
 #include "base/baseMemory.h"
 #include "base/baseStrings.h"
 #include "base/baseThreads.h"
-#include "datastructures\bitstream.h"
+#include "datastructures/bitstream.h"
 #include "os/core/osCore.h"
 #include "bitmapCoreTypes.h"
 
@@ -21,8 +21,8 @@ typedef struct QOIHeader
 
 typedef enum QOITagKind
 {
-    QOI_TAG_RGB = 0b1111'1110,
-    QOI_TAG_RGBA = 0b1111'1111,
+    QOI_TAG_RGB = 0b11111110,
+    QOI_TAG_RGBA = 0b11111111,
     QOI_TAG_INDEX = 0b00,
     QOI_TAG_DIFF = 0b01,
     QOI_TAG_LUMA = 0b10,

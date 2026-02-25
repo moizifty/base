@@ -8,4 +8,5 @@
 
 void ProgramMain(CmdLineHashMap *cmdline)
 {
+    BASE_UNUSED_PARAM(cmdline);
 }

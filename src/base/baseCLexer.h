@@ -36,7 +36,7 @@ typedef struct CTok
     str8 lexeme;
 }CTok;
 
-BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(CTokArray, CTok);
+BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(CTokArray, CTok)
 
 typedef struct CTokChunkListNode
 {

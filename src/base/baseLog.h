@@ -23,7 +23,7 @@ typedef struct LogEntry
     str8 msg;
 }LogEntry;
 
-BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(LogEntryArray, LogEntry);
+BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(LogEntryArray, LogEntry)
 
 typedef struct LogEntryChunkNode
 {

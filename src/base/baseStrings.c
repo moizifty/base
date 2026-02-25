@@ -4,8 +4,8 @@
 #include "baseThreads.h"
 #include <string.h>
 
-BASE_CREATE_LL_DEFS(U16List, u16);
-BASE_CREATE_LL_DEFS(U8List, u8);
+BASE_CREATE_LL_DEFS(U16List, u16)
+BASE_CREATE_LL_DEFS(U8List, u8)
 
 void Str8ListPushNodeLast(Str8List *l, Str8ListNode *node)
 {
@@ -55,7 +55,7 @@ void Str8ListPopNodeLast(Str8List *l)
     }
 }
 
-void Str8ListPushLastFmt(Arena *arena, Str8List *l, const i8 *fmt, ...)
+void Str8ListPushLastFmt(Arena *arena, Str8List *l, const char *fmt, ...)
 {
     va_list list;
     va_start(list, fmt);
@@ -173,23 +173,23 @@ str8 Str8PushCopy(Arena *arena, str8 str)
 
     return s;
 }
-str8 Str8PushFmtV(Arena *arena, const i8 *fmt, va_list args)
+str8 Str8PushFmtV(Arena *arena, const char *fmt, va_list args)
 {
     // you cannot reuse va_list after its been passed into a function
     va_list list, list2;
     va_copy(list, args);
     va_copy(list2, args);
 
-    i64 numWritten = stbsp_vsnprintf(null, 0, (i8 *)fmt, list);
+    i64 numWritten = stbsp_vsnprintf(null, 0, (char *)fmt, list);
 
     str8 s = {0};
     s.data = arenaPushNoZero(arena, numWritten + 1);
     s.len = numWritten;
 
-    stbsp_vsnprintf((i8 *)s.data, (int)s.len + 1, (i8 *)fmt, list2);
+    stbsp_vsnprintf((char *)s.data, (int)s.len + 1, (char *)fmt, list2);
     return s;
 }
-str8 Str8PushFmt(Arena *arena, const i8* fmt, ...)
+str8 Str8PushFmt(Arena *arena, const char* fmt, ...)
 {
     va_list list;
     va_start(list, fmt);
@@ -276,7 +276,6 @@ str8 Str8SubStr8(str8 str, u64 start, u64 end)
 }
 u64 Str8FindSubStr8(str8 haystack, str8 needle, u64 startPos, StrMatchFlags flags)
 {
-    bool found = false;
     u64 foundIndex = haystack.len;
     for(u64 i = startPos; i < haystack.len; i += 1)
     {
@@ -286,7 +285,6 @@ u64 Str8FindSubStr8(str8 haystack, str8 needle, u64 startPos, StrMatchFlags flag
             if(Str8Equals(substr, needle, flags))
             {
                 foundIndex = i;
-                found = true;
                 if(!(flags & STR_MATCHFLAGS_FIND_LAST))
                 {
                     break;

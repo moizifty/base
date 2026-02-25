@@ -3,7 +3,7 @@
 
 #include "base/baseCore.h"
 #include "base/baseMemory.h"
-#include "datastructures\bitstream.h"
+#include "datastructures/bitstream.h"
 
 #define COMPRESSION_DEFLATE_WINDOW_SIZE 32768 // Maximum size of the sliding window
 #define COMPRESSION_DEFLATE_MAX_CODE_LENGTH 15 // Maximum length of a Huffman code

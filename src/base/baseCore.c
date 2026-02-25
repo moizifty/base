@@ -1,5 +1,4 @@
 #include <locale.h>
-#include <stdio.h>
 #include <stdarg.h>
 
 #include "baseCore.h"
@@ -13,7 +12,7 @@
 #define STB_SPRINTF_IMPLEMENTATION
 #include "thirdparty/ts_stb_sprintf.h"
 
-BASE_CREATE_LL_DEFS(U8ArrayList, U8Array);
+BASE_CREATE_LL_DEFS(U8ArrayList, U8Array)
 
 void U8ChunkListPushLast(struct Arena *arena, U8ChunkList *l, u8 u)
 {
@@ -63,7 +62,7 @@ U8Array U8ChunkListFlattenToArray(struct Arena *arena, U8ChunkList *l)
     return flattened;
 }
 
-void BaseMainThreadEntry(ProgramMainFunc programMain, i64 argc, i8 **argv)
+void BaseMainThreadEntry(ProgramMainFunc programMain, i64 argc, char **argv)
 {
     setlocale(LC_ALL, ".utf8");
     OSEnableVirtualTerminalSequenceProcessing();
@@ -92,8 +91,9 @@ void BaseMainThreadEntry(ProgramMainFunc programMain, i64 argc, i8 **argv)
 }
 i64 baseColFprintf(FILE *fp, const char *fmt, ...)
 {
-    va_list list;
+    va_list list, list2;
     va_start(list, fmt);
+    va_start(list2, fmt);
 
     i64 res = 0;
     ArenaTemp temp = baseTempBegin(null, 0);
@@ -119,7 +119,7 @@ i64 baseColFprintf(FILE *fp, const char *fmt, ...)
                             {
                                 if (bufOccupied > 0)
                                 {
-                                    str8 s = Str8PushCopy(temp.arena, baseStr8((u8*)buf, bufOccupied));
+                                    str8 s = Str8PushCopy(temp.arena, baseStr8((u8*)buf, (u64)bufOccupied));
                                     Str8ListPushLast(temp.arena, &strList, s);
                                     bufOccupied = 0;
                                 }
@@ -181,7 +181,7 @@ i64 baseColFprintf(FILE *fp, const char *fmt, ...)
                     {
                         buf[bufOccupied] = fmt[i];
 
-                        str8 s = Str8PushCopy(temp.arena, baseStr8((u8*)buf, bufOccupied));
+                        str8 s = Str8PushCopy(temp.arena, baseStr8((u8*)buf, (u64)bufOccupied));
                         Str8ListPushLast(temp.arena, &strList, s);
                         bufOccupied = 0;
                     }
@@ -191,16 +191,16 @@ i64 baseColFprintf(FILE *fp, const char *fmt, ...)
 
         if(bufOccupied > 0)
         {
-            Str8ListPushLast(temp.arena, &strList, baseStr8((u8*)buf, bufOccupied));
+            Str8ListPushLast(temp.arena, &strList, baseStr8((u8*)buf, (u64)bufOccupied));
         }
 
         Str8ListPushLastFmt(temp.arena, &strList, BASE_TERMINAL_RESET_CODE, -1);
 
         str8 finalStr = Str8ListJoin(temp.arena, &strList, null);
-        i64 needed = stbsp_vsnprintf(null, 0, (i8 *)finalStr.data, list) + 1;
+        i64 needed = stbsp_vsnprintf(null, 0, (char *)finalStr.data, list) + 1;
 
-        i8 *data = arenaPush(temp.arena, needed);
-        res = stbsp_vsnprintf(data, (int)needed, (i8 *)finalStr.data, list);
+        i8 *data = arenaPush(temp.arena, (u64)needed);
+        res = stbsp_vsnprintf((char*)data, (int)needed, (char *)finalStr.data, list2);
 
         fprintf(fp, "%.*s", (int)res, data);
     }
@@ -285,10 +285,10 @@ u16 baseConvertToLittleEndianU16(u16 num)
 u32 baseConvertToBigEndianU32(u32 num)
 {
     u8 *bytes = (u8*)&num;
-    return (bytes[3] << 24) | (bytes[2] << 16) | (bytes[1] << 8) | bytes[0];
+    return (bytes[3] << 24u) | (bytes[2] << 16u) | (bytes[1] << 8u) | bytes[0];
 }
 u32 baseConvertToLittleEndianU32(u32 num)
 {
     u8 *bytes = (u8*)&num;
-    return (bytes[0] << 24) | (bytes[1] << 16) | (bytes[2] << 8) | bytes[3];
+    return (bytes[0] << 24u) | (bytes[1] << 16u) | (bytes[2] << 8u) | bytes[3];
 }

@@ -8,10 +8,10 @@
 #include "base/baseMath.h"
 #include "base/baseLog.h"
 
-#include "bitmap\bitmapCoreTypes.h"
-#include "bitmap\bitmapDDS.h"
-#include "bitmap\bitmapPNG.h"
-#include "bitmap\bitmapQOI.h"
+#include "bitmap/bitmapCoreTypes.h"
+#include "bitmap/bitmapDDS.h"
+#include "bitmap/bitmapPNG.h"
+#include "bitmap/bitmapQOI.h"
 
 BitmapFileKind bitmapFileKindFromPath(str8 path);
 

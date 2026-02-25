@@ -1,7 +1,7 @@
 /**********************************************************************/
-/* GENERATED FILE
-/* Input: .\src\base\baseMath.h
-/* Date-Time: 3/10/2025 - 21:01
+// GENERATED FILE
+// Input: .\src\base\baseMath.h
+// Date-Time: 3/10/2025 - 21:01
 /**********************************************************************/
 
 #include "baseMath.gen.h"

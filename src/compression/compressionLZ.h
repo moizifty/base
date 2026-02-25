@@ -61,7 +61,7 @@ typedef struct CompressionLZ4MSubByteDictSlot
     u64 len;
 }CompressionLZ4MSubByteDictSlot;
 
-BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(CompressionLZ4MSubByteDictSlotArray, CompressionLZ4MSubByteDictSlot);
+BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(CompressionLZ4MSubByteDictSlotArray, CompressionLZ4MSubByteDictSlot)
 
 typedef struct CompressionLZ4MSubByteDict
 {

@@ -61,7 +61,7 @@ void Str8ListInsertNode(Str8List *l, Str8ListNode *prev, Str8ListNode *node);
 void Str8ListPushLast(Arena *arena, Str8List *l, str8 value);
 void Str8ListPushFirst(Arena *arena, Str8List *l, str8 value);
 void Str8ListPushInsert(Arena *arena, Str8List *l, Str8ListNode *prev, str8 value);
-void Str8ListPushLastFmt(Arena *arena, Str8List *l, const i8 *fmt, ...);
+void Str8ListPushLastFmt(Arena *arena, Str8List *l, const char *fmt, ...);
 void Str8ListPopNodeLast(Str8List *l);
 
 void Str8ListPushListLast(Arena *arena, Str8List *l, Str8List* a);
@@ -78,8 +78,8 @@ str32 baseStr32(u32 *bytes, u64 size);
 u64 baseStr16DataLen(u16 *str);
 
 str8 Str8PushCopy(Arena *arena, str8 str);
-str8 Str8PushFmtV(Arena *arena, const i8 *fmt, va_list args);
-str8 Str8PushFmt(Arena *arena, const i8* fmt, ...);
+str8 Str8PushFmtV(Arena *arena, const char *fmt, va_list args);
+str8 Str8PushFmt(Arena *arena, const char* fmt, ...);
 
 bool Str8IsNullOrEmpty(str8 a);
 i64 Str8Compare(str8 a, str8 b);
@@ -104,8 +104,8 @@ str8 Str8ChopPastLastSlash(str8 str);
 str8 Str8ChopBefore(str8 str, str8 before, StrMatchFlags flags);
 
 // conversions
-BASE_CREATE_LL_DECLS(U16List, u16);
-BASE_CREATE_LL_DECLS(U8List, u8);
+BASE_CREATE_LL_DECLS(U16List, u16)
+BASE_CREATE_LL_DECLS(U8List, u8)
 
 typedef struct DecodeCodePointInfo
 {

@@ -53,12 +53,13 @@ void *arenaPushNoZero(Arena *arena, u64 size)
         arena->pos += alignAmount + size;
         if (arena->pos <= arena->size && (arena->commitPos < arena->pos))
         {
-            u64 sizeToCommit = arena->pos - arena->commitPos;
+            u64 sizeToCommit = arena->pos + arena->commitPos;
             sizeToCommit += BASE_ARENA_DEFAULT_COMMIT_GRANULARITY - 1;
             sizeToCommit -= sizeToCommit % BASE_ARENA_DEFAULT_COMMIT_GRANULARITY;
 
-            arenaCommitImpl(arenaBase + arena->commitPos, sizeToCommit);
-            arena->commitPos += sizeToCommit;
+            
+            arenaCommitImpl(arenaBase, sizeToCommit);
+            arena->commitPos = sizeToCommit;
         }
     }
     else
@@ -73,7 +74,7 @@ void *arenaPush(Arena *arena, u64 size)
 {
     void* ptr = arenaPushNoZero(arena, size);
 
-    //todo: zero out
+    memset(ptr, 0, size);
     BASE_MEMZERO(ptr, size);
     return ptr;
 }

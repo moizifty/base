@@ -34,6 +34,11 @@ void basePrintStructMember(void *member, MetagenStructMemb memb)
             case METAGEN_TYPE_bool: basePrintf("%d", *((bool*)(member) + i)); break;
 
             METAGEN_PRINT_MEMB_CUSTOM
+
+            default:
+            {
+                basePrintf("Unhandled type in metagen printing.\n");
+            }break;
         }
         
         if (i < count - 1)

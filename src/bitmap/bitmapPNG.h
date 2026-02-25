@@ -6,9 +6,9 @@
 #include "base/baseMemory.h"
 #include "base/baseThreads.h"
 #include "base/baseMath.h"
-#include "compression\compressionDeflate.h"
+#include "compression/compressionDeflate.h"
 
-#include "bitmap\bitmapCoreTypes.h"
+#include "bitmap/bitmapCoreTypes.h"
 
 typedef u32 PNGChunkType;
     //LITLE ENDIAN

@@ -256,8 +256,9 @@ u64 compressionLZ4MCalculateCompressedOutputSize(CompressionLZ4MBlockCompoundLis
 
 U8Array compressionLZ4MCompress(Arena *arena, U8Array input, CompressOptions *options)
 {
-    CompressOptions compressOpt = {0};
-    if(options != null) compressOpt = *options;
+    BASE_UNUSED_PARAM(options);
+    // CompressOptions compressOpt = {0};
+    // if(options != null) compressOpt = *options;
 
     U8Array retCompressed = {0};
     ArenaTemp temp = baseTempBegin(null, 0);
