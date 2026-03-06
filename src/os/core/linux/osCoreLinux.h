@@ -5,6 +5,7 @@
 #include <sys/mman.h>
 #include <sys/syscall.h>
 #include <fcntl.h>
+#include <sys/ioctl.h>
 #include <unistd.h>
 #include <time.h>
 #include <termios.h>
