@@ -184,7 +184,11 @@ Str8List OSGetFilePaths(Arena *arena, str8 dir, str8 pattern, bool recursive);
 str8 OSGetProgramPath(Arena *arena);
 str8 OSGetProgramDirectory(Arena *arena);
 str8 OSGetProgramLogsDirectory(Arena *arena);
-bool OSRunProcessEx(struct Arena *arena, str8 app, str8 args, void *peb, str8 *outStr, str8 *errStr);
+// bool OSRunProcessEx(struct Arena *arena, str8 app, str8 args, void *peb, str8 *outStr, str8 *errStr);
+OSHandle OSProcessOpen(struct Arena *arena, str8 app, str8 args, void *environment);
+void OSProcessClose(OSHandle procHandle);
+void OSProcessWait(OSHandle procHandle); //wait on it to finish
+bool OSProcessReadStdoutStderr(struct Arena *arena, OSHandle procHandle, str8 *stdoutStr, str8 *stderrStr);
 
 OSHandle OSLoadDynamicLibrary(str8 name);
 void *OSGetExportAddressFromDynamicLibrary(OSHandle dynLib, str8 name);

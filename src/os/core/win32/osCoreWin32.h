@@ -30,6 +30,15 @@ typedef struct OSFindFileIterWin32
     struct OSFileFindOptionalParams optParams;
 }OSFindFileIterWin32;
 
+typedef struct OSProcessWin32
+{
+    PROCESS_INFORMATION procInfo;
+    HANDLE stderrReadPipe;
+    HANDLE stdoutReadPipe;
+
+    bool running;
+}OSProcessWin32;
+
 #define HRFAILURE(HR)   ((HR) != S_OK && (HR) != S_FALSE)
 global IMAGE_DOS_HEADER __ImageBase;
 #define HINST_THIS ((HINSTANCE)&__ImageBase)

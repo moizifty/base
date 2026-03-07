@@ -500,8 +500,19 @@ void bssInterpExpr(struct BSSInterpretorState *iState, ASTExpr *expr)
             str8 runString = expr->run.expr->value->strRep;
             str8 command = Str8PushFmt(iState->checkerArena, "cmd.exe /q /k \"@echo off && %S\"", runString);
 
-            str8 out = {0}, err = {0};
-            OSRunProcessEx(iState->checkerArena, STR8_LIT(""), command, null, &out, &err);
+            str8 outm = {0}, errm = {0};
+            OSHandle proc = OSProcessOpen(iState->checkerArena, STR8_LIT(""), command, null);
+
+            Str8List outlist = {0};
+            Str8List errlist = {0};
+            while (OSProcessReadStdoutStderr(iState->checkerArena, proc, &outm, &errm))
+            {
+                if (!BASE_NULL_OR_EMPTY(outm)) Str8ListPushLast(iState->checkerArena, &outlist, outm);
+                if (!BASE_NULL_OR_EMPTY(errm)) Str8ListPushLast(iState->checkerArena, &errlist, errm);
+            }
+            
+            OSProcessWait(proc);
+            OSProcessClose(proc);
 
             BssValue *val = arenaPushType(iState->checkerArena, BssValue);
             val->hasBssValue = true;
@@ -513,6 +524,8 @@ void bssInterpExpr(struct BSSInterpretorState *iState, ASTExpr *expr)
                 stdoutMemb->val = arenaPushType(iState->checkerArena, BssValue);
                 stdoutMemb->val->type = val->type->obj.membScope->table.first->type;
                 stdoutMemb->val->hasBssValue = true;
+
+                str8 out = Str8ListJoin(iState->checkerArena, &outlist, null);
                 Str8ListPushLast(iState->checkerArena, &stdoutMemb->val->str.val, out);
 
                 stdoutMemb->val->strRep = out;
@@ -526,6 +539,9 @@ void bssInterpExpr(struct BSSInterpretorState *iState, ASTExpr *expr)
                 stderrMemb->val = arenaPushType(iState->checkerArena, BssValue);
                 stderrMemb->val->type = val->type->obj.membScope->table.first->next->type;
                 stderrMemb->val->hasBssValue = true;
+
+                str8 err = Str8ListJoin(iState->checkerArena, &errlist, null);
+
                 Str8ListPushLast(iState->checkerArena, &stderrMemb->val->str.val, err);
 
                 stderrMemb->val->strRep = err;

@@ -35,7 +35,23 @@ void printFiles(Arena *arena, str8 path)
 
 void ProgramMain(CmdLineHashMap *cmdline)
 {
+
 	Arena *generalArena = arenaAlloc(BASE_GIGABYTES(2));
+	OSHandle proc = OSProcessOpen(generalArena, STR8_EMPTY, STR8_LIT("cmd /k \"echo moiz\""), null);
+
+	if (OSIsHandleValid(proc))
+	{
+		str8 out, err;
+		while(OSProcessReadStdoutStderr(generalArena, proc, &out, &err))
+		{
+		}
+
+	}
+	else
+	{
+		basePrintf("not valid\n");
+	}
+	return;
 	OSNetAddrList localIps = OSNetGetLocalIpAddress(generalArena, OS_NET_ADDR_EITHER);
 
 	Path p = pathFromStr8(generalArena, STR8_LIT("examples/moi/i/test.txt"));
