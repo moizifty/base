@@ -1,0 +1,54 @@
+print("~nBuilding {cwd}~n~n");
+
+onedrivefolder = getenv("onedrive");
+
+baselib = "{onedrivefolder}\Documents\Programming\C\base\src";
+print(baselib);
+
+this = {
+    src = {"{cwd}\src\main.c"},
+    libs = {
+        ""
+    },
+};
+
+exePath = "{cwd}\builds\main.exe";
+
+if hasflag("build")
+{
+    compiler = "cl";
+
+    src = join(this.src, " ");
+
+    flags = "/Zi";
+
+    link = "/link {join(this.libs, " ")}";
+
+    includes = 
+    {
+        "/I~"{cwd}\src\include~"",
+        "/I~"{baselib}~"",
+    };
+
+    includeArg = join(includes, " ");
+    print(includeArg);
+    outputName = "/Fe~"{exePath}~"";
+    objFolder = "/Fo~"{"{cwd}\builds/"}~"";
+
+    command = "{compiler} {outputName} {objFolder} {flags} {includeArg} {src} {link}";
+    output = run command;
+
+    // for some BS reason msvc c compiler dumps errors in the stdout not stderr?
+    print("{output.stdout}~n");
+    print("{output.stderr}~n");
+
+    deleteObjsCommand = run "del ~"{"{cwd}\builds\*.obj"}~"";
+    print("{deleteObjsCommand}");
+}
+
+if hasflag("test")
+{
+    print("{(run "~"{exePath}~"").out}");
+}
+
+print("~nFinished Building {cwd}~n");

@@ -1,0 +1,9 @@
+fn compile ()
+{
+    stuff = "moiz";
+    i = 23;
+    
+    print("Hi {stuff} {moiz}")
+}
+
+compile();
