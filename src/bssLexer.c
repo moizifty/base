@@ -247,7 +247,6 @@ bool bssLexerLexBuffer(BssInterp *interp, U8Array buf)
     
     return true;
 }
-
 bool bssLexerLexFile(BssInterp *interp, str8 file)
 {
     U8Array buf = OSFileReadAll(interp->arena, file);
@@ -261,8 +260,37 @@ bool bssLexerLexFile(BssInterp *interp, str8 file)
     else
     {
         baseEPrintf("Failed to open file '%S'\n", file);
-        result = false;
+        return false;
     }
 
+    BssTokChunkList chunkList = {0};
+    BssTok tok = {0};
+    
+    ArenaTemp temp = baseTempBegin(&interp->arena, 1);
+    {
+        for (tok = bssLexerLexNextTok(interp); tok.kind != TOK_END_INPUT; tok = tok = bssLexerLexNextTok(interp))
+        {
+            BssTokChunkListPushLast(temp.arena, &chunkList, tok);
+        }
+        
+        // add the end input token too, at end
+        BssTokChunkListPushLast(temp.arena, &chunkList, tok);
+
+        interp->lexer->tokArray = BssTokChunkListFlattenToArray(interp->arena, &chunkList);
+    }
+
+    baseTempEnd(temp);
     return result;
+}
+BssTok bssLexerGetNextTok(BssInterp *interp)
+{
+    return interp->lexer->currTokIndex >= interp->lexer->tokArray.len ? 
+           interp->lexer->tokArray.data[interp->lexer->tokArray.len - 1] :
+           interp->lexer->tokArray.data[interp->lexer->currTokIndex++];
+}
+BssTok bssLexerPeekTok(BssInterp *interp, u64 amount)
+{
+    return interp->lexer->currTokIndex + amount >= interp->lexer->tokArray.len ? 
+           interp->lexer->tokArray.data[interp->lexer->tokArray.len - 1] :
+           interp->lexer->tokArray.data[interp->lexer->currTokIndex + amount];
 }

@@ -33,27 +33,10 @@ typedef enum BssTokKind
     TOK_END_INPUT,
 }BssTokKind;
 
-typedef struct BssLexer
-{
-    U8Array buffer;
-    str8 path;
-
-    u8 ch;
-    u64 line;
-    u64 col;
-
-    u8 *currLocInBuffer;
-}BssLexer;
-
-typedef struct BssInterp
-{
-    Arena *arena;
-    BssLexer *lexer;
-}BssInterp;
 
 typedef struct BssTokPos
 {
-    BssLexer *ownerLexer;
+    struct BssLexer *ownerLexer;
     u64 line;
     u64 col;
 
@@ -69,5 +52,57 @@ typedef struct BssTok
     str8 lexeme;
 }BssTok;
 
+
+BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(BssTokArray, BssTok);
+
+typedef struct BssTokChunkListNode
+{
+    struct BssTokChunkListNode *next;
+    struct BssTokChunkListNode *prev;
+
+    BssTokArray chunk;
+    u64 cap;
+}BssTokChunkListNode;
+
+typedef struct BssTokChunkList
+{
+    struct BssTokChunkListNode *first;
+    struct BssTokChunkListNode *last;
+
+    u64 len;
+    u64 totalLen;
+}BssTokChunkList;
+
+typedef struct BssLexer
+{
+    U8Array buffer;
+    str8 path;
+
+    u8 ch;
+    u64 line;
+    u64 col;
+    u8 *currLocInBuffer;
+
+    BssTokArray tokArray;
+    u64 currTokIndex;
+}BssLexer;
+
+typedef struct BssParser
+{
+    struct BssAstFile *file;
+}BssParser;
+
+typedef struct BssInterp
+{
+    Arena *arena;
+    BssLexer *lexer;
+    BssParser *parser;
+}BssInterp;
+
+void BssTokChunkListPushLast(Arena *arena, BssTokChunkList *l, BssTok tok);
+BssTokArray BssTokChunkListFlattenToArray(Arena *arena, BssTokChunkList *l);
+
 i64 bssGetEscapeCharValue(str8 escapeCharString);
+void bssPrintSourceRange(BssTokPos start, BssTokPos end, u64 contextLines);
+
 #endif

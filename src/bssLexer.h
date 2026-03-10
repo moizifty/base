@@ -3,4 +3,18 @@
 
 #include "bssCore.h"
 
+#include "os/core/osCore.h"
+#include "bssLexer.h"
+
+bool bssLexerAdvanceChar(BssInterp *interp);
+u8 bssLexerPeekCharEx(BssInterp *interp, u64 amount);
+u8 bssLexerPeekChar(BssInterp *interp);
+
+BssTok bssLexerLexNextTok(BssInterp *interp);
+
+bool bssLexerLexBuffer(BssInterp *interp, U8Array buf);
+bool bssLexerLexFile(BssInterp *interp, str8 file);
+BssTok bssLexerGetNextTok(BssInterp *interp);
+BssTok bssLexerPeekTok(BssInterp *interp);
+
 #endif
