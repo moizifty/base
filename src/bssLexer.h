@@ -15,6 +15,6 @@ BssTok bssLexerLexNextTok(BssInterp *interp);
 bool bssLexerLexBuffer(BssInterp *interp, U8Array buf);
 bool bssLexerLexFile(BssInterp *interp, str8 file);
 BssTok bssLexerGetNextTok(BssInterp *interp);
-BssTok bssLexerPeekTok(BssInterp *interp);
+BssTok bssLexerPeekTok(BssInterp *interp, u64 amount);
 
 #endif
