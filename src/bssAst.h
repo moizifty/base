@@ -14,20 +14,94 @@ typedef enum BssAstTopLevelKind
     BSS_AST_TOP_LEVEL_FUNC,
 }BssAstTopLevelKind;
 
+typedef enum BssAstStmtKind
+{
+    BSS_AST_STMT_EXPR,
+    BSS_AST_STMT_ASSIGN,
+    BSS_AST_STMT_FOR,
+    BSS_AST_STMT_WHILE,
+    BSS_AST_STMT_BREAK,
+    BSS_AST_STMT_CONT,
+    BSS_AST_STMT_RET,
+    BSS_AST_STMT_IF,
+}BssAstStmtKind;
+
+typedef enum BssAstExprKind
+{
+    BSS_AST_EXPR_LIT,
+    BSS_AST_EXPR_IDEN,
+    BSS_AST_EXPR_BINARY,
+    BSS_AST_EXPR_UNARY,
+    BSS_AST_EXPR_SUBSCRIPT,
+    BSS_AST_EXPR_ACCESS,
+    BSS_AST_EXPR_FUNCCALL,
+    BSS_AST_EXPR_COMPOUND,
+}BssAstExprKind;
+
+typedef struct BssAstExpr
+{
+    BSS_AST_POS_DEFS
+
+    struct BssAstStmt *next;
+    struct BssAstStmt *prev;
+    
+    BssAstExprKind kind;
+    union
+    {
+        struct
+        {
+            struct BssAstExpr *left;
+            struct BssAstExpr *right;
+            BssTok op;
+        }bin;
+
+        struct
+        {
+            BssTok op;
+            struct BssAstExpr *expr;
+        }unary;
+
+        BssTok lit, iden;
+    };
+}BssAstExpr;
+
 typedef struct BssAstStmt
 {
     BSS_AST_POS_DEFS
 
     struct BssAstStmt *next;
     struct BssAstStmt *prev;
+    
+    BssAstStmtKind kind;
+    union
+    {
+        struct
+        {
+            BssAstExpr *lhs;
+            BssAstExpr *rhs;
+        }assign;
+
+        BssAstExpr *expr;
+    };
 }BssAstStmt;
 
 BASE_CREATE_EFFICIENT_LL_DECLS(BssAstStmtList, BssAstStmt);
+
+typedef struct BssAstBlock
+{
+    BSS_AST_POS_DEFS
+
+    BssAstStmtList stmts;
+}BssAstBlock;
 
 typedef struct BssAstFunc
 {
     BSS_AST_POS_DEFS
 
+    BssTok iden;
+    BssTokList params;
+
+    BssAstBlock *block;
 }BssAstFunc;
 
 typedef struct BssAstTopLevel
@@ -53,13 +127,31 @@ typedef struct BssAstFile
     BssAstTopLevelList toplevels;
 }BssAstFile;
 
+typedef BssAstExpr* (*BssPrecedencePrefixFunc) (BssInterp *);
+typedef BssAstExpr* (*BssPrecedenceInfixFunc) (BssInterp *, BssAstExpr *left, BssTok op);
 
+typedef struct BssPrecedenceTableEntry
+{
+    BssPrecedencePrefixFunc prefix;
+    BssPrecedenceInfixFunc infix;
+    u64 precedence;
+}BssPrecedenceTableEntry;
+
+#define BSS_AST_EXPR_ZERO (&gBssAstExprEmpty)
 #define BSS_AST_STMT_ZERO (&gBssAstStmtEmpty)
+#define BSS_AST_BLOCK_ZERO (&gBssAstBlockEmpty)
 #define BSS_AST_FUNC_ZERO (&gBssAstFuncEmpty)
 #define BSS_AST_TOP_LEVEL_ZERO (&gBssAstTopLevelEmpty)
 
+global BssAstExpr gBssAstExprEmpty;
 global BssAstStmt gBssAstStmtEmpty;
+global BssAstBlock gBssAstBlockEmpty;
 global BssAstFunc gBssAstFuncEmpty;
 global BssAstTopLevel gBssAstTopLevelEmpty;
 
+BssAstExpr *bssAllocExpr(BssInterp *interp, BssTok start, BssTok end, BssAstExprKind kind);
+BssAstExpr *bssAllocExprLit(BssInterp *interp, BssTok start, BssTok end, BssTok lit);
+BssAstExpr *bssAllocExprIden(BssInterp *interp, BssTok start, BssTok end, BssTok iden);
+BssAstExpr *bssAllocExprBinary(BssInterp *interp, BssTok start, BssTok end, BssAstExpr *lhs, BssAstExpr *rhs, BssTok op);
+BssAstExpr *bssAllocExprUnary(BssInterp *interp, BssTok start, BssTok end, BssAstExpr *rhs, BssTok op);
 #endif

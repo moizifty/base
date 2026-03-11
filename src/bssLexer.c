@@ -284,13 +284,13 @@ bool bssLexerLexFile(BssInterp *interp, str8 file)
 }
 BssTok bssLexerGetNextTok(BssInterp *interp)
 {
-    return interp->lexer->currTokIndex >= interp->lexer->tokArray.len ? 
+    return interp->lexer->currTokIndex >= (interp->lexer->tokArray.len - 1) ? 
            interp->lexer->tokArray.data[interp->lexer->tokArray.len - 1] :
            interp->lexer->tokArray.data[interp->lexer->currTokIndex++];
 }
 BssTok bssLexerPeekTok(BssInterp *interp, u64 amount)
 {
-    return interp->lexer->currTokIndex + amount >= interp->lexer->tokArray.len ? 
+    return interp->lexer->currTokIndex + amount >= (interp->lexer->tokArray.len - 1) ? 
            interp->lexer->tokArray.data[interp->lexer->tokArray.len - 1] :
            interp->lexer->tokArray.data[interp->lexer->currTokIndex + amount];
 }

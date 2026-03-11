@@ -1,5 +1,7 @@
 #include "bssCore.h"
 
+BASE_CREATE_LL_DEFS(BssTokList, BssTok)
+
 void BssTokChunkListPushLast(Arena *arena, BssTokChunkList *l, BssTok tok)
 {
     if(!BASE_ANY_PTR(l) || (l->last->chunk.len >= l->last->cap))
@@ -86,34 +88,62 @@ void bssPrintSourceRange(BssTokPos start, BssTokPos end, u64 contextLines)
     u8 *printStart = rangeStart;
     u8 *printEnd = rangeEnd;
 
+    u64 numLinesReversed = 0;
+    u64 numLinesForwarded = 0;
     // u wana compare against contextline + 1 since you also want to print the COMPLETE LINE
     // u dont just wana quit at the newline otherwise ud be one context line short
-    for(u64 newlinesSeen = 0; printStart >= lexerBufStart && newlinesSeen != (contextLines + 1); )
+    for(; printStart > lexerBufStart && numLinesReversed != (contextLines + 1); )
     {
         if (*printStart == '\n')
         {
-            newlinesSeen++;
-            if (newlinesSeen == (contextLines + 1)) break;
+            numLinesReversed++;
+            if (numLinesReversed == (contextLines + 1)) break;
         }
         
         printStart--;
     }
 
     /// do the same for end
-    for(u64 newlinesSeen = 0; printEnd < lexerBufEnd && newlinesSeen != (contextLines + 1); )
+    for(; printEnd < lexerBufEnd && numLinesForwarded != (contextLines + 1); )
     {
         if (*printEnd == '\n')
         {
-            newlinesSeen++;
-            if (newlinesSeen == (contextLines + 1)) break;
+            numLinesForwarded++;
+            if (numLinesForwarded == (contextLines + 1)) break;
         }
         
         printEnd++;
     }
 
+    bool emitLineInfo = true;
+    u64 currLineNumber = start.line - numLinesReversed;
     while (printStart != printEnd)
     {
-        basePrintf("%c", *printStart);
+        bool isNewline = *printStart == '\n';
+
+        if (*printStart == '\r' || *printStart == '\f' || *printStart == '\v')
+        {
+            printStart++;
+            continue;
+        }
+
+        if (emitLineInfo)
+        {
+            basePrintf("\n%7lld | ", currLineNumber);
+            emitLineInfo = false;
+        }
+
+        if (isNewline)
+        {
+            emitLineInfo = true;
+            currLineNumber++;
+        }
+        else
+        {
+            if (printStart >= rangeStart && printStart <= rangeEnd) basePrintf("{r}%c", *printStart);
+            else basePrintf("%c", *printStart);
+        }
+
         printStart++;
     }
 

@@ -1,9 +1,6 @@
+
 fn compile ()
 {
-    stuff = "moiz";
+    stuff = 23;
     i = 23;
-    
-    print("Hi {stuff} {moiz}")
 }
-
-compile();

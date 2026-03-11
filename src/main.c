@@ -13,7 +13,7 @@ void ProgramMain(CmdLineHashMap *line)
     Arena *arena = arenaAllocDefault();
     BssInterp interp = {.arena = arena};
 
-    if(!bssLexerLexFile(&interp, STR8_LIT("tests/test.bss")))
+    if(!bssParserParseFile(&interp, STR8_LIT("tests/test.bss")))
     {
         baseEPrintf("{r}Failed to open bss file\n");
     }

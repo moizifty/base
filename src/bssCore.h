@@ -31,6 +31,7 @@ typedef enum BssTokKind
     TOK_NEQ_OP,
 
     TOK_END_INPUT,
+    TOK_KIND_END = TOK_END_INPUT
 }BssTokKind;
 
 
@@ -52,8 +53,8 @@ typedef struct BssTok
     str8 lexeme;
 }BssTok;
 
-
-BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(BssTokArray, BssTok);
+BASE_CREATE_LL_DECLS(BssTokList, BssTok)
+BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(BssTokArray, BssTok)
 
 typedef struct BssTokChunkListNode
 {
