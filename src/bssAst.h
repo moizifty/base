@@ -38,12 +38,15 @@ typedef enum BssAstExprKind
     BSS_AST_EXPR_COMPOUND,
 }BssAstExprKind;
 
+typedef struct BssAstExpr BssAstExpr;
+BASE_CREATE_EFFICIENT_LL_DECLS(BssAstExprList, BssAstExpr);
+
 typedef struct BssAstExpr
 {
     BSS_AST_POS_DEFS
 
-    struct BssAstStmt *next;
-    struct BssAstStmt *prev;
+    struct BssAstExpr *next;
+    struct BssAstExpr *prev;
     
     BssAstExprKind kind;
     union
@@ -61,9 +64,16 @@ typedef struct BssAstExpr
             struct BssAstExpr *expr;
         }unary;
 
+        struct 
+        {
+            BssAstExpr *lhs;
+            BssAstExprList args;
+        }call;
+
         BssTok lit, iden;
     };
 }BssAstExpr;
+
 
 typedef struct BssAstStmt
 {
@@ -154,4 +164,5 @@ BssAstExpr *bssAllocExprLit(BssInterp *interp, BssTok start, BssTok end, BssTok 
 BssAstExpr *bssAllocExprIden(BssInterp *interp, BssTok start, BssTok end, BssTok iden);
 BssAstExpr *bssAllocExprBinary(BssInterp *interp, BssTok start, BssTok end, BssAstExpr *lhs, BssAstExpr *rhs, BssTok op);
 BssAstExpr *bssAllocExprUnary(BssInterp *interp, BssTok start, BssTok end, BssAstExpr *rhs, BssTok op);
+BssAstExpr *bssAllocExprFnCall(BssInterp *interp, BssTok start, BssTok end, BssAstExpr *lhs, BssAstExprList args);
 #endif

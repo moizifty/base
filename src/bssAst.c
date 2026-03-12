@@ -7,6 +7,7 @@ readonly BssAstFunc gBssAstFuncEmpty = {0};
 readonly BssAstTopLevel gBssAstTopLevelEmpty = {0};
 
 BASE_CREATE_EFFICIENT_LL_DEFS(BssAstStmtList, BssAstStmt)
+BASE_CREATE_EFFICIENT_LL_DEFS(BssAstExprList, BssAstExpr)
 BASE_CREATE_EFFICIENT_LL_DEFS(BssAstTopLevelList, BssAstTopLevel)
 
 BssAstExpr *bssAllocExpr(BssInterp *interp, BssTok start, BssTok end, BssAstExprKind kind)
@@ -15,6 +16,8 @@ BssAstExpr *bssAllocExpr(BssInterp *interp, BssTok start, BssTok end, BssAstExpr
     ast->startTok = start;
     ast->endTok = end;
     ast->kind = kind;
+
+    bssPrintSourceRange(start.pos, end.pos, 0);
 
     return ast;
 }
@@ -46,6 +49,14 @@ BssAstExpr *bssAllocExprUnary(BssInterp *interp, BssTok start, BssTok end, BssAs
     BssAstExpr *ast = bssAllocExpr(interp, start, end, BSS_AST_EXPR_UNARY);
     ast->unary.expr = rhs;
     ast->unary.op = op;
+
+    return ast; 
+}
+BssAstExpr *bssAllocExprFnCall(BssInterp *interp, BssTok start, BssTok end, BssAstExpr *lhs, BssAstExprList args)
+{
+    BssAstExpr *ast = bssAllocExpr(interp, start, end, BSS_AST_EXPR_FUNCCALL);
+    ast->call.lhs = lhs;
+    ast->call.args = args;
 
     return ast; 
 }

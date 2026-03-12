@@ -9,7 +9,9 @@
 #define BSS_PARSER_PEEK_TOK(N) (bssLexerPeekTok(interp, N))
 #define BSS_PARSER_NEXT_TOK() (bssLexerGetNextTok(interp))
 
-BssAstExpr *bssParserParseBinary(BssInterp *interp, BssAstExpr *left, BssTok op);
+BssAstExpr *bssParserParseExprFnCall(BssInterp *interp, BssAstExpr *left, BssTok op);
+BssAstExpr *bssParserParseExprBinary(BssInterp *interp, BssAstExpr *left, BssTok op);
 BssAstExpr *bssParserParseExpr(BssInterp *interp, u64 currPrecedence);
+BssAstExprList bssParserParseExprList(BssInterp *interp, BssTokKind endKind);
 
 #endif

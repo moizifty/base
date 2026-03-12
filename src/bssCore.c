@@ -140,7 +140,7 @@ void bssPrintSourceRange(BssTokPos start, BssTokPos end, u64 contextLines)
         }
         else
         {
-            if (printStart >= rangeStart && printStart <= rangeEnd) basePrintf("{r}%c", *printStart);
+            if (printStart >= rangeStart && printStart < rangeEnd) basePrintf("{r}%c", *printStart);
             else basePrintf("%c", *printStart);
         }
 

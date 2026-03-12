@@ -3,10 +3,17 @@
 
 BssPrecedenceTableEntry gBssPrecedenceTable[TOK_KIND_END] =
 {
-    ['+'] = {.precedence = 1, .prefix = null, .infix = bssParserParseBinary},
-    ['-'] = {.precedence = 2, .prefix = null, .infix = bssParserParseBinary},
-    ['/'] = {.precedence = 3, .prefix = null, .infix = bssParserParseBinary},
-    ['*'] = {.precedence = 3, .prefix = null, .infix = bssParserParseBinary},
+    [TOK_EQ_OP] = {.precedence = 1, .prefix = null, .infix = bssParserParseExprBinary},
+    [TOK_NEQ_OP] = {.precedence = 1, .prefix = null, .infix = bssParserParseExprBinary},
+    [TOK_LOGICAL_AND_OP] = {.precedence = 11, .prefix = null, .infix = bssParserParseExprBinary},
+    [TOK_LOGICAL_OR_OP] = {.precedence = 10, .prefix = null, .infix = bssParserParseExprBinary},
+
+    ['+'] = {.precedence = 20, .prefix = null, .infix = bssParserParseExprBinary},
+    ['-'] = {.precedence = 20, .prefix = null, .infix = bssParserParseExprBinary},
+    ['/'] = {.precedence = 30, .prefix = null, .infix = bssParserParseExprBinary},
+    ['*'] = {.precedence = 30, .prefix = null, .infix = bssParserParseExprBinary},
+
+    ['('] = {.precedence = 100, .prefix = null, .infix = bssParserParseExprFnCall},
 };
 
 
@@ -285,6 +292,33 @@ BssAstExpr *bssParserParsePrefix(BssInterp *interp)
             BSS_PARSER_NEXT_TOK();
         }break;
 
+        case '+':
+        case '-':
+        {
+            BssTok op = BSS_PARSER_CURR_TOK;
+            BSS_PARSER_NEXT_TOK();
+            expr = bssParserParsePrefix(interp);
+            if (expr != BSS_AST_EXPR_ZERO)
+            {
+                expr = bssAllocExprUnary(interp, op, expr->endTok, expr, op);
+            }
+        }break;
+
+        case '(':
+        {
+            BSS_PARSER_NEXT_TOK();
+            expr = bssParserParseExpr(interp, 0);
+
+            if (BSS_PARSER_MATCH(')'))
+            {
+                BSS_PARSER_NEXT_TOK();
+            }
+            else
+            {
+                bssParserError(interp, "Expected closing ')', instead got '%S'", BSS_PARSER_CURR_TOK.lexeme);
+            }
+        }break;
+
         default:
         {
             bssParserError(interp, "Not a valid expression");
@@ -294,7 +328,25 @@ BssAstExpr *bssParserParsePrefix(BssInterp *interp)
     return expr;
 }
 
-BssAstExpr *bssParserParseBinary(BssInterp *interp, BssAstExpr *left, BssTok op)
+BssAstExpr *bssParserParseExprFnCall(BssInterp *interp, BssAstExpr *left, BssTok op)
+{
+    BssAstExpr *expr = BSS_AST_EXPR_ZERO;
+
+    BssAstExprList list = bssParserParseExprList(interp, ')');
+    if (BSS_PARSER_MATCH(')'))
+    {
+        expr = bssAllocExprFnCall(interp, left->startTok, BSS_PARSER_CURR_TOK, left, list);
+
+        BSS_PARSER_NEXT_TOK();
+    }
+    else
+    {
+        bssParserError(interp, "Expected ')' instead got '%S'", BSS_PARSER_CURR_TOK.lexeme);
+    }
+    return expr;
+}
+
+BssAstExpr *bssParserParseExprBinary(BssInterp *interp, BssAstExpr *left, BssTok op)
 {
     BssAstExpr *expr = BSS_AST_EXPR_ZERO;
 
@@ -304,6 +356,10 @@ BssAstExpr *bssParserParseBinary(BssInterp *interp, BssAstExpr *left, BssTok op)
         case '-':
         case '/':
         case '*':
+        case TOK_LOGICAL_OR_OP:
+        case TOK_LOGICAL_AND_OP:
+        case TOK_EQ_OP:
+        case TOK_NEQ_OP:
         {
             BssAstExpr *rhs = bssParserParseExpr(interp, gBssPrecedenceTable[op.kind].precedence);
             if (rhs != BSS_AST_EXPR_ZERO)
@@ -337,6 +393,35 @@ BssAstExpr *bssParserParseExpr(BssInterp *interp, u64 currPrecedence)
 
     return lhs;
 }
+
+BssAstExprList bssParserParseExprList(BssInterp *interp, BssTokKind endKind)
+{
+    BssAstExprList list = {0};
+    while (!BSS_PARSER_MATCH(endKind) &&
+           !BSS_PARSER_MATCH(TOK_END_INPUT))
+    {
+        BssAstExpr *expr = bssParserParseExpr(interp, 0);
+        if (expr != BSS_AST_EXPR_ZERO)
+        {
+            if (BSS_PARSER_MATCH(',') || 
+                BSS_PARSER_MATCH(endKind))
+            {
+                if (BSS_PARSER_MATCH(',')) BSS_PARSER_NEXT_TOK();
+                BssAstExprListPushNodeLast(&list, expr);
+                continue;
+            }
+            else
+            {
+                bssParserError(interp, "Expected ',' after arg, instead got '%S'", BSS_PARSER_CURR_TOK.lexeme);
+            }
+        }
+        
+        break;
+    }
+
+    return list;
+}
+
 
 bool bssParserParseFile(BssInterp *interp, str8 file)
 {
