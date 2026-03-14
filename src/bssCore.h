@@ -145,7 +145,6 @@ typedef struct BssValue
                 struct
                 {
                     struct BssAstFunc *ast;
-                    struct BssScope *scope;
                     BssTokList params;
                 }defined;
             };

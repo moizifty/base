@@ -24,6 +24,7 @@ typedef struct BssScope
 {
     struct BssScope *parent;
 
+    bool isScopeInFunction;
     BssSymTable symTable;
 }BssScope;
 

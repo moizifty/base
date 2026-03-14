@@ -18,12 +18,12 @@ typedef enum BssAstStmtKind
 {
     BSS_AST_STMT_EXPR,
     BSS_AST_STMT_ASSIGN,
-    BSS_AST_STMT_FOR,
-    BSS_AST_STMT_WHILE,
-    BSS_AST_STMT_BREAK,
-    BSS_AST_STMT_CONT,
     BSS_AST_STMT_RET,
     BSS_AST_STMT_IF,
+    BSS_AST_STMT_FOR,
+    BSS_AST_STMT_WHILE,
+    BSS_AST_STMT_CONT,
+    BSS_AST_STMT_BREAK,
 }BssAstStmtKind;
 
 typedef enum BssAstExprKind
@@ -84,13 +84,20 @@ typedef struct BssAstStmt
     BssAstStmtKind kind;
     union
     {
+        BssAstExpr *expr, *retExpr;
+        
         struct
         {
             BssAstExpr *lhs;
             BssAstExpr *rhs;
         }assign;
 
-        BssAstExpr *expr, *retExpr;
+        struct
+        {
+            BssAstExpr *cond;
+            struct BssAstBlock *thenBlock;
+            struct BssAstBlock *elseBlock;
+        }ifStmt;
     };
 }BssAstStmt;
 
@@ -101,6 +108,8 @@ typedef struct BssAstBlock
     BSS_AST_POS_DEFS
 
     BssAstStmtList stmts;
+
+    struct BssScope *scope;
 }BssAstBlock;
 
 typedef struct BssAstFunc

@@ -9,7 +9,7 @@ str8 gBssBssTokLexemeTable[] =
     [TOK_WHILE_KW] = STR8_LIT_COMP_CONST("while"),
     [TOK_IN_KW] = STR8_LIT_COMP_CONST("in"),
     [TOK_FN_KW] = STR8_LIT_COMP_CONST("fn"),
-    [TOK_RET_KW] = STR8_LIT_COMP_CONST("ret"),
+    [TOK_RET_KW] = STR8_LIT_COMP_CONST("return"),
     [TOK_BREAK_KW] = STR8_LIT_COMP_CONST("break"),
     [TOK_CONTINUE_KW] = STR8_LIT_COMP_CONST("continue"),
  

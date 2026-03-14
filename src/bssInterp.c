@@ -59,7 +59,6 @@ BssValue *bssInterpreterInterpExprBinary(BssInterp *interp, BssAstExpr *expr)
 
                 case TOK_EQ_OP:
                 {
-                    // todo check for div by 0
                     value->kind = BSS_VALUE_BOOL;
                     value->num = lhs->num == rhs->num;
                     value->str = Str8PushFmt(interp->arena, "%s", value->num ? "true" : "false");
@@ -67,7 +66,6 @@ BssValue *bssInterpreterInterpExprBinary(BssInterp *interp, BssAstExpr *expr)
 
                 case TOK_NEQ_OP:
                 {
-                    // todo check for div by 0
                     value->kind = BSS_VALUE_BOOL;
                     value->num = lhs->num != rhs->num;
                     value->str = Str8PushFmt(interp->arena, "%s", value->num ? "true" : "false");
@@ -75,11 +73,74 @@ BssValue *bssInterpreterInterpExprBinary(BssInterp *interp, BssAstExpr *expr)
 
                 default:
                 {
-                    baseEPrintf("Unhandled binary operator '%S'\n", expr->bin.op.lexeme);
+                    bssInterpreterError(interp, expr->startTok.pos, expr->endTok.pos, "Operator '%S' not valid between types int", expr->bin.op.lexeme);
+                    return BSS_VALUE_ZERO;
                 }break;
             }
         }
+        else if (lhs->kind == BSS_VALUE_BOOL && rhs->kind == BSS_VALUE_BOOL)
+        {
+            value->kind = BSS_VALUE_BOOL;
+
+            switch (expr->bin.op.kind)
+            {
+                case TOK_EQ_OP:
+                {
+                    value->num = lhs->num != rhs->num;
+                }break;
+                case TOK_NEQ_OP:
+                {
+                    value->num = lhs->num == rhs->num;
+                }break;
+                case TOK_LOGICAL_OR_OP:
+                {
+                    value->num = lhs->num || rhs->num;
+                }break;
+                case TOK_LOGICAL_AND_OP:
+                {
+                    value->num = lhs->num && rhs->num;
+                }break;
+                default:
+                {
+                    bssInterpreterError(interp, expr->startTok.pos, expr->endTok.pos, "Operator '%S' not valid between types bool", expr->bin.op.lexeme);
+                    return BSS_VALUE_ZERO;
+                }break;
+            }
+
+            value->str = Str8PushFmt(interp->arena, "%s", value->num ? "true" : "false");
+        }
+        else
+        {
+            bssInterpreterError(interp, expr->startTok.pos, expr->endTok.pos, "Binary op is not valid with these types.");
+            return BSS_VALUE_ZERO;
+        }
     }
+
+    return value;
+}
+
+BssValue *bssInterpreterInterpBlock(BssInterp *interp, BssAstBlock *block)
+{
+    BssValue *value = BSS_VALUE_VOID_VALUE;
+
+    BssScope *prevScope = interp->currScope;
+    interp->currScope = block->scope;
+    
+    BASE_LIST_FOREACH(BssAstStmt, stmt, block->stmts)
+    {
+        if(!bssInterpreterInterpStmt(interp, stmt))
+        {
+            break;
+        }
+
+        if (interp->returnSignaled)
+        {
+            value = interp->lastRetValue;
+            break;
+        }
+    }
+
+    interp->currScope = prevScope;
 
     return value;
 }
@@ -98,12 +159,10 @@ BssValue *bssInterpreterInterpFunc(BssInterp *interp, BssAstFunc *func, BssAstEx
         return BSS_VALUE_ZERO;
     }
 
-    BssValue *value = BSS_VALUE_VOID_VALUE;
-
     BssSymTableSlotEntry *entry = bssScopeFindEntry(interp->rootScope, func->iden.lexeme);
 
     BssScope *prevScope = interp->currScope;
-    interp->currScope = entry->value->fn.defined.scope;
+    interp->currScope = entry->value->fn.defined.ast->block->scope;
     
     // todo put in temp arena
     BssValueArray argValues = 
@@ -129,22 +188,8 @@ BssValue *bssInterpreterInterpFunc(BssInterp *interp, BssAstFunc *func, BssAstEx
         paramEntry->value = argValues.data[index];
     }
 
-    interp->returnSignaled = false;
-    BASE_LIST_FOREACH(BssAstStmt, stmt, func->block->stmts)
-    {
-        if(!bssInterpreterInterpStmt(interp, stmt))
-        {
-            break;
-        }
+    BssValue *value = bssInterpreterInterpBlock(interp, func->block);
 
-        if (interp->returnSignaled)
-        {
-            value = interp->lastRetValue;
-            break;
-        }
-    }
-
-    interp->currScope = prevScope;
     interp->returnSignaled = false;
 
     return value;
@@ -172,6 +217,13 @@ BssValue *bssInterpreterInterpExpr(BssInterp *interp, BssAstExpr *expr)
                     value = arenaPushType(interp->arena, BssValue);
                     value->kind = BSS_VALUE_STRING;
                     value->str = bssGetStr8RepFromTokLexeme(interp->arena, expr->lit);
+                }break;
+                case TOK_BOOL_LIT:
+                {
+                    value = arenaPushType(interp->arena, BssValue);
+                    value->kind = BSS_VALUE_BOOL;
+                    value->num = (expr->lit.lexeme.data[0] == 'f') ? false : true;
+                    value->str = expr->lit.lexeme;
                 }break;
                 default:
                 {
@@ -271,20 +323,62 @@ bool bssInterpreterInterpStmt(BssInterp *interp, BssAstStmt *stmt)
 
             }
         }break;
-
+        
         case BSS_AST_STMT_RET:
         {
-            interp->returnSignaled = true;
-
-            if (stmt->retExpr == BSS_AST_EXPR_ZERO)
+            if (interp->currScope->isScopeInFunction)
             {
-                interp->lastRetValue = BSS_VALUE_VOID_VALUE;
-                return true;
+                interp->returnSignaled = true;
+
+                if (stmt->retExpr == BSS_AST_EXPR_ZERO)
+                {
+                    interp->lastRetValue = BSS_VALUE_VOID_VALUE;
+                    return true;
+                }
+                else
+                {
+                    interp->lastRetValue = bssInterpreterInterpExpr(interp, stmt->retExpr);
+                    return interp->lastRetValue != BSS_VALUE_ZERO;
+                }
             }
             else
             {
-                interp->lastRetValue = bssInterpreterInterpExpr(interp, stmt->retExpr);
-                return interp->lastRetValue != BSS_VALUE_ZERO;
+                bssInterpreterError(interp, stmt->startTok.pos, stmt->endTok.pos, "Return stmt can only be used in function block!");
+                return false;
+            }
+        }break;
+
+        case BSS_AST_STMT_IF:
+        {
+            BssValue *condValue = bssInterpreterInterpExpr(interp, stmt->ifStmt.cond);
+            if (condValue != BSS_VALUE_ZERO)
+            {
+                if (condValue->kind == BSS_VALUE_BOOL)
+                {
+                    if (condValue->num)
+                    {
+                        if(bssInterpreterInterpBlock(interp, stmt->ifStmt.thenBlock) == BSS_VALUE_ZERO)
+                        {
+                            return false;
+                        }
+                    }
+                    else if (stmt->ifStmt.elseBlock != BSS_AST_BLOCK_ZERO)
+                    {
+                        if(bssInterpreterInterpBlock(interp, stmt->ifStmt.elseBlock) == BSS_VALUE_ZERO)
+                        {
+                            return false;
+                        }
+                    }
+
+                    return true;
+                }
+                else
+                {
+                    bssInterpreterError(interp,
+                                        stmt->ifStmt.cond->startTok.pos,
+                                        stmt->ifStmt.cond->endTok.pos,
+                                        "Expected expression of boolean type for if condition");
+                }
             }
         }break;
 

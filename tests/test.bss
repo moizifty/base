@@ -1,11 +1,15 @@
-fn compile(x)
+fn fib(x)
 {
-    ret x * x;
+    if (x == 0)
+    {
+        return 0;
+    }
+    else if (x == 1)
+    {
+        return 1;
+    }
+
+    return x + fib(x - 1);
 }
 
-print(compile(12));
-sum = 1+2+3+4+5+56+8;
-print(sum);
-print("~n");
-sum = 2390 + 203;
-print(sum);
+print(fib(3));

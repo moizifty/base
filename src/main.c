@@ -15,9 +15,8 @@ void ProgramMain(CmdLineHashMap *line)
 
     if(!bssInterpreterInterpFile(&interp, STR8_LIT("tests/test.bss")))
     {
-        baseEPrintf("{r}Failed to open bss file\n");
+        baseEPrintf("{r}Failed to interpret file\n");
     }
     
-    basePrintf("{g}Done!");
     return;
 }
