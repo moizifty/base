@@ -74,7 +74,6 @@ typedef struct BssAstExpr
     };
 }BssAstExpr;
 
-
 typedef struct BssAstStmt
 {
     BSS_AST_POS_DEFS
@@ -91,7 +90,7 @@ typedef struct BssAstStmt
             BssAstExpr *rhs;
         }assign;
 
-        BssAstExpr *expr;
+        BssAstExpr *expr, *retExpr;
     };
 }BssAstStmt;
 

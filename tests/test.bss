@@ -1,7 +1,11 @@
-fn compile ()
+fn compile(x)
 {
-    stuff = -(23 + (90 == 23 + 2)) + 23;
-    i = 23 + call() + 90;
-
-    call(23);
+    ret x * x;
 }
+
+print(compile(12));
+sum = 1+2+3+4+5+56+8;
+print(sum);
+print("~n");
+sum = 2390 + 203;
+print(sum);

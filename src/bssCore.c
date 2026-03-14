@@ -1,6 +1,11 @@
 #include "bssCore.h"
 
+readonly BssValue gBssValueEmpty = {0};
+readonly BssValue gBssValueVoid = {.str = STR8_LIT_COMP_CONST("void"), .kind = BSS_VALUE_VOID};
+readonly BssBuiltinFunc gBssBuiltinFuncEmpty = {0};
+
 BASE_CREATE_LL_DEFS(BssTokList, BssTok)
+BASE_CREATE_EFFICIENT_LL_DEFS(BssBuiltinFuncList, BssBuiltinFunc)
 
 void BssTokChunkListPushLast(Arena *arena, BssTokChunkList *l, BssTok tok)
 {
@@ -75,6 +80,82 @@ i64 bssGetEscapeCharValue(str8 escapeCharString)
     }
 
     return -1;
+}
+
+str8 bssGetStr8RepFromTokLexeme(Arena *arena, BssTok tok)
+{
+    str8 ret = {0};
+    ArenaTemp temp = baseTempBegin(&arena, 1);
+    {
+        // '""
+        tok.lexeme.data++;
+
+        // the speech marks
+        tok.lexeme.len -= 2;
+
+        str8 t = {0}; 
+        t.data = arenaPushArray(temp.arena, u8, tok.lexeme.len);
+        t.len = 0;
+
+        for(u64 i = 0; i < tok.lexeme.len; i++)
+        {
+            u8 ch = tok.lexeme.data[i];
+            u8 toWrite = ch;
+
+            if (ch == '~')
+            {
+                str8 charLitStr = {0};
+                charLitStr.data = tok.lexeme.data + i;
+                charLitStr.len = 2;
+
+                i64 ev = bssGetEscapeCharValue(charLitStr);
+                toWrite = (u8) ev;
+
+                i++;
+            }
+
+            t.data[t.len++] = toWrite;
+        }
+
+        ret = Str8PushCopy(arena, t);
+
+    }
+    arenaTempEnd(temp);
+
+    return ret;
+}
+
+void bssBuiltinFunctionPushEntry(BssInterp *interp, str8 name, int numParams, BssFunc fn)
+{
+    BssBuiltinFunc *builtin = arenaPushType(interp->arena, BssBuiltinFunc);
+    builtin->name = name;
+    builtin->func = fn;
+
+    BssBuiltinFuncListPushNodeLast(&interp->builtins, builtin);
+
+    BssSymTableSlotEntry *entry = BSS_SYMTABLE_SLOT_ENTRY_ZERO;
+    bssScopePushEntry(interp, interp->rootScope, name, &entry);
+
+    entry->name = name;
+    entry->value = arenaPushType(interp->arena, BssValue);
+    entry->value->kind = BSS_VALUE_FUNCTION;
+    entry->value->fn.isBuiltin = true;
+    entry->value->fn.builtin.fn = builtin;
+    entry->value->fn.builtin.numParams = numParams;
+}
+BssBuiltinFunc *bssBuiltinFunctionFindEntry(BssInterp *interp, str8 name)
+{
+    BssBuiltinFunc *found = BSS_BUILTIN_FUNC_ZERO;
+    BASE_LIST_FOREACH(BssBuiltinFunc, func, interp->builtins)
+    {
+        if (Str8Equals(func->name, name, 0))
+        {
+            return func;
+        }
+    }
+
+
+    return found;
 }
 
 void bssPrintSourceRange(BssTokPos start, BssTokPos end, u64 contextLines)

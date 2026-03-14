@@ -13,5 +13,6 @@ BssAstExpr *bssParserParseExprFnCall(BssInterp *interp, BssAstExpr *left, BssTok
 BssAstExpr *bssParserParseExprBinary(BssInterp *interp, BssAstExpr *left, BssTok op);
 BssAstExpr *bssParserParseExpr(BssInterp *interp, u64 currPrecedence);
 BssAstExprList bssParserParseExprList(BssInterp *interp, BssTokKind endKind);
+bool bssParserParseFile(BssInterp *interp, str8 file);
 
 #endif

@@ -1,5 +1,6 @@
 #include "bssParser.h"
 #include "bssLexer.h"
+#include "bssScope.h"
 
 BssPrecedenceTableEntry gBssPrecedenceTable[TOK_KIND_END] =
 {
@@ -37,6 +38,40 @@ BssAstStmt *bssParserParseStmt(BssInterp *interp)
 
     switch (BSS_PARSER_CURR_TOK.kind)
     {
+        case TOK_RET_KW:
+        {
+            BssTok start = BSS_PARSER_CURR_TOK;
+            BSS_PARSER_NEXT_TOK();
+
+            BssTok end = {0};
+            BssAstExpr *expr = BSS_AST_EXPR_ZERO;
+
+            if (!BSS_PARSER_MATCH(';'))
+            {
+                expr = bssParserParseExpr(interp, 0);
+                if (expr == BSS_AST_EXPR_ZERO)
+                {
+                    return BSS_AST_STMT_ZERO;
+                }
+            }
+
+            if (BSS_PARSER_MATCH(';'))
+            {
+                BSS_PARSER_NEXT_TOK();
+
+                ast = arenaPushType(interp->arena, BssAstStmt);
+                ast->kind = BSS_AST_STMT_RET;
+                ast->startTok = start;
+                ast->endTok = (expr == BSS_AST_EXPR_ZERO) ? start : expr->endTok;
+                ast->retExpr = expr;
+            }
+            else
+            {
+                bssParserError(interp, "Expected ';' end of statement instead got '%S'\n", BSS_PARSER_CURR_TOK.lexeme);
+                return BSS_AST_STMT_ZERO;
+            }
+        }break;
+
         default:
         {
             BssAstExpr *lhs = bssParserParseExpr(interp, 0);
@@ -55,6 +90,11 @@ BssAstStmt *bssParserParseStmt(BssInterp *interp)
                     ast->kind = BSS_AST_STMT_ASSIGN;
                     ast->assign.lhs = lhs;
                     ast->assign.rhs = rhs;
+
+                    if (lhs->kind = BSS_AST_EXPR_IDEN)
+                    {
+                        bssScopePushEntry(interp, interp->currScope, lhs->iden.lexeme, null);
+                    }
                 }
                 else
                 {
@@ -80,12 +120,20 @@ BssAstStmt *bssParserParseStmt(BssInterp *interp)
 
     return ast;
 }
-BssAstBlock *bssParserParseBlock(BssInterp *interp)
+BssAstBlock *bssParserParseBlock(BssInterp *interp, bool createScope)
 {
     BssAstBlock *ast = BSS_AST_BLOCK_ZERO;
 
     BssTok start = {0};
     BssAstStmtList list = {0};
+
+    BssScope *prev = interp->currScope;
+    if (createScope)
+    {
+        interp->currScope = arenaPushType(interp->arena, BssScope);
+        interp->currScope->parent = prev;
+    }
+
     if (BSS_PARSER_MATCH('{'))
     {
         start = BSS_PARSER_CURR_TOK;
@@ -119,6 +167,8 @@ BssAstBlock *bssParserParseBlock(BssInterp *interp)
         }
     }
 
+    interp->currScope = prev;
+
     return ast;
 }
 
@@ -137,7 +187,6 @@ BssTokList bssParserParseTokList(BssInterp *interp)
         }
         else
         {
-            bssParserError(interp, "Expected a ',' instead got '%S'", BSS_PARSER_CURR_TOK.lexeme);
             break;
         }
     }
@@ -158,33 +207,65 @@ BssAstFunc *bssParserParseFunc(BssInterp *interp)
         if (BSS_PARSER_MATCH(TOK_IDEN))
         {
             iden = BSS_PARSER_CURR_TOK;
-            BSS_PARSER_NEXT_TOK();
 
-            if (BSS_PARSER_MATCH('('))
+            if (bssScopeFindEntry(interp->currScope, iden.lexeme) != BSS_SYMTABLE_SLOT_ENTRY_ZERO)
+            {
+                bssParserError(interp, "Function '%S' already defined", iden.lexeme);
+            }
+            else
             {
                 BSS_PARSER_NEXT_TOK();
 
-                BssTokList params = bssParserParseTokList(interp);
-                if (BSS_PARSER_MATCH(')'))
+                if (BSS_PARSER_MATCH('('))
                 {
                     BSS_PARSER_NEXT_TOK();
 
-                    BssAstBlock *block = bssParserParseBlock(interp);
-                    if (block != BSS_AST_BLOCK_ZERO)
+                    BssTokList params = bssParserParseTokList(interp);
+                    if (BSS_PARSER_MATCH(')'))
                     {
-                        ast = arenaPushType(interp->arena, BssAstFunc);
-                        ast->startTok = start;
-                        ast->endTok = block->endTok;
+                        BSS_PARSER_NEXT_TOK();
+
+                        BssScope *prevScope = interp->currScope;
+                        interp->currScope = arenaPushType(interp->arena, BssScope);
+                        interp->currScope->parent = prevScope;
+
+                        BASE_LIST_FOREACH(BssTokListNode, node, params)
+                        {
+                            bssScopePushEntry(interp, interp->currScope, node->val.lexeme, null);
+                        }
+
+                        BssAstBlock *block = bssParserParseBlock(interp, false);
+
+                        if (block != BSS_AST_BLOCK_ZERO)
+                        {
+                            ast = arenaPushType(interp->arena, BssAstFunc);
+                            ast->startTok = start;
+                            ast->endTok = block->endTok;
+                            ast->iden = iden;
+                            ast->block = block;
+                            ast->params = params;
+
+                            BssSymTableSlotEntry *entry = BSS_SYMTABLE_SLOT_ENTRY_ZERO;
+                            bssScopePushEntry(interp, interp->rootScope, iden.lexeme, &entry);
+
+                            entry->value = arenaPushType(interp->arena, BssValue);
+                            entry->value->kind = BSS_VALUE_FUNCTION;
+                            entry->value->fn.defined.params = params;
+                            entry->value->fn.defined.ast = ast;
+                            entry->value->fn.defined.scope = interp->currScope;
+                        }
+
+                        interp->currScope = prevScope;
+                    }
+                    else
+                    {
+                        bssParserError(interp, "Expected closing ')' instead got '%S'", BSS_PARSER_CURR_TOK.lexeme);
                     }
                 }
                 else
                 {
-                    bssParserError(interp, "Expected closing ')' instead got '%S'", BSS_PARSER_CURR_TOK.lexeme);
+                    bssParserError(interp, "Expected '(' instead got '%S'", BSS_PARSER_CURR_TOK.lexeme);
                 }
-            }
-            else
-            {
-                bssParserError(interp, "Expected '(' instead got '%S'", BSS_PARSER_CURR_TOK.lexeme);
             }
         }
         else
@@ -422,9 +503,11 @@ BssAstExprList bssParserParseExprList(BssInterp *interp, BssTokKind endKind)
     return list;
 }
 
-
 bool bssParserParseFile(BssInterp *interp, str8 file)
 {
+    interp->rootScope = arenaPushType(interp->arena, BssScope);
+    interp->currScope = interp->rootScope;
+
     if (bssLexerLexFile(interp, file))
     {
         return bssParserParseLexed(interp);

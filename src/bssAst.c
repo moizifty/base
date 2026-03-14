@@ -17,8 +17,6 @@ BssAstExpr *bssAllocExpr(BssInterp *interp, BssTok start, BssTok end, BssAstExpr
     ast->endTok = end;
     ast->kind = kind;
 
-    bssPrintSourceRange(start.pos, end.pos, 0);
-
     return ast;
 }
 BssAstExpr *bssAllocExprLit(BssInterp *interp, BssTok start, BssTok end, BssTok lit)
