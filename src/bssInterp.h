@@ -10,9 +10,16 @@
 
 void bssInterpreterError(BssInterp *interp, BssTokPos start, BssTokPos end, i8 *fmt, ...);
 
-BssValue *bssInterpreterInterpExprBinary(BssInterp *interp, BssAstExpr *expr);
-BssValue *bssInterpreterInterpExpr(BssInterp *interp, BssAstExpr *expr);
+BssScope *bssInterpreterCreateFuncScopeAndPushArgs(BssInterp *interp, BssTokList params, BssAstExprList args);
+BssValue *bssInterpreterInterpFunc(BssInterp *interp, Arena *scopeArena, BssAstFunc *func, BssAstExpr *callingExpr);
+BssValue *bssInterpreterInterpExprBinary(BssInterp *interp, Arena *scopeArena, BssAstExpr *expr);
+BssValue *bssInterpreterInterpExpr(BssInterp *interp, Arena *scopeArena, BssAstExpr *expr);
 
-bool bssInterpreterInterpStmt(BssInterp *interp, BssAstStmt *stmt);
+bool bssInterpreterInterpStmt(BssInterp *interp, Arena *scopeArena, BssAstStmt *stmt);
+BssValue *bssInterpreterInterpBlock(BssInterp *interp, BssAstBlock *block, bool createBlock);
+
+bool bssInterpreterInterpStr8(BssInterp *interp, str8 file);
+bool bssInterpreterInterpParsed(BssInterp *interp);
+bool bssInterpreterInterpFile(BssInterp *interp, str8 file);
 
 #endif

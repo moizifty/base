@@ -9,4 +9,5 @@
 #define BSS_BUILTIN_FUNCTION_DEF(NAME)  BssValue *bssBuiltin##NAME(BssInterp *interp, BssAstExpr *expr)
 
 BSS_BUILTIN_FUNCTION_DEF(Print);
+BSS_BUILTIN_FUNCTION_DEF(Run);
 #endif

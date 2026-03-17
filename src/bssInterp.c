@@ -15,137 +15,44 @@ void bssInterpreterError(BssInterp *interp, BssTokPos start, BssTokPos end, i8 *
     va_end(va);
 }
 
-
-BssValue *bssInterpreterInterpExprBinary(BssInterp *interp, BssAstExpr *expr)
+BssScope *bssInterpreterCreateFuncScopeAndPushArgs(BssInterp *interp, BssTokList params, BssAstExprList args)
 {
-    BssValue *value = BSS_VALUE_ZERO;
+    BssScope *fnScope = bssAllocScope(interp, arenaAllocDefault(), interp->rootScope, true);
+    BssScope *prevScope = interp->currScope;
 
-    BssValue *lhs = bssInterpreterInterpExpr(interp, expr->bin.left);
-    BssValue *rhs = bssInterpreterInterpExpr(interp, expr->bin.right);
-    if (lhs != BSS_VALUE_ZERO && rhs != BSS_VALUE_ZERO)
+    // todo put in temp arena
+    BssValueArray argValues = 
     {
-        value = arenaPushType(interp->arena, BssValue);
+        .data = arenaPushArray(fnScope->scopeArena, BssValue*, args.len),
+        .len = args.len,
+    };
 
-        if(lhs->kind == BSS_VALUE_INT && rhs->kind == BSS_VALUE_INT)
+    u64 index = 0;
+    BASE_LIST_FOREACH_INDEX(BssAstExpr, arg, args, index)
+    {
+        argValues.data[index] = bssInterpreterInterpExpr(interp, fnScope->scopeArena, arg);
+        if (argValues.data[index] == BSS_VALUE_ZERO)
         {
-            value->kind = BSS_VALUE_INT;
-
-            switch (expr->bin.op.kind)
-            {
-                case '+':
-                {
-                    value->num = lhs->num + rhs->num;
-                    value->str = Str8PushFmt(interp->arena, "%lld", value->num);
-                }break;
-
-                case '-':
-                {
-                    value->num = lhs->num - rhs->num;
-                    value->str = Str8PushFmt(interp->arena, "%lld", value->num);
-                }break;
-
-                case '*':
-                {
-                    value->num = lhs->num * rhs->num;
-                    value->str = Str8PushFmt(interp->arena, "%lld", value->num);
-                }break;
-
-                case '/':
-                {
-                    // todo check for div by 0
-                    value->num = lhs->num / rhs->num;
-                    value->str = Str8PushFmt(interp->arena, "%lld", value->num);
-                }break;
-
-                case TOK_EQ_OP:
-                {
-                    value->kind = BSS_VALUE_BOOL;
-                    value->num = lhs->num == rhs->num;
-                    value->str = Str8PushFmt(interp->arena, "%s", value->num ? "true" : "false");
-                }break;
-
-                case TOK_NEQ_OP:
-                {
-                    value->kind = BSS_VALUE_BOOL;
-                    value->num = lhs->num != rhs->num;
-                    value->str = Str8PushFmt(interp->arena, "%s", value->num ? "true" : "false");
-                }break;
-
-                default:
-                {
-                    bssInterpreterError(interp, expr->startTok.pos, expr->endTok.pos, "Operator '%S' not valid between types int", expr->bin.op.lexeme);
-                    return BSS_VALUE_ZERO;
-                }break;
-            }
-        }
-        else if (lhs->kind == BSS_VALUE_BOOL && rhs->kind == BSS_VALUE_BOOL)
-        {
-            value->kind = BSS_VALUE_BOOL;
-
-            switch (expr->bin.op.kind)
-            {
-                case TOK_EQ_OP:
-                {
-                    value->num = lhs->num != rhs->num;
-                }break;
-                case TOK_NEQ_OP:
-                {
-                    value->num = lhs->num == rhs->num;
-                }break;
-                case TOK_LOGICAL_OR_OP:
-                {
-                    value->num = lhs->num || rhs->num;
-                }break;
-                case TOK_LOGICAL_AND_OP:
-                {
-                    value->num = lhs->num && rhs->num;
-                }break;
-                default:
-                {
-                    bssInterpreterError(interp, expr->startTok.pos, expr->endTok.pos, "Operator '%S' not valid between types bool", expr->bin.op.lexeme);
-                    return BSS_VALUE_ZERO;
-                }break;
-            }
-
-            value->str = Str8PushFmt(interp->arena, "%s", value->num ? "true" : "false");
-        }
-        else
-        {
-            bssInterpreterError(interp, expr->startTok.pos, expr->endTok.pos, "Binary op is not valid with these types.");
-            return BSS_VALUE_ZERO;
+            return BSS_SCOPE_ZERO;
         }
     }
 
-    return value;
-}
+    interp->currScope = fnScope;
 
-BssValue *bssInterpreterInterpBlock(BssInterp *interp, BssAstBlock *block)
-{
-    BssValue *value = BSS_VALUE_VOID_VALUE;
-
-    BssScope *prevScope = interp->currScope;
-    interp->currScope = block->scope;
-    
-    BASE_LIST_FOREACH(BssAstStmt, stmt, block->stmts)
+    index = 0;
+    BASE_LIST_FOREACH_INDEX(BssTokListNode, param, params, index)
     {
-        if(!bssInterpreterInterpStmt(interp, stmt))
-        {
-            break;
-        }
+        BssSymTableSlotEntry *paramEntry = BSS_SYMTABLE_SLOT_ENTRY_ZERO;
+        bssScopePushEntry(interp, interp->currScope, param->val.lexeme, &paramEntry);
 
-        if (interp->returnSignaled)
-        {
-            value = interp->lastRetValue;
-            break;
-        }
+        paramEntry->value = argValues.data[index];
     }
 
     interp->currScope = prevScope;
 
-    return value;
+    return fnScope;
 }
-
-BssValue *bssInterpreterInterpFunc(BssInterp *interp, BssAstFunc *func, BssAstExpr *callingExpr)
+BssValue *bssInterpreterInterpFunc(BssInterp *interp, Arena *scopeArena, BssAstFunc *func, BssAstExpr *callingExpr)
 {
     if (callingExpr->call.args.len != func->params.len)
     {
@@ -159,43 +66,263 @@ BssValue *bssInterpreterInterpFunc(BssInterp *interp, BssAstFunc *func, BssAstEx
         return BSS_VALUE_ZERO;
     }
 
-    BssSymTableSlotEntry *entry = bssScopeFindEntry(interp->rootScope, func->iden.lexeme);
-
-    BssScope *prevScope = interp->currScope;
-    interp->currScope = entry->value->fn.defined.ast->block->scope;
+    BssScope *fnScope = bssInterpreterCreateFuncScopeAndPushArgs(interp, func->params, callingExpr->call.args);
+    BssScope *prevLastScope = interp->lastFnCalleeScope;
+    interp->lastFnCalleeScope = interp->currScope;
     
-    // todo put in temp arena
-    BssValueArray argValues = 
-    {
-        .data = arenaPushArray(interp->arena, BssValue*, callingExpr->call.args.len),
-        .len = callingExpr->call.args.len,
-    };
+    interp->currScope = fnScope;
+    interp->currScope->isReturnedSignaled = false;
 
-    u64 index = 0;
-    BASE_LIST_FOREACH_INDEX(BssAstExpr, arg, callingExpr->call.args, index)
-    {
-        argValues.data[index] = bssInterpreterInterpExpr(interp, arg);
-        if (argValues.data[index] == BSS_VALUE_ZERO)
-        {
-            return BSS_VALUE_ZERO;
-        }
-    }
 
-    index = 0;
-    BASE_LIST_FOREACH_INDEX(BssTokListNode, param, func->params, index)
-    {
-        BssSymTableSlotEntry *paramEntry = bssScopeFindEntry(interp->currScope, param->val.lexeme);
-        paramEntry->value = argValues.data[index];
-    }
+    BssValue *value = bssInterpreterInterpBlock(interp, func->block, false);
 
-    BssValue *value = bssInterpreterInterpBlock(interp, func->block);
+    // pass the value up the scope, so it doesnt get destroyed
+    value = bssAllocValueCopy(interp->lastFnCalleeScope->scopeArena, value);
 
-    interp->returnSignaled = false;
+    arenaFree(fnScope->scopeArena);
+    interp->currScope = interp->lastFnCalleeScope;
+    interp->lastFnCalleeScope = prevLastScope;
 
     return value;
 }
 
-BssValue *bssInterpreterInterpExpr(BssInterp *interp, BssAstExpr *expr)
+BssValue *bssInterpreterInterpExprBinary(BssInterp *interp, Arena *scopeArena, BssAstExpr *expr)
+{
+    BssValue *value = BSS_VALUE_ZERO;
+
+    BssValue *lhs = bssInterpreterInterpExpr(interp, scopeArena, expr->bin.left);
+    BssValue *rhs = bssInterpreterInterpExpr(interp, scopeArena, expr->bin.right);
+    if (lhs != BSS_VALUE_ZERO && rhs != BSS_VALUE_ZERO)
+    {
+        if(lhs->kind == BSS_VALUE_INT && rhs->kind == BSS_VALUE_INT)
+        {
+            switch (expr->bin.op.kind)
+            {
+                case '+':
+                {
+                    value = bssAllocValueInt(scopeArena, lhs->num + rhs->num);
+                }break;
+
+                case '-':
+                {
+                    value = bssAllocValueInt(scopeArena, lhs->num - rhs->num);
+                }break;
+
+                case '*':
+                {
+                    value = bssAllocValueInt(scopeArena, lhs->num * rhs->num);
+                }break;
+
+                case '/':
+                {
+                    if (rhs->num == 0)
+                    {
+                        bssInterpreterError(interp, expr->bin.right->startTok.pos, expr->bin.right->endTok.pos, "Expression evaluates to 0, cannot divide by 0.");
+                        return BSS_VALUE_ZERO;
+                    }
+                    else
+                    {
+                        value = bssAllocValueInt(scopeArena, lhs->num / rhs->num);
+                    }
+                }break;
+
+                case '<':
+                {
+                    value = bssAllocValueBool(scopeArena, lhs->num < rhs->num);
+                }break;
+
+                case '>':
+                {
+                    value = bssAllocValueBool(scopeArena, lhs->num > rhs->num);
+                }break;
+
+                case TOK_EQ_OP:
+                {
+                    value = bssAllocValueBool(scopeArena, lhs->num == rhs->num);
+                }break;
+
+                case TOK_NEQ_OP:
+                {
+                    value = bssAllocValueBool(scopeArena, lhs->num != rhs->num);
+                }break;
+
+                default:
+                {
+                    bssInterpreterError(interp, expr->startTok.pos, expr->endTok.pos, "Operator '%S' not valid between types int", expr->bin.op.lexeme);
+                    return BSS_VALUE_ZERO;
+                }break;
+            }
+        }
+        else if (lhs->kind == BSS_VALUE_BOOL && rhs->kind == BSS_VALUE_BOOL)
+        {
+            switch (expr->bin.op.kind)
+            {
+                case TOK_EQ_OP:
+                {
+                    value = bssAllocValueBool(scopeArena, lhs->num == rhs->num);
+                }break;
+                case TOK_NEQ_OP:
+                {
+                    value = bssAllocValueBool(scopeArena, lhs->num != rhs->num);
+                }break;
+                case TOK_LOGICAL_OR_OP:
+                {
+                    value = bssAllocValueBool(scopeArena, lhs->num || rhs->num);
+                }break;
+                case TOK_LOGICAL_AND_OP:
+                {
+                    value = bssAllocValueBool(scopeArena, lhs->num && rhs->num);
+                }break;
+                default:
+                {
+                    bssInterpreterError(interp, expr->startTok.pos, expr->endTok.pos, "Operator '%S' not valid between types bool", expr->bin.op.lexeme);
+                    return BSS_VALUE_ZERO;
+                }break;
+            }
+        }
+        else if (lhs->kind == BSS_VALUE_STRING || rhs->kind == BSS_VALUE_STRING)
+        {
+            switch (expr->bin.op.kind)
+            {
+                case '+':
+                {
+                    value = bssAllocValueStr8(scopeArena, Str8PushFmt(scopeArena, "%S%S", lhs->str, rhs->str));
+                }break;
+
+                case TOK_EQ_OP:
+                {
+                    value = bssAllocValueBool(scopeArena, Str8Equals(lhs->str, rhs->str, 0));
+                }break;
+
+                case TOK_NEQ_OP:
+                {
+                    value = bssAllocValueBool(scopeArena, !Str8Equals(lhs->str, rhs->str, 0));
+                }break;
+
+                default:
+                {
+                    bssInterpreterError(interp, expr->startTok.pos, expr->endTok.pos, "Operator '%S' not valid between types int", expr->bin.op.lexeme);
+                    return BSS_VALUE_ZERO;
+                }break;
+            }
+        }
+        else
+        {
+            bssInterpreterError(interp, expr->startTok.pos, expr->endTok.pos, "Binary op is not valid with these types.");
+            return BSS_VALUE_ZERO;
+        }
+    }
+
+    return value;
+}
+BssValue *bssInterpreterInterpExprUnary(BssInterp *interp, Arena *scopeArena, BssAstExpr *expr)
+{
+    BssValue *value = BSS_VALUE_ZERO;
+
+    BssValue *term = bssInterpreterInterpExpr(interp, scopeArena, expr->unary.expr);
+    if (term != BSS_VALUE_ZERO)
+    {
+        if(term->kind == BSS_VALUE_INT)
+        {
+            switch (expr->unary.op.kind)
+            {
+                case '+':
+                {
+                    value = bssAllocValueInt(scopeArena, term->num);
+                }break;
+                case '-':
+                {
+                    value = bssAllocValueInt(scopeArena, -term->num);
+                }break;
+
+                default:
+                {
+                    bssInterpreterError(interp, expr->startTok.pos, expr->endTok.pos, "Operator '%S' for type int", expr->unary.op.lexeme);
+                    return BSS_VALUE_ZERO;
+                }break;
+            }
+        }
+        else
+        {
+            bssInterpreterError(interp, expr->startTok.pos, expr->endTok.pos, "Unary op is not valid for type.");
+            return BSS_VALUE_ZERO;
+        }
+    }
+
+    return value;
+}
+
+str8 bssInterpreterInterpStringSubst(BssInterp *interp, Arena *scopeArena, BssTok lit)
+{
+    U8ChunkList chunkList = {0};
+
+    str8 lexeme = lit.lexeme;
+
+    ArenaTemp temp = baseTempBegin(&scopeArena, 1);
+    {
+        lexeme = bssGetStr8RepFromTokLexeme(temp.arena, lit);
+        for (u64 i = 0; i < lexeme.len; i++)
+        {
+            if (lexeme.data[i] == '{' && lexeme.data[i + 1] != '{')
+            {
+                i++;
+
+                U8Array fmtStrBuffer = {.data = lexeme.data + i};
+                u64 bracketCount = 1;
+                while (i < lexeme.len && bracketCount != 0)
+                {
+                    if(lexeme.data[i] == '{') bracketCount++;
+                    else if (lexeme.data[i] == '}') bracketCount--;
+
+                    fmtStrBuffer.len++;
+                    i++;
+                }
+
+                if (bracketCount != 0)
+                {
+                    bssInterpreterError(interp, lit.pos, lit.pos, "Mismatch of fmt string start brackets and end brackets");
+                    baseTempEnd(temp);
+                    return bssGetStr8RepFromTokLexeme(scopeArena, lit);
+                }
+
+                fmtStrBuffer.len -= 1; // get rid of included }
+
+                BssInterp fmtInterp = {.arena = temp.arena};
+                if(bssLexerFromBuffer(&fmtInterp, fmtStrBuffer))
+                {
+                    fmtInterp.lexer->path = interp->lexer->path;
+                    bssLexerLexWhole(&fmtInterp);
+
+                    BssAstExpr *expr = bssParserParseExpr(&fmtInterp, 0);
+                    if (expr != BSS_AST_EXPR_ZERO &&
+                        fmtInterp.lexer->tokArray.data[fmtInterp.lexer->currTokIndex].kind == TOK_END_INPUT)
+                    {
+                        expr->startTok.pos = lit.pos;
+                        expr->endTok.pos = lit.pos;
+                        BssValue *value = bssInterpreterInterpExpr(interp, temp.arena, expr);
+                        if (value != BSS_VALUE_ZERO)
+                        {
+                            U8ChunkListPushStr8Last(temp.arena, &chunkList, value->str);
+                        }
+                    }
+                    else
+                    {
+                        bssInterpreterError(interp, lit.pos, lit.pos, "Failed to parse singular expression, there should only be one expression inside fmt string");
+                    }
+                }
+            }
+        
+            if (i < lexeme.len) U8ChunkListPushLast(temp.arena, &chunkList, lexeme.data[i]);
+        }
+
+        lexeme = Str8FromU8Array(U8ChunkListFlattenToArray(scopeArena, &chunkList));
+    }
+
+    baseTempEnd(temp);
+
+    return lexeme;
+}
+BssValue *bssInterpreterInterpExpr(BssInterp *interp, Arena *scopeArena, BssAstExpr *expr)
 {
     BssValue *value = BSS_VALUE_ZERO;
 
@@ -207,23 +334,15 @@ BssValue *bssInterpreterInterpExpr(BssInterp *interp, BssAstExpr *expr)
             {
                 case TOK_INT_LIT:
                 {
-                    value = arenaPushType(interp->arena, BssValue);
-                    value->kind = BSS_VALUE_INT;
-                    value->num = I64FromStr8(expr->lit.lexeme);
-                    value->str = Str8PushCopy(interp->arena, expr->lit.lexeme);
+                    value = bssAllocValueInt(scopeArena, I64FromStr8(expr->lit.lexeme));
                 }break;
                 case TOK_STR_LIT:
                 {
-                    value = arenaPushType(interp->arena, BssValue);
-                    value->kind = BSS_VALUE_STRING;
-                    value->str = bssGetStr8RepFromTokLexeme(interp->arena, expr->lit);
+                    value = bssAllocValueStr8(scopeArena, bssInterpreterInterpStringSubst(interp, scopeArena, expr->lit));
                 }break;
                 case TOK_BOOL_LIT:
                 {
-                    value = arenaPushType(interp->arena, BssValue);
-                    value->kind = BSS_VALUE_BOOL;
-                    value->num = (expr->lit.lexeme.data[0] == 'f') ? false : true;
-                    value->str = expr->lit.lexeme;
+                    value = bssAllocValueBool(scopeArena, (expr->lit.lexeme.data[0] == 'f') ? false : true);
                 }break;
                 default:
                 {
@@ -233,9 +352,14 @@ BssValue *bssInterpreterInterpExpr(BssInterp *interp, BssAstExpr *expr)
             }
         }break;
 
+        case BSS_AST_EXPR_UNARY:
+        {
+            value = bssInterpreterInterpExprUnary(interp, scopeArena, expr);
+        }break;
+
         case BSS_AST_EXPR_BINARY:
         {
-            value = bssInterpreterInterpExprBinary(interp, expr);
+            value = bssInterpreterInterpExprBinary(interp, scopeArena, expr);
         }break;
 
         case BSS_AST_EXPR_FUNCCALL:
@@ -256,7 +380,7 @@ BssValue *bssInterpreterInterpExpr(BssInterp *interp, BssAstExpr *expr)
                     }
                     else
                     {
-                        value = bssInterpreterInterpFunc(interp, entry->value->fn.defined.ast, expr);
+                        value = bssInterpreterInterpFunc(interp, scopeArena, entry->value->fn.defined.ast, expr);
                     }
                 }
                 else
@@ -294,13 +418,13 @@ BssValue *bssInterpreterInterpExpr(BssInterp *interp, BssAstExpr *expr)
     return value;
 }
 
-bool bssInterpreterInterpStmt(BssInterp *interp, BssAstStmt *stmt)
+bool bssInterpreterInterpStmt(BssInterp *interp, Arena *scopeArena, BssAstStmt *stmt)
 {
     switch (stmt->kind)
     {
         case BSS_AST_STMT_EXPR:
         {
-            BssValue *exprValue = bssInterpreterInterpExpr(interp, stmt->expr);
+            BssValue *exprValue = bssInterpreterInterpExpr(interp, scopeArena, stmt->expr);
             return exprValue != BSS_VALUE_ZERO;
         }break;
 
@@ -314,7 +438,7 @@ bool bssInterpreterInterpStmt(BssInterp *interp, BssAstStmt *stmt)
 
                 if (entry != BSS_SYMTABLE_SLOT_ENTRY_ZERO)
                 {
-                    entry->value = bssInterpreterInterpExpr(interp, stmt->assign.rhs);
+                    entry->value = bssInterpreterInterpExpr(interp, entry->scopeDefinedIn->scopeArena, stmt->assign.rhs);
                     return entry->value != BSS_VALUE_ZERO;
                 }
             }
@@ -328,7 +452,7 @@ bool bssInterpreterInterpStmt(BssInterp *interp, BssAstStmt *stmt)
         {
             if (interp->currScope->isScopeInFunction)
             {
-                interp->returnSignaled = true;
+                interp->currScope->isReturnedSignaled = true;
 
                 if (stmt->retExpr == BSS_AST_EXPR_ZERO)
                 {
@@ -337,7 +461,7 @@ bool bssInterpreterInterpStmt(BssInterp *interp, BssAstStmt *stmt)
                 }
                 else
                 {
-                    interp->lastRetValue = bssInterpreterInterpExpr(interp, stmt->retExpr);
+                    interp->lastRetValue = bssInterpreterInterpExpr(interp, interp->lastFnCalleeScope->scopeArena, stmt->retExpr);
                     return interp->lastRetValue != BSS_VALUE_ZERO;
                 }
             }
@@ -350,21 +474,21 @@ bool bssInterpreterInterpStmt(BssInterp *interp, BssAstStmt *stmt)
 
         case BSS_AST_STMT_IF:
         {
-            BssValue *condValue = bssInterpreterInterpExpr(interp, stmt->ifStmt.cond);
+            BssValue *condValue = bssInterpreterInterpExpr(interp, scopeArena, stmt->ifStmt.cond);
             if (condValue != BSS_VALUE_ZERO)
             {
                 if (condValue->kind == BSS_VALUE_BOOL)
                 {
                     if (condValue->num)
                     {
-                        if(bssInterpreterInterpBlock(interp, stmt->ifStmt.thenBlock) == BSS_VALUE_ZERO)
+                        if(bssInterpreterInterpBlock(interp, stmt->ifStmt.thenBlock, true) == BSS_VALUE_ZERO)
                         {
                             return false;
                         }
                     }
                     else if (stmt->ifStmt.elseBlock != BSS_AST_BLOCK_ZERO)
                     {
-                        if(bssInterpreterInterpBlock(interp, stmt->ifStmt.elseBlock) == BSS_VALUE_ZERO)
+                        if(bssInterpreterInterpBlock(interp, stmt->ifStmt.elseBlock, true) == BSS_VALUE_ZERO)
                         {
                             return false;
                         }
@@ -382,6 +506,37 @@ bool bssInterpreterInterpStmt(BssInterp *interp, BssAstStmt *stmt)
             }
         }break;
 
+        case BSS_AST_STMT_WHILE:
+        {
+            BssValue *condValue = bssInterpreterInterpExpr(interp, scopeArena, stmt->whileStmt.cond);
+            if (condValue != BSS_VALUE_ZERO)
+            {
+                if (condValue->kind == BSS_VALUE_BOOL)
+                {
+                    while (condValue != BSS_VALUE_ZERO && 
+                           condValue->kind == BSS_VALUE_BOOL && 
+                           condValue->num == true)
+                    {
+                        if(bssInterpreterInterpBlock(interp, stmt->whileStmt.block, true) == BSS_VALUE_ZERO)
+                        {
+                            return false;
+                        }
+
+                        condValue = bssInterpreterInterpExpr(interp, scopeArena, stmt->whileStmt.cond);
+                    }
+                    
+                    return true;
+                }
+                else
+                {
+                    bssInterpreterError(interp,
+                                        stmt->whileStmt.cond->startTok.pos,
+                                        stmt->whileStmt.cond->endTok.pos,
+                                        "Expected expression of boolean type for while condition");
+                }
+            }
+        }break;
+
         default:
         {
             bssInterpreterError(interp, stmt->startTok.pos, stmt->endTok.pos, "Unhandled stmt");
@@ -390,12 +545,49 @@ bool bssInterpreterInterpStmt(BssInterp *interp, BssAstStmt *stmt)
 
     return false;
 }
+BssValue *bssInterpreterInterpBlock(BssInterp *interp, BssAstBlock *block, bool createBlock)
+{
+    BssValue *value = BSS_VALUE_VOID_VALUE;
+    BssScope *prevScope = interp->currScope;
+
+    interp->currScope->isReturnedSignaled = false;
+
+    if (createBlock)
+    {
+        BssScope *scope = bssAllocScope(interp, arenaAllocDefault(), prevScope, prevScope->isScopeInFunction);
+        interp->currScope = scope;
+    }
+    
+    BASE_LIST_FOREACH(BssAstStmt, stmt, block->stmts)
+    {
+        if(!bssInterpreterInterpStmt(interp, interp->currScope->scopeArena, stmt))
+        {
+            break;
+        }
+
+        if (interp->currScope->isReturnedSignaled)
+        {
+            value = interp->lastRetValue;
+            prevScope->isReturnedSignaled = true;
+            break;
+        }
+    }
+
+    if (createBlock)
+    {
+        arenaFree(interp->currScope->scopeArena);
+        interp->currScope = prevScope;
+    }
+
+    return value;
+}
 
 bool bssInterpreterInterpParsed(BssInterp *interp)
 {
     interp->currScope = interp->rootScope;
 
     bssBuiltinFunctionPushEntry(interp, STR8_LIT("print"), 1, bssBuiltinPrint);
+    bssBuiltinFunctionPushEntry(interp, STR8_LIT("run"), 1, bssBuiltinRun);
 
     bool result = true;
     BASE_LIST_FOREACH(BssAstTopLevel, toplevel, interp->parser->file->toplevels)
@@ -404,7 +596,7 @@ bool bssInterpreterInterpParsed(BssInterp *interp)
         {
             case BSS_AST_TOP_LEVEL_STMT:
             {
-                if(!bssInterpreterInterpStmt(interp, toplevel->stmt))
+                if(!bssInterpreterInterpStmt(interp, interp->currScope->scopeArena, toplevel->stmt))
                 {
                     result = false;
                     goto LOOP_END;
@@ -417,6 +609,7 @@ bool bssInterpreterInterpParsed(BssInterp *interp)
 LOOP_END:
     return result;
 }
+
 bool bssInterpreterInterpFile(BssInterp *interp, str8 file)
 {
     if(bssParserParseFile(interp, file))

@@ -21,6 +21,20 @@ str8 gBssBssTokLexemeTable[] =
     [TOK_END_INPUT] = STR8_LIT_COMP_CONST("END OF INPUT"),
 };
 
+void bssLexerError(BssInterp *interp, BssTokPos pos, i8 *fmt, ...)
+{
+    va_list va;
+    va_start(va, fmt);
+    baseColEPrintf("{Bu}%S (%lld, %lld)", pos.ownerLexer->path, pos.line, pos.col);
+    baseColEPrintf("{B}\n        --> Lexer Error: ");
+    baseEPrintfV(fmt, va);
+
+    bssPrintSourceRange(pos, pos, 2);
+
+    va_end(va);
+}
+
+
 bool bssLexerAdvanceChar(BssInterp *interp)
 {
     if(interp->lexer->currLocInBuffer > (interp->lexer->buffer.data + interp->lexer->buffer.len))
@@ -93,41 +107,15 @@ LEX_START:
                 charLitStr.data = interp->lexer->currLocInBuffer;
                 charLitStr.len = 2;
 
-                if(bssGetEscapeCharValue(charLitStr) == '\"')
+                i64 escapeVal = bssGetEscapeCharValue(charLitStr);
+                if(escapeVal == '\"')
                 {
                     tokLen++;
                     bssLexerAdvanceChar(interp);
                 }
-            }
-            else if (interp->lexer->ch == '{')
-            {
-                tok.isFmtStr = true;
-                bool prevOpenBrack = true;
-                u64 bracketCount = 1;
-                while(interp->lexer->ch != '}' || (bracketCount != 0))
+                else if (escapeVal == -1)
                 {
-                    tokLen++;
-                    bssLexerAdvanceChar(interp);
-
-                    if(interp->lexer->ch == '}')
-                    {
-                        bracketCount -= 1;
-                        prevOpenBrack = false;
-                    }
-                    else if(interp->lexer->ch == '{')
-                    {
-                        if(prevOpenBrack)
-                        {
-                            tok.isFmtStr = false;
-                        }
-
-                        bracketCount += 1;
-                        prevOpenBrack = true;
-                    }
-                    else
-                    {
-                        prevOpenBrack = false;
-                    }
+                    bssLexerError(interp, pos, "Expected a valid escape character");
                 }
             }
 
@@ -236,33 +224,8 @@ LEX_START:
     return tok;
 }
 
-bool bssLexerLexBuffer(BssInterp *interp, U8Array buf)
+void bssLexerLexWhole(BssInterp *interp)
 {
-    interp->lexer = arenaPushType(interp->arena, BssLexer);
-    interp->lexer->buffer = buf;
-    interp->lexer->line = 1;
-    interp->lexer->col = 1;
-    interp->lexer->currLocInBuffer = buf.data;
-    interp->lexer->ch = *interp->lexer->currLocInBuffer;
-    
-    return true;
-}
-bool bssLexerLexFile(BssInterp *interp, str8 file)
-{
-    U8Array buf = OSFileReadAll(interp->arena, file);
-
-    bool result = false;
-    if (BASE_ANY(buf))
-    {
-        result = bssLexerLexBuffer(interp, buf);
-        interp->lexer->path = file;
-    }
-    else
-    {
-        baseEPrintf("Failed to open file '%S'\n", file);
-        return false;
-    }
-
     BssTokChunkList chunkList = {0};
     BssTok tok = {0};
     
@@ -280,6 +243,36 @@ bool bssLexerLexFile(BssInterp *interp, str8 file)
     }
 
     baseTempEnd(temp);
+}
+bool bssLexerFromBuffer(BssInterp *interp, U8Array buf)
+{
+    interp->lexer = arenaPushType(interp->arena, BssLexer);
+    interp->lexer->buffer = buf;
+    interp->lexer->line = 1;
+    interp->lexer->col = 1;
+    interp->lexer->currLocInBuffer = buf.data;
+    interp->lexer->ch = *interp->lexer->currLocInBuffer;
+
+    return true;
+}
+bool bssLexerLexFile(BssInterp *interp, str8 file)
+{
+    U8Array buf = OSFileReadAll(interp->arena, file);
+
+    bool result = false;
+    if (BASE_ANY(buf))
+    {
+        result = bssLexerFromBuffer(interp, buf);
+        interp->lexer->path = file;
+
+        bssLexerLexWhole(interp);
+    }
+    else
+    {
+        baseEPrintf("Failed to open file '%S'\n", file);
+        return false;
+    }
+
     return result;
 }
 BssTok bssLexerGetNextTok(BssInterp *interp)

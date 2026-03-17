@@ -1,4 +1,5 @@
 #include "bssCore.h"
+#include "bssScope.h"
 
 readonly BssValue gBssValueEmpty = {0};
 readonly BssValue gBssValueVoid = {.str = STR8_LIT_COMP_CONST("void"), .kind = BSS_VALUE_VOID};
@@ -6,6 +7,7 @@ readonly BssBuiltinFunc gBssBuiltinFuncEmpty = {0};
 
 BASE_CREATE_LL_DEFS(BssTokList, BssTok)
 BASE_CREATE_EFFICIENT_LL_DEFS(BssBuiltinFuncList, BssBuiltinFunc)
+BASE_CREATE_EFFICIENT_LL_DEFS(BssTokFmtStrPosList, BssTokFmtStrPos)
 
 void BssTokChunkListPushLast(Arena *arena, BssTokChunkList *l, BssTok tok)
 {
@@ -229,4 +231,53 @@ void bssPrintSourceRange(BssTokPos start, BssTokPos end, u64 contextLines)
     }
 
     basePrintf("\n");
+}
+
+BssValue *bssAllocValue(Arena *arena, BssValueKind kind)
+{
+    BssValue *value = arenaPushType(arena, BssValue);
+    value->kind = kind;
+
+    return value;
+}
+BssValue *bssAllocValueCopy(Arena *arena, BssValue *other)
+{
+    BssValue *value = arenaPushType(arena, BssValue);
+    value->kind = other->kind;
+    *value = *other;
+
+    // handle all allocated types
+    value->str = Str8PushCopy(arena, other->str);
+
+    return value;
+}
+BssValue *bssAllocValueInt(Arena *arena, i64 val)
+{
+    BssValue *value = bssAllocValue(arena, BSS_VALUE_INT);
+    value->num = val;
+    value->str = Str8PushFmt(arena, "%lld", val);
+
+    return value;
+}
+BssValue *bssAllocValueStr8(Arena *arena, str8 val)
+{
+    BssValue *value = bssAllocValue(arena, BSS_VALUE_STRING);
+    value->str = val;
+
+    return value;
+}
+BssValue *bssAllocValueBool(Arena *arena, bool val)
+{
+    BssValue *value = bssAllocValue(arena, BSS_VALUE_BOOL);
+    value->num = val;
+    value->str = val ? STR8_LIT("true") : STR8_LIT("false");
+
+    return value;
+}
+BssValue *bssAllocValueFn(Arena *arena, struct BssAstFunc *ast)
+{
+    BssValue *value = bssAllocValue(arena, BSS_VALUE_FUNCTION);
+    value->fn.defined.ast = ast;
+
+    return value;
 }

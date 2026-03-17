@@ -54,13 +54,24 @@ typedef struct BssTokPos
     U8Array range;
 }BssTokPos;
 
+typedef struct BssTokFmtStrPos
+{
+    U8Array range;
+
+    struct BssTokFmtStrPos *next;
+    struct BssTokFmtStrPos *prev;
+}BssTokFmtStrPos;
+
+BASE_CREATE_EFFICIENT_LL_DECLS(BssTokFmtStrPosList, BssTokFmtStrPos)
+
 typedef struct BssTok
 {
     BssTokKind kind;
     BssTokPos pos;
-    bool isFmtStr;
 
     str8 lexeme;
+
+    BssTokFmtStrPosList fmts;
 }BssTok;
 
 BASE_CREATE_LL_DECLS(BssTokList, BssTok)
@@ -145,7 +156,6 @@ typedef struct BssValue
                 struct
                 {
                     struct BssAstFunc *ast;
-                    BssTokList params;
                 }defined;
             };
 
@@ -175,7 +185,8 @@ typedef struct BssInterp
 
     BssBuiltinFuncList builtins;
 
-    bool returnSignaled;
+    // previous scope which called a function
+    struct BssScope *lastFnCalleeScope;
     BssValue *lastRetValue;
 
     struct BssScope *rootScope;
@@ -200,5 +211,12 @@ void bssBuiltinFunctionPushEntry(BssInterp *interp, str8 name, int numParams, Bs
 BssBuiltinFunc *bssBuiltinFunctionFindEntry(BssInterp *interp, str8 name);
 
 void bssPrintSourceRange(BssTokPos start, BssTokPos end, u64 contextLines);
+
+BssValue *bssAllocValue(Arena *arena, BssValueKind kind);
+BssValue *bssAllocValueCopy(Arena *arena, BssValue *other);
+BssValue *bssAllocValueInt(Arena *arena, i64 val);
+BssValue *bssAllocValueStr8(Arena *arena, str8 val);
+BssValue *bssAllocValueBool(Arena *arena, bool val);
+BssValue *bssAllocValueFn(Arena *arena, struct BssAstFunc *ast);
 
 #endif

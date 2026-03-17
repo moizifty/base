@@ -2,12 +2,15 @@
 #include "bssLexer.h"
 #include "bssScope.h"
 
-BssPrecedenceTableEntry gBssPrecedenceTable[TOK_KIND_END] =
+BssPrecedenceTableEntry gBssPrecedenceTable[TOK_KIND_END + 1] =
 {
     [TOK_EQ_OP] = {.precedence = 1, .prefix = null, .infix = bssParserParseExprBinary},
     [TOK_NEQ_OP] = {.precedence = 1, .prefix = null, .infix = bssParserParseExprBinary},
     [TOK_LOGICAL_AND_OP] = {.precedence = 11, .prefix = null, .infix = bssParserParseExprBinary},
     [TOK_LOGICAL_OR_OP] = {.precedence = 10, .prefix = null, .infix = bssParserParseExprBinary},
+
+    ['<'] = {.precedence = 11, .prefix = null, .infix = bssParserParseExprBinary},
+    ['>'] = {.precedence = 11, .prefix = null, .infix = bssParserParseExprBinary},
 
     ['+'] = {.precedence = 20, .prefix = null, .infix = bssParserParseExprBinary},
     ['-'] = {.precedence = 20, .prefix = null, .infix = bssParserParseExprBinary},
@@ -41,6 +44,11 @@ BssAstStmt *bssParserParseStmt(BssInterp *interp)
         case TOK_IF_KW:
         {
             ast = bssParserParseStmtIf(interp);
+        }break;
+
+        case TOK_WHILE_KW:
+        {
+            ast = bssParserParseStmtWhile(interp);
         }break;
 
         case TOK_RET_KW:
@@ -95,11 +103,6 @@ BssAstStmt *bssParserParseStmt(BssInterp *interp)
                     ast->kind = BSS_AST_STMT_ASSIGN;
                     ast->assign.lhs = lhs;
                     ast->assign.rhs = rhs;
-
-                    if (lhs->kind = BSS_AST_EXPR_IDEN)
-                    {
-                        bssScopePushEntry(interp, interp->currScope, lhs->iden.lexeme, null);
-                    }
                 }
                 else
                 {
@@ -125,20 +128,12 @@ BssAstStmt *bssParserParseStmt(BssInterp *interp)
 
     return ast;
 }
-BssAstBlock *bssParserParseBlock(BssInterp *interp, bool createScope)
+BssAstBlock *bssParserParseBlock(BssInterp *interp)
 {
     BssAstBlock *ast = BSS_AST_BLOCK_ZERO;
 
     BssTok start = {0};
     BssAstStmtList list = {0};
-
-    BssScope *prev = interp->currScope;
-    if (createScope)
-    {
-        interp->currScope = arenaPushType(interp->arena, BssScope);
-        interp->currScope->parent = prev;
-        interp->currScope->isScopeInFunction = prev->isScopeInFunction;
-    }
 
     if (BSS_PARSER_MATCH('{'))
     {
@@ -164,10 +159,6 @@ BssAstBlock *bssParserParseBlock(BssInterp *interp, bool createScope)
             ast->startTok = start;
             ast->endTok = BSS_PARSER_CURR_TOK;
             ast->stmts = list;
-            if (createScope)
-            {
-                ast->scope = interp->currScope;
-            }
 
             BSS_PARSER_NEXT_TOK();
         }
@@ -176,8 +167,6 @@ BssAstBlock *bssParserParseBlock(BssInterp *interp, bool createScope)
             bssParserError(interp, "Expected '}' but instead got '%S'", BSS_PARSER_CURR_TOK.lexeme);
         }
     }
-
-    interp->currScope = prev;
 
     return ast;
 }
@@ -218,7 +207,7 @@ BssAstFunc *bssParserParseFunc(BssInterp *interp)
         {
             iden = BSS_PARSER_CURR_TOK;
 
-            if (bssScopeFindEntry(interp->currScope, iden.lexeme) != BSS_SYMTABLE_SLOT_ENTRY_ZERO)
+            if (bssScopeFindEntry(interp->rootScope, iden.lexeme) != BSS_SYMTABLE_SLOT_ENTRY_ZERO)
             {
                 bssParserError(interp, "Function '%S' already defined", iden.lexeme);
             }
@@ -235,17 +224,7 @@ BssAstFunc *bssParserParseFunc(BssInterp *interp)
                     {
                         BSS_PARSER_NEXT_TOK();
 
-                        BssScope *prevScope = interp->currScope;
-                        interp->currScope = arenaPushType(interp->arena, BssScope);
-                        interp->currScope->parent = prevScope;
-                        interp->currScope->isScopeInFunction = true;
-
-                        BASE_LIST_FOREACH(BssTokListNode, node, params)
-                        {
-                            bssScopePushEntry(interp, interp->currScope, node->val.lexeme, null);
-                        }
-
-                        BssAstBlock *block = bssParserParseBlock(interp, false);
+                        BssAstBlock *block = bssParserParseBlock(interp);
 
                         if (block != BSS_AST_BLOCK_ZERO)
                         {
@@ -259,14 +238,8 @@ BssAstFunc *bssParserParseFunc(BssInterp *interp)
                             BssSymTableSlotEntry *entry = BSS_SYMTABLE_SLOT_ENTRY_ZERO;
                             bssScopePushEntry(interp, interp->rootScope, iden.lexeme, &entry);
 
-                            entry->value = arenaPushType(interp->arena, BssValue);
-                            entry->value->kind = BSS_VALUE_FUNCTION;
-                            entry->value->fn.defined.params = params;
-                            entry->value->fn.defined.ast = ast;
-                            entry->value->fn.defined.ast->block->scope = interp->currScope;
+                            entry->value = bssAllocValueFn(interp->rootScope->scopeArena, ast);
                         }
-
-                        interp->currScope = prevScope;
                     }
                     else
                     {
@@ -303,7 +276,7 @@ BssAstStmt *bssParserParseStmtIf(BssInterp *interp)
         BssAstExpr *cond = bssParserParseExpr(interp, 0);
         if (cond != BSS_AST_EXPR_ZERO)
         {
-            BssAstBlock *thenBlock = bssParserParseBlock(interp, true);
+            BssAstBlock *thenBlock = bssParserParseBlock(interp);
 
             if (thenBlock != BSS_AST_BLOCK_ZERO)
             {
@@ -321,7 +294,6 @@ BssAstStmt *bssParserParseStmtIf(BssInterp *interp)
                             elseBlock = arenaPushType(interp->arena, BssAstBlock);
                             elseBlock->startTok = elseIf->startTok;
                             elseBlock->endTok = elseIf->endTok;
-                            elseBlock->scope = elseIf->ifStmt.thenBlock->scope;
 
                             BssAstStmtListPushNodeLast(&elseBlock->stmts, elseIf);
                         }
@@ -332,7 +304,7 @@ BssAstStmt *bssParserParseStmtIf(BssInterp *interp)
                     }
                     else
                     {
-                        elseBlock = bssParserParseBlock(interp, true);
+                        elseBlock = bssParserParseBlock(interp);
                         if (elseBlock == BSS_AST_BLOCK_ZERO)
                         {
                             return BSS_AST_STMT_ZERO;
@@ -355,6 +327,40 @@ BssAstStmt *bssParserParseStmtIf(BssInterp *interp)
     else
     {
         bssParserError(interp, "Expected 'if' kw, instead got '%S'", BSS_PARSER_CURR_TOK.lexeme);
+    }
+
+    return ast;
+}
+BssAstStmt *bssParserParseStmtWhile(BssInterp *interp)
+{
+    BssAstStmt *ast = BSS_AST_STMT_ZERO;
+    BssTok start = BSS_PARSER_CURR_TOK;
+
+    if (BSS_PARSER_MATCH(TOK_WHILE_KW))
+    {
+        BSS_PARSER_NEXT_TOK();
+
+        BssAstExpr *cond = bssParserParseExpr(interp, 0);
+        if (cond != BSS_AST_EXPR_ZERO)
+        {
+            BssAstBlock *block = bssParserParseBlock(interp);
+
+            if (block != BSS_AST_BLOCK_ZERO)
+            {
+                BssTok end = block->endTok;
+
+                ast = arenaPushType(interp->arena, BssAstStmt);
+                ast->startTok = start;
+                ast->endTok = end;
+                ast->kind = BSS_AST_STMT_WHILE;
+                ast->whileStmt.cond = cond;
+                ast->whileStmt.block = block;
+            }
+        }
+    }
+    else
+    {
+        bssParserError(interp, "Expected 'while' kw, instead got '%S'", BSS_PARSER_CURR_TOK.lexeme);
     }
 
     return ast;
@@ -416,19 +422,6 @@ BssAstTopLevelList bssParserParseTopLevels(BssInterp *interp)
     }
 
     return list;
-}
-
-bool bssParserParseLexed(BssInterp *interp)
-{
-    interp->parser = arenaPushType(interp->arena, BssParser);
-    interp->parser->file = arenaPushType(interp->arena, BssAstFile);
-
-    BssAstTopLevelList toplevels = bssParserParseTopLevels(interp);
-    interp->parser->file->toplevels = toplevels;
-    interp->parser->file->startTok = toplevels.first ? toplevels.first->startTok : (BssTok){0};
-    interp->parser->file->endTok = toplevels.last ? toplevels.first->endTok : (BssTok){0};
-
-    return true;
 }
 
 BssAstExpr *bssParserParsePrefix(BssInterp *interp)
@@ -517,6 +510,8 @@ BssAstExpr *bssParserParseExprBinary(BssInterp *interp, BssAstExpr *left, BssTok
         case '-':
         case '/':
         case '*':
+        case '>':
+        case '<':
         case TOK_LOGICAL_OR_OP:
         case TOK_LOGICAL_AND_OP:
         case TOK_EQ_OP:
@@ -583,11 +578,21 @@ BssAstExprList bssParserParseExprList(BssInterp *interp, BssTokKind endKind)
     return list;
 }
 
+bool bssParserParseLexed(BssInterp *interp)
+{
+    interp->parser = arenaPushType(interp->arena, BssParser);
+    interp->parser->file = arenaPushType(interp->arena, BssAstFile);
+    interp->rootScope = bssAllocScope(interp, arenaAllocDefault(), null, false);
+
+    BssAstTopLevelList toplevels = bssParserParseTopLevels(interp);
+    interp->parser->file->toplevels = toplevels;
+    interp->parser->file->startTok = toplevels.first ? toplevels.first->startTok : (BssTok){0};
+    interp->parser->file->endTok = toplevels.last ? toplevels.first->endTok : (BssTok){0};
+
+    return true;
+}
 bool bssParserParseFile(BssInterp *interp, str8 file)
 {
-    interp->rootScope = arenaPushType(interp->arena, BssScope);
-    interp->currScope = interp->rootScope;
-
     if (bssLexerLexFile(interp, file))
     {
         return bssParserParseLexed(interp);

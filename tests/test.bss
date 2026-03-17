@@ -1,15 +1,13 @@
-fn fib(x)
-{
-    if (x == 0)
-    {
-        return 0;
-    }
-    else if (x == 1)
-    {
-        return 1;
-    }
 
-    return x + fib(x - 1);
+fn some(x)
+{
+    return 200;
 }
 
-print(fib(3));
+fn fib(x)
+{
+    return some(x) + 2000;
+}
+
+
+print("{fib(3)}");

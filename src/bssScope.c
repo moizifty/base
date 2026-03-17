@@ -1,9 +1,21 @@
 #include "base/baseHash.h"
 #include "bssScope.h"
 
+readonly BssScope gBssScopeEmpty = {0};
 readonly BssSymTableSlotEntry gBsSymTableSlotEntryEmpty = {0};
 
 BASE_CREATE_EFFICIENT_LL_DEFS(BssSymTableSlotEntryList, BssSymTableSlotEntry)
+
+BssScope *bssAllocScope(BssInterp *interp, Arena *scopesArena, BssScope *parent, bool isScopeInFunction)
+{
+    BssScope *scope = arenaPushType(scopesArena, BssScope);
+    scope->parent = parent;
+    scope->isScopeInFunction = isScopeInFunction;
+    scope->scopeArena = scopesArena;
+    scope->isReturnedSignaled = false;
+
+    return scope;
+}
 
 BssSymTableSlotEntry *bssScopeFindEntry(BssScope *scope, str8 name)
 {
@@ -25,7 +37,8 @@ bool bssScopePushEntry(BssInterp *interp, BssScope *scope, str8 name, BssSymTabl
     {
         existing = arenaPushType(interp->arena, BssSymTableSlotEntry);
         existing->name = name;
-
+        existing->scopeDefinedIn = scope;
+        
         BssSymTableSlotEntryListPushNodeLast(&scope->symTable.entries, existing);
     }
 

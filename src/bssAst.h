@@ -98,6 +98,12 @@ typedef struct BssAstStmt
             struct BssAstBlock *thenBlock;
             struct BssAstBlock *elseBlock;
         }ifStmt;
+
+        struct
+        {
+            BssAstExpr *cond;
+            struct BssAstBlock *block;
+        }whileStmt;
     };
 }BssAstStmt;
 
@@ -108,8 +114,6 @@ typedef struct BssAstBlock
     BSS_AST_POS_DEFS
 
     BssAstStmtList stmts;
-
-    struct BssScope *scope;
 }BssAstBlock;
 
 typedef struct BssAstFunc
