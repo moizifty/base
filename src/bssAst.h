@@ -32,14 +32,16 @@ typedef enum BssAstExprKind
     BSS_AST_EXPR_IDEN,
     BSS_AST_EXPR_BINARY,
     BSS_AST_EXPR_UNARY,
-    BSS_AST_EXPR_SUBSCRIPT,
-    BSS_AST_EXPR_ACCESS,
     BSS_AST_EXPR_FUNCCALL,
     BSS_AST_EXPR_COMPOUND,
+    BSS_AST_EXPR_ACCESS,
+    BSS_AST_EXPR_SUBSCRIPT,
 }BssAstExprKind;
 
 typedef struct BssAstExpr BssAstExpr;
-BASE_CREATE_EFFICIENT_LL_DECLS(BssAstExprList, BssAstExpr);
+typedef struct BssAstNamedExpr BssAstNamedExpr;
+BASE_CREATE_EFFICIENT_LL_DECLS(BssAstExprList, BssAstExpr)
+BASE_CREATE_EFFICIENT_LL_DECLS(BssAstNamedExprList, BssAstNamedExpr)
 
 typedef struct BssAstExpr
 {
@@ -51,6 +53,8 @@ typedef struct BssAstExpr
     BssAstExprKind kind;
     union
     {
+        BssTok lit, iden;
+
         struct
         {
             struct BssAstExpr *left;
@@ -69,10 +73,23 @@ typedef struct BssAstExpr
             BssAstExpr *lhs;
             BssAstExprList args;
         }call;
-
-        BssTok lit, iden;
+        
+        BssAstNamedExprList compound;
     };
 }BssAstExpr;
+
+typedef struct BssAstNamedExpr
+{
+    BSS_AST_POS_DEFS
+
+    struct BssAstNamedExpr *next;
+    struct BssAstNamedExpr *prev;
+
+    bool isNamed;
+
+    struct BssAstExpr *lhs;
+    struct BssAstExpr *rhs;
+}BssAstNamedExpr;
 
 typedef struct BssAstStmt
 {
@@ -107,7 +124,7 @@ typedef struct BssAstStmt
     };
 }BssAstStmt;
 
-BASE_CREATE_EFFICIENT_LL_DECLS(BssAstStmtList, BssAstStmt);
+BASE_CREATE_EFFICIENT_LL_DECLS(BssAstStmtList, BssAstStmt)
 
 typedef struct BssAstBlock
 {
@@ -177,4 +194,6 @@ BssAstExpr *bssAllocExprIden(BssInterp *interp, BssTok start, BssTok end, BssTok
 BssAstExpr *bssAllocExprBinary(BssInterp *interp, BssTok start, BssTok end, BssAstExpr *lhs, BssAstExpr *rhs, BssTok op);
 BssAstExpr *bssAllocExprUnary(BssInterp *interp, BssTok start, BssTok end, BssAstExpr *rhs, BssTok op);
 BssAstExpr *bssAllocExprFnCall(BssInterp *interp, BssTok start, BssTok end, BssAstExpr *lhs, BssAstExprList args);
+BssAstExpr *bssAllocExprCompound(BssInterp *interp, BssTok start, BssTok end, BssAstNamedExprList compound);
+
 #endif

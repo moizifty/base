@@ -8,6 +8,3 @@ fn fib(x)
 {
     return some(x) + 2000;
 }
-
-
-print("{fib(3)}");

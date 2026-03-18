@@ -473,6 +473,71 @@ BssAstExpr *bssParserParsePrefix(BssInterp *interp)
             }
         }break;
 
+        case '{':
+        {
+            BssTok startTok = BSS_PARSER_CURR_TOK;
+            BSS_PARSER_NEXT_TOK();
+
+            BssTok endTok = BSS_PARSER_CURR_TOK;
+
+            BssAstNamedExprList list = {0};
+            while (!BSS_PARSER_MATCH('}') && !BSS_PARSER_MATCH(TOK_END_INPUT))
+            {
+                bool isNamed = false;
+                BssAstExpr *lhs = bssParserParseExpr(interp, 0);
+                BssAstExpr *rhs = BSS_AST_EXPR_ZERO;
+                if (lhs != BSS_AST_EXPR_ZERO)
+                {
+                    if (BSS_PARSER_MATCH('='))
+                    {
+                        isNamed = true;
+
+                        BSS_PARSER_NEXT_TOK();
+
+                        rhs = bssParserParseExpr(interp, 0);
+                        if (rhs == BSS_AST_EXPR_ZERO)
+                        {
+                            return BSS_AST_EXPR_ZERO;
+                        }
+                    }
+
+                    BssAstNamedExpr *ne = arenaPushType(interp->arena, BssAstNamedExpr);
+                    ne->startTok = lhs->startTok;
+                    ne->endTok = (isNamed) ? rhs->endTok : lhs->endTok;
+                    ne->isNamed = isNamed;
+                    ne->lhs = lhs;
+                    ne->rhs = rhs;
+
+                    BssAstNamedExprListPushNodeLast(&list, ne);
+
+                    if (BSS_PARSER_MATCH(','))
+                    {
+                        BSS_PARSER_NEXT_TOK();
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+                else
+                {
+                    return BSS_AST_EXPR_ZERO;
+                }
+            }
+
+            if (BSS_PARSER_MATCH('}'))
+            {
+                endTok = BSS_PARSER_CURR_TOK;
+                BSS_PARSER_NEXT_TOK();
+
+                expr = bssAllocExprCompound(interp, startTok, endTok, list);
+            }
+            else
+            {
+                bssParserError(interp, "Expected '}' to close compound list instead got '%S'", BSS_PARSER_CURR_TOK.lexeme);
+            }
+        }break;
+
         default:
         {
             bssParserError(interp, "Not a valid expression");

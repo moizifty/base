@@ -73,10 +73,12 @@ BssValue *bssInterpreterInterpFunc(BssInterp *interp, Arena *scopeArena, BssAstF
     interp->currScope = fnScope;
     interp->currScope->isReturnedSignaled = false;
 
-
     BssValue *value = bssInterpreterInterpBlock(interp, func->block, false);
 
     // pass the value up the scope, so it doesnt get destroyed
+    // we allocate the return value on interp->lastFnCalleeScope, but if this is a function scope
+    // it will get free below in arenaFree
+    // so copy it
     value = bssAllocValueCopy(interp->lastFnCalleeScope->scopeArena, value);
 
     arenaFree(fnScope->scopeArena);
@@ -391,6 +393,55 @@ BssValue *bssInterpreterInterpExpr(BssInterp *interp, Arena *scopeArena, BssAstE
             else
             {
                 bssInterpreterError(interp, expr->startTok.pos, expr->endTok.pos, "Expected an identifier for function call!");
+            }
+        }break;
+
+        case BSS_AST_EXPR_COMPOUND:
+        {
+            // empty compounds are treated like arrays
+            bool isArray = true;
+
+            // validate named expressions are idens, on the lhs
+            bool valid = true;
+            BASE_LIST_FOREACH(BssAstNamedExpr, ne, expr->compound)
+            {
+                if (ne->isNamed)
+                {
+                    isArray = false;
+
+                    if (ne->lhs->kind != BSS_AST_EXPR_IDEN)
+                    {
+                        bssInterpreterError(interp, ne->lhs->startTok.pos, ne->lhs->endTok.pos, "Expected an identifier in named expression.");
+                        valid = false;
+                    }
+                }
+            }
+
+            if(valid)
+            {
+                BssValueList values = {0};
+
+                BASE_LIST_FOREACH(BssAstNamedExpr, ne, expr->compound)
+                {
+                    if (ne->isNamed)
+                    {
+                        // todo named expressions, i.e objects
+                    }
+                    else
+                    {
+                        BssValue *val = bssInterpreterInterpExpr(interp, scopeArena, ne->lhs);
+                        if (val != BSS_VALUE_ZERO)
+                        {
+                            BssValueListPushNodeLast(&values, val);
+                        }
+                        else
+                        {
+                            return BSS_VALUE_ZERO;
+                        }
+                    }
+                }
+
+                value = bssAllocValueArray(scopeArena, values);
             }
         }break;
 

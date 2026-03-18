@@ -9,6 +9,7 @@ readonly BssAstTopLevel gBssAstTopLevelEmpty = {0};
 BASE_CREATE_EFFICIENT_LL_DEFS(BssAstStmtList, BssAstStmt)
 BASE_CREATE_EFFICIENT_LL_DEFS(BssAstExprList, BssAstExpr)
 BASE_CREATE_EFFICIENT_LL_DEFS(BssAstTopLevelList, BssAstTopLevel)
+BASE_CREATE_EFFICIENT_LL_DEFS(BssAstNamedExprList, BssAstNamedExpr)
 
 BssAstExpr *bssAllocExpr(BssInterp *interp, BssTok start, BssTok end, BssAstExprKind kind)
 {
@@ -55,6 +56,13 @@ BssAstExpr *bssAllocExprFnCall(BssInterp *interp, BssTok start, BssTok end, BssA
     BssAstExpr *ast = bssAllocExpr(interp, start, end, BSS_AST_EXPR_FUNCCALL);
     ast->call.lhs = lhs;
     ast->call.args = args;
+
+    return ast; 
+}
+BssAstExpr *bssAllocExprCompound(BssInterp *interp, BssTok start, BssTok end, BssAstNamedExprList compound)
+{
+    BssAstExpr *ast = bssAllocExpr(interp, start, end, BSS_AST_EXPR_COMPOUND);
+    ast->compound = compound;
 
     return ast; 
 }

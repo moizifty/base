@@ -18,7 +18,6 @@ BssValue *bssInterpreterInterpExpr(BssInterp *interp, Arena *scopeArena, BssAstE
 bool bssInterpreterInterpStmt(BssInterp *interp, Arena *scopeArena, BssAstStmt *stmt);
 BssValue *bssInterpreterInterpBlock(BssInterp *interp, BssAstBlock *block, bool createBlock);
 
-bool bssInterpreterInterpStr8(BssInterp *interp, str8 file);
 bool bssInterpreterInterpParsed(BssInterp *interp);
 bool bssInterpreterInterpFile(BssInterp *interp, str8 file);
 

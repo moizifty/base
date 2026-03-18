@@ -41,7 +41,8 @@ typedef enum BssValueKind
     BSS_VALUE_BOOL,
     BSS_VALUE_CHAR,
     BSS_VALUE_STRING,
-    BSS_VALUE_AGGREGATE,
+    BSS_VALUE_OBJECT,
+    BSS_VALUE_ARRAY,
     BSS_VALUE_FUNCTION,
 }BssValueKind;
 
@@ -115,16 +116,16 @@ typedef struct BssParser
 }BssParser;
 
 
-typedef struct BssValueCompoundMemb
+typedef struct BssValueObjMemb
 {
-    struct BssValueCompoundMemb *next;
-    struct BssValueCompoundMemb *prev;
+    struct BssValueObjMemb *next;
+    struct BssValueObjMemb *prev;
 
     str8 name;
     struct BssValue *val;
-}BssValueCompoundMemb;
+}BssValueObjMemb;
 
-BASE_CREATE_EFFICIENT_LL_DECLS(BssValueCompoundMembList, BssValueCompoundMemb);
+BASE_CREATE_EFFICIENT_LL_DECLS(BssValueObjMembList, BssValueObjMemb);
 
 typedef struct BssValue BssValue;
 BASE_CREATE_EFFICIENT_LL_DECLS(BssValueList, BssValue);
@@ -140,7 +141,8 @@ typedef struct BssValue
     union
     {
         i64 num; //bool, int, char
-        BssValueCompoundMembList compound;
+        BssValueObjMemb obj;
+        BssValueList array;
 
         struct 
         {
@@ -218,5 +220,6 @@ BssValue *bssAllocValueInt(Arena *arena, i64 val);
 BssValue *bssAllocValueStr8(Arena *arena, str8 val);
 BssValue *bssAllocValueBool(Arena *arena, bool val);
 BssValue *bssAllocValueFn(Arena *arena, struct BssAstFunc *ast);
+BssValue *bssAllocValueArray(Arena *arena, BssValueList values);
 
 #endif

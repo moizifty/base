@@ -8,6 +8,7 @@ readonly BssBuiltinFunc gBssBuiltinFuncEmpty = {0};
 BASE_CREATE_LL_DEFS(BssTokList, BssTok)
 BASE_CREATE_EFFICIENT_LL_DEFS(BssBuiltinFuncList, BssBuiltinFunc)
 BASE_CREATE_EFFICIENT_LL_DEFS(BssTokFmtStrPosList, BssTokFmtStrPos)
+BASE_CREATE_EFFICIENT_LL_DEFS(BssValueList, BssValue)
 
 void BssTokChunkListPushLast(Arena *arena, BssTokChunkList *l, BssTok tok)
 {
@@ -249,6 +250,16 @@ BssValue *bssAllocValueCopy(Arena *arena, BssValue *other)
     // handle all allocated types
     value->str = Str8PushCopy(arena, other->str);
 
+    if (value->kind == BSS_VALUE_ARRAY)
+    {
+        value->array = (BssValueList){0};
+        BASE_LIST_FOREACH(BssValue, v, other->array)
+        {
+            BssValue *copiedSubItem = bssAllocValueCopy(arena, v);
+            BssValueListPushNodeLast(&value->array, copiedSubItem);
+        }
+    }
+
     return value;
 }
 BssValue *bssAllocValueInt(Arena *arena, i64 val)
@@ -278,6 +289,33 @@ BssValue *bssAllocValueFn(Arena *arena, struct BssAstFunc *ast)
 {
     BssValue *value = bssAllocValue(arena, BSS_VALUE_FUNCTION);
     value->fn.defined.ast = ast;
+
+    return value;
+}
+BssValue *bssAllocValueArray(Arena *arena, BssValueList values)
+{
+    BssValue *value = bssAllocValue(arena, BSS_VALUE_ARRAY);
+    value->array = values;
+
+    ArenaTemp temp = baseTempBegin(&arena, 1);
+    {
+        Str8List strrep = {0};
+        Str8ListPushLastFmt(temp.arena, &strrep, "{");
+
+        BASE_LIST_FOREACH(BssValue, v, values)
+        {
+            Str8ListPushLast(temp.arena, &strrep, v->str);
+            if (v != values.last)
+            {
+                Str8ListPushLastFmt(temp.arena, &strrep, ",");
+            }
+        }
+
+        Str8ListPushLastFmt(temp.arena, &strrep, "}");
+
+        value->str = Str8ListJoin(arena, &strrep, null);
+    }
+    baseTempEnd(temp);
 
     return value;
 }
