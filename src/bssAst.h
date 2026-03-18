@@ -54,6 +54,7 @@ typedef struct BssAstExpr
     union
     {
         BssTok lit, iden;
+        BssAstNamedExprList compound;
 
         struct
         {
@@ -74,7 +75,11 @@ typedef struct BssAstExpr
             BssAstExprList args;
         }call;
         
-        BssAstNamedExprList compound;
+        struct
+        {
+            BssAstExpr *container;
+            BssAstExpr *index;
+        }subscript;
     };
 }BssAstExpr;
 
@@ -195,5 +200,6 @@ BssAstExpr *bssAllocExprBinary(BssInterp *interp, BssTok start, BssTok end, BssA
 BssAstExpr *bssAllocExprUnary(BssInterp *interp, BssTok start, BssTok end, BssAstExpr *rhs, BssTok op);
 BssAstExpr *bssAllocExprFnCall(BssInterp *interp, BssTok start, BssTok end, BssAstExpr *lhs, BssAstExprList args);
 BssAstExpr *bssAllocExprCompound(BssInterp *interp, BssTok start, BssTok end, BssAstNamedExprList compound);
+BssAstExpr *bssAllocExprSubscript(BssInterp *interp, BssTok start, BssTok end, BssAstExpr *container, BssAstExpr *index);
 
 #endif

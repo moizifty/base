@@ -10,6 +10,7 @@
 #define BSS_PARSER_NEXT_TOK() (bssLexerGetNextTok(interp))
 
 BssAstExpr *bssParserParseExprFnCall(BssInterp *interp, BssAstExpr *left, BssTok op);
+BssAstExpr *bssParserParseExprSubscript(BssInterp *interp, BssAstExpr *left, BssTok op);
 BssAstExpr *bssParserParseExprBinary(BssInterp *interp, BssAstExpr *left, BssTok op);
 BssAstExpr *bssParserParseExpr(BssInterp *interp, u64 currPrecedence);
 BssAstExprList bssParserParseExprList(BssInterp *interp, BssTokKind endKind);

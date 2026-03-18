@@ -12,12 +12,16 @@ BSS_BUILTIN_FUNCTION_DEF(Print)
     
     if (expr->call.args.len == 1)
     {
-        BssAstExpr *arg = expr->call.args.first;
-        BssValue *argValue = bssInterpreterInterpExpr(interp, interp->currScope->scopeArena, arg);
-        if (argValue != BSS_VALUE_ZERO)
+        ArenaTemp temp = baseTempBegin(&interp->currScope->scopeArena, 1);
         {
-            basePrintf("%S", argValue->str);
+            BssAstExpr *arg = expr->call.args.first;
+            BssValue *argValue = bssInterpreterInterpExpr(interp, temp.arena, arg);
+            if (argValue != BSS_VALUE_ZERO)
+            {
+                basePrintf("%S", Str8FromBssValue(temp.arena, argValue));
+            }
         }
+        baseTempEnd(temp);
     }
     else
     {

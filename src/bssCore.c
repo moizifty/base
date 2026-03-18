@@ -2,7 +2,7 @@
 #include "bssScope.h"
 
 readonly BssValue gBssValueEmpty = {0};
-readonly BssValue gBssValueVoid = {.str = STR8_LIT_COMP_CONST("void"), .kind = BSS_VALUE_VOID};
+readonly BssValue gBssValueVoid = {.kind = BSS_VALUE_VOID};
 readonly BssBuiltinFunc gBssBuiltinFuncEmpty = {0};
 
 BASE_CREATE_LL_DEFS(BssTokList, BssTok)
@@ -248,9 +248,12 @@ BssValue *bssAllocValueCopy(Arena *arena, BssValue *other)
     *value = *other;
 
     // handle all allocated types
-    value->str = Str8PushCopy(arena, other->str);
-
-    if (value->kind == BSS_VALUE_ARRAY)
+    
+    if (value->kind == BSS_VALUE_STRING)
+    {
+        value->str = Str8PushCopy(arena, other->str);
+    }
+    else if (value->kind == BSS_VALUE_ARRAY)
     {
         value->array = (BssValueList){0};
         BASE_LIST_FOREACH(BssValue, v, other->array)
@@ -266,7 +269,6 @@ BssValue *bssAllocValueInt(Arena *arena, i64 val)
 {
     BssValue *value = bssAllocValue(arena, BSS_VALUE_INT);
     value->num = val;
-    value->str = Str8PushFmt(arena, "%lld", val);
 
     return value;
 }
@@ -274,14 +276,13 @@ BssValue *bssAllocValueStr8(Arena *arena, str8 val)
 {
     BssValue *value = bssAllocValue(arena, BSS_VALUE_STRING);
     value->str = val;
-
+    
     return value;
 }
 BssValue *bssAllocValueBool(Arena *arena, bool val)
 {
     BssValue *value = bssAllocValue(arena, BSS_VALUE_BOOL);
     value->num = val;
-    value->str = val ? STR8_LIT("true") : STR8_LIT("false");
 
     return value;
 }
@@ -297,25 +298,45 @@ BssValue *bssAllocValueArray(Arena *arena, BssValueList values)
     BssValue *value = bssAllocValue(arena, BSS_VALUE_ARRAY);
     value->array = values;
 
-    ArenaTemp temp = baseTempBegin(&arena, 1);
-    {
-        Str8List strrep = {0};
-        Str8ListPushLastFmt(temp.arena, &strrep, "{");
-
-        BASE_LIST_FOREACH(BssValue, v, values)
-        {
-            Str8ListPushLast(temp.arena, &strrep, v->str);
-            if (v != values.last)
-            {
-                Str8ListPushLastFmt(temp.arena, &strrep, ",");
-            }
-        }
-
-        Str8ListPushLastFmt(temp.arena, &strrep, "}");
-
-        value->str = Str8ListJoin(arena, &strrep, null);
-    }
-    baseTempEnd(temp);
-
     return value;
+}
+
+str8 Str8FromBssValue(Arena *arena, BssValue *value)
+{
+    switch(value->kind)
+    {
+        case BSS_VALUE_VOID: return STR8_LIT("void");
+        case BSS_VALUE_INT: return Str8PushFmt(arena, "%lld", value->num);
+        case BSS_VALUE_BOOL: return value->num ? STR8_LIT("true") : STR8_LIT("false");
+        case BSS_VALUE_STRING: return value->str;
+        case BSS_VALUE_ARRAY:
+        {
+            str8 val = STR8_EMPTY;
+            ArenaTemp temp = baseTempBegin(&arena, 1);
+            {
+                Str8List list = {0};
+                Str8ListPushLastFmt(temp.arena, &list, "{");
+                BASE_LIST_FOREACH(BssValue, v, value->array)
+                {
+                    Str8ListPushLast(temp.arena, &list, Str8FromBssValue(temp.arena, v));
+                    if (v != value->array.last)
+                    {
+                        Str8ListPushLastFmt(temp.arena, &list, ",");
+                    }
+                }
+                Str8ListPushLastFmt(temp.arena, &list, "}");
+
+                val = Str8ListJoin(arena, &list, null);
+                return val;
+            }
+
+            baseTempEnd(temp);
+        }break;
+
+        default:
+        {
+            baseEPrintf("{r}Failed to convert bssvalue to str8\n");
+            return STR8_EMPTY;
+        }
+    }
 }

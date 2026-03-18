@@ -222,4 +222,5 @@ BssValue *bssAllocValueBool(Arena *arena, bool val);
 BssValue *bssAllocValueFn(Arena *arena, struct BssAstFunc *ast);
 BssValue *bssAllocValueArray(Arena *arena, BssValueList values);
 
+str8 Str8FromBssValue(Arena *arena, BssValue *value);
 #endif

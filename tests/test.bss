@@ -6,5 +6,10 @@ fn some(x)
 
 fn fib(x)
 {
-    return some(x) + 2000;
+    return {some(x) + 2000};
 }
+
+
+sum = {90, 10, {120, 1290, fib(3)}};
+sum[2][1][0] = "sdsd";
+print(sum[2]);

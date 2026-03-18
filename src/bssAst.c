@@ -66,3 +66,11 @@ BssAstExpr *bssAllocExprCompound(BssInterp *interp, BssTok start, BssTok end, Bs
 
     return ast; 
 }
+BssAstExpr *bssAllocExprSubscript(BssInterp *interp, BssTok start, BssTok end, BssAstExpr *container, BssAstExpr *index)
+{
+    BssAstExpr *ast = bssAllocExpr(interp, start, end, BSS_AST_EXPR_SUBSCRIPT);
+    ast->subscript.container = container;
+    ast->subscript.index = index;
+
+    return ast; 
+}

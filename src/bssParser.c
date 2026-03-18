@@ -18,6 +18,7 @@ BssPrecedenceTableEntry gBssPrecedenceTable[TOK_KIND_END + 1] =
     ['*'] = {.precedence = 30, .prefix = null, .infix = bssParserParseExprBinary},
 
     ['('] = {.precedence = 100, .prefix = null, .infix = bssParserParseExprFnCall},
+    ['['] = {.precedence = 100, .prefix = null, .infix = bssParserParseExprSubscript},
 };
 
 
@@ -564,7 +565,29 @@ BssAstExpr *bssParserParseExprFnCall(BssInterp *interp, BssAstExpr *left, BssTok
     }
     return expr;
 }
+BssAstExpr *bssParserParseExprSubscript(BssInterp *interp, BssAstExpr *left, BssTok op)
+{
+    BssAstExpr *expr = BSS_AST_EXPR_ZERO;
 
+    BssAstExpr *index = bssParserParseExpr(interp, 0);
+
+    if (index != BSS_AST_EXPR_ZERO)
+    {
+        if (BSS_PARSER_MATCH(']'))
+        {
+            BssTok end = BSS_PARSER_CURR_TOK;
+            BSS_PARSER_NEXT_TOK();
+
+            expr = bssAllocExprSubscript(interp, left->startTok, end, left, index);
+        }
+        else
+        {
+            bssParserError(interp, "Expected ']', instead got '%S'", BSS_PARSER_CURR_TOK.lexeme);
+        }
+    }
+
+    return expr;
+}
 BssAstExpr *bssParserParseExprBinary(BssInterp *interp, BssAstExpr *left, BssTok op)
 {
     BssAstExpr *expr = BSS_AST_EXPR_ZERO;

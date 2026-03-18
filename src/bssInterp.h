@@ -14,6 +14,7 @@ BssScope *bssInterpreterCreateFuncScopeAndPushArgs(BssInterp *interp, BssTokList
 BssValue *bssInterpreterInterpFunc(BssInterp *interp, Arena *scopeArena, BssAstFunc *func, BssAstExpr *callingExpr);
 BssValue *bssInterpreterInterpExprBinary(BssInterp *interp, Arena *scopeArena, BssAstExpr *expr);
 BssValue *bssInterpreterInterpExpr(BssInterp *interp, Arena *scopeArena, BssAstExpr *expr);
+BssValue *bssInterpreterInterpLValueExprAndGetSym(BssInterp *interp, Arena *scopeArena, BssAstExpr *expr, BssSymTableSlotEntry **outSym);
 
 bool bssInterpreterInterpStmt(BssInterp *interp, Arena *scopeArena, BssAstStmt *stmt);
 BssValue *bssInterpreterInterpBlock(BssInterp *interp, BssAstBlock *block, bool createBlock);
