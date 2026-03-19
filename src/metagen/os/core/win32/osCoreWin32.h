@@ -12,6 +12,7 @@
 #define __UNICODE__
 #define _UNICODE_
 #define WIN32_LEAN_AND_MEAN
+#define COBJMACROS
 #include <windows.h>
 #include <memoryapi.h>
 #include <Shlwapi.h>
@@ -29,8 +30,18 @@ typedef struct OSFindFileIterWin32
     struct OSFileFindOptionalParams optParams;
 }OSFindFileIterWin32;
 
+typedef struct OSProcessWin32
+{
+    PROCESS_INFORMATION procInfo;
+    HANDLE stderrReadPipe;
+    HANDLE stdoutReadPipe;
+
+    bool running;
+}OSProcessWin32;
+
 #define HRFAILURE(HR)   ((HR) != S_OK && (HR) != S_FALSE)
 global IMAGE_DOS_HEADER __ImageBase;
 #define HINST_THIS ((HINSTANCE)&__ImageBase)
+#define OS_CORE_WIN32_HINST HINST_THIS
 
 #endif

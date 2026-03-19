@@ -89,6 +89,11 @@ OSState *OSInit(Arena *arena)
     return gOSState;
 }
 
+bool OSIsHandleValid(OSHandle handle)
+{
+    return handle._u64 != (u64)null && handle._u64 != (u64)INVALID_HANDLE_VALUE;
+}
+
 void* OSReserveMemory(u64 size)
 {
     return VirtualAlloc(NULL, size, MEM_RESERVE, PAGE_NOACCESS);
@@ -127,6 +132,12 @@ void OSEnableVirtualTerminalSequenceProcessing(void)
 
         SetConsoleMode(hConsole, consoleMode);
     }
+}
+bool OSStdoutIsRedirected(void)
+{
+    HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    DWORD consoleMode;
+    return GetConsoleMode(hConsole, &consoleMode);
 }
 
 // files
@@ -300,9 +311,29 @@ bool OSCreateDirectory(str8 path, bool createIntermediateDirs)
 
         if(createIntermediateDirs)
         {
-            if (SHCreateDirectoryEx(null, widePath.data, null) != ERROR_SUCCESS)
+            Str8List pathSplit = Str8Split(temp.arena, path, STR8_LIT("/"), STR_MATCHFLAGS_SLASH_INSENSITIVE, STR_SPLITFLAGS_DISCARD_EMPTY);
+            path = STR8_EMPTY;
+            
+            BASE_LIST_FOREACH(Str8ListNode, node, pathSplit)
             {
-                result = false;
+                if (pathSplit.first == node)
+                {
+                    path = node->val;
+                }
+                else
+                {
+                    path = Str8PushFmt(temp.arena, "%S/%S", path, node->val);
+                }
+
+                widePath = Str16FromFromStr8(temp.arena, path);
+                if (!CreateDirectory(widePath.data, null))
+                {
+                    if (GetLastError() != ERROR_ALREADY_EXISTS)
+                    {
+                        result = false;
+                        break;
+                    }
+                }
             }
         }
         else
@@ -457,8 +488,11 @@ str8 OSGetProgramLogsDirectory(Arena *arena)
 
     return Str8ListJoin(arena, &strs, null);
 }
-bool OSRunProcessEx(Arena *arena, str8 app, str8 args, void *peb, str8 *outStr, str8 *errStr)
+
+OSHandle OSProcessOpen(struct Arena *arena, str8 app, str8 args, void *environment)
 {
+    OSHandle handle = {._u64 = (u64)INVALID_HANDLE_VALUE};
+
     SECURITY_ATTRIBUTES sa = 
     {
          .nLength = sizeof(SECURITY_ATTRIBUTES), 
@@ -473,7 +507,7 @@ bool OSRunProcessEx(Arena *arena, str8 app, str8 args, void *peb, str8 *outStr, 
     if (!CreatePipe(&stdoutPread, &stdoutPwrite, &sa, 0) ||
         !CreatePipe(&stderrPread, &stderrPwrite, &sa, 0)) 
     {
-        return false;
+        return handle;
     }
 
     SetHandleInformation(stdoutPread, HANDLE_FLAG_INHERIT, 0);
@@ -489,121 +523,136 @@ bool OSRunProcessEx(Arena *arena, str8 app, str8 args, void *peb, str8 *outStr, 
 
     // Launch the child process
     PROCESS_INFORMATION pi = {0};
-    if (!CreateProcessA((app.len == 0) ? null : (LPSTR) app.data, args.len == 0 ? null : (LPSTR) args.data, NULL, NULL, TRUE, 0, peb, NULL, &si, &pi)) 
+    if (CreateProcessA((app.len == 0) ? null : (LPSTR) app.data, args.len == 0 ? null : (LPSTR) args.data, NULL, NULL, TRUE, 0, environment, NULL, &si, &pi)) 
     {
-        return false;
+        OSProcessWin32 *proc = arenaPushType(arena, OSProcessWin32);
+        proc->procInfo = pi;
+        proc->stdoutReadPipe = stdoutPread;
+        proc->stderrReadPipe = stderrPread;
+        proc->running = true;
+
+        handle._u64 = (u64)proc;
     }
     
     // Close the read handles for the pipes
     CloseHandle(stdoutPwrite);
     CloseHandle(stderrPwrite);
 
-    *outStr = STR8_LIT("");
-    *errStr = STR8_LIT("");
-    
-    i64 totalStdoutSize = 0;
-    i64 totalStderrSize = 0;
-
-    U8ChunkList outChunkList = {0};
-    U8ChunkList errChunkList = {0};
-
-    DWORD exitCode = 0;
-
-    while(true)
+    return handle;
+}
+void OSProcessWait(OSHandle procHandle)
+{
+    if (OSIsHandleValid(procHandle))
     {
+        OSProcessWin32 *proc = (OSProcessWin32*)procHandle._u64;
+        WaitForSingleObject(proc->procInfo.hProcess, INFINITE);
+    }
+}
+void OSProcessClose(OSHandle procHandle)
+{
+    if (OSIsHandleValid(procHandle))
+    {
+        OSProcessWin32 *proc = (OSProcessWin32*)procHandle._u64;
+
+        if (proc->stderrReadPipe != INVALID_HANDLE_VALUE &&
+            proc->stdoutReadPipe != INVALID_HANDLE_VALUE)
+        {
+            CloseHandle(proc->stderrReadPipe);
+            CloseHandle(proc->stdoutReadPipe);
+        }
+
+        CloseHandle(proc->procInfo.hProcess);
+        CloseHandle(proc->procInfo.hThread);
+    }
+}
+
+bool OSProcessReadStdoutStderr(struct Arena *arena, OSHandle procHandle, str8 *stdoutStr, str8 *stderrStr)
+{
+    *stdoutStr = STR8_LIT("");
+    *stderrStr = STR8_LIT("");
+
+    if (OSIsHandleValid(procHandle))
+    {
+        OSProcessWin32 *proc = (OSProcessWin32*)procHandle._u64;
+        if (proc->running)
+        {
+            DWORD exitCode = 0;
+
+            GetExitCodeProcess(proc->procInfo.hProcess, &exitCode);
+            DWORD waitResult = WaitForSingleObject(proc->procInfo.hProcess, 0);
+
+            proc->running = (waitResult != WAIT_OBJECT_0) && (exitCode == STILL_ACTIVE);
+        }
+
         DWORD readSize = 0;
-
-        GetExitCodeProcess(pi.hProcess, &exitCode);
-        DWORD waitR = WaitForSingleObject(pi.hProcess, 0);
-
-        bool isRunning = (waitR != WAIT_OBJECT_0) && (exitCode == STILL_ACTIVE);
-        
         DWORD availBytes = 0;
-        if((PeekNamedPipe(stdoutPread, NULL, 0, NULL, &availBytes, NULL) && availBytes))
+
+        if((PeekNamedPipe(proc->stdoutReadPipe, NULL, 0, NULL, &availBytes, NULL) && availBytes))
         {
-            char buf[255] = {0};
+            stdoutStr->data = arenaPushNoZero(arena, availBytes + 1);
+            stdoutStr->len = availBytes;
 
-            if(!ReadFile(stdoutPread, buf, BASE_ARRAY_SIZE(buf), &readSize, NULL) || (readSize == 0))
+            if(!ReadFile(proc->stdoutReadPipe, stdoutStr->data, (DWORD)stdoutStr->len, &readSize, NULL) || (readSize == 0))
             {
-                break;
+                return false;
             }
-
-            if(readSize > BASE_ARRAY_SIZE(buf))
-            {
-
-                str8 s = {0};
-                s.data = arenaPushNoZero(arena, readSize + 1);
-                s.len = readSize;
-
-                ReadFile(stdoutPread, s.data, readSize, &readSize, NULL);
-
-                U8ChunkListPushStr8Last(arena, &outChunkList, s);
-            }
-            else
-            {
-                U8ChunkListPushStr8Last(arena, &outChunkList, baseStr8((u8*)buf, readSize));
-            }
-
-            totalStdoutSize += readSize;
         }
 
-        if(PeekNamedPipe(stderrPread, NULL, 0, NULL, &availBytes, NULL) && availBytes)
+        if((PeekNamedPipe(proc->stderrReadPipe, NULL, 0, NULL, &availBytes, NULL) && availBytes))
         {
-            char buf[255];
+            stderrStr->data = arenaPushNoZero(arena, availBytes + 1);
+            stderrStr->len = availBytes;
 
-            if(!ReadFile(stderrPread, buf, BASE_ARRAY_SIZE(buf), &readSize, NULL) || (readSize == 0))
+            if(!ReadFile(proc->stderrReadPipe, stderrStr->data, (DWORD) stderrStr->len, &readSize, NULL) || (readSize == 0))
             {
-                break;
+                return false;
             }
-
-            if(readSize > BASE_ARRAY_SIZE(buf))
-            {
-
-                str8 s = {0};
-                s.data = arenaPushNoZero(arena, readSize + 1);
-                s.len = readSize;
-
-                ReadFile(stderrPread, s.data, readSize, &readSize, NULL);
-
-                U8ChunkListPushStr8Last(arena, &errChunkList, s);
-            }
-            else
-            {
-                U8ChunkListPushStr8Last(arena, &errChunkList, baseStr8((u8*)buf, readSize));
-            }
-
-            totalStderrSize += readSize;
         }
-        
-        if(!isRunning && availBytes == 0)
+
+        if (!proc->running)
         {
-            break;
+            CloseHandle(proc->stderrReadPipe);
+            CloseHandle(proc->stdoutReadPipe);
+
+            proc->stdoutReadPipe = proc->stderrReadPipe = INVALID_HANDLE_VALUE;
+            return false;
         }
+
+        return true;
     }
-    
 
-    if(totalStdoutSize > 0)
+    return false;
+}
+
+OSHandle OSLoadDynamicLibrary(str8 name)
+{
+    OSHandle handle = {._u64 = 0};
+
+    ArenaTemp temp = baseTempBegin(null, 0);
     {
-        // todo, when making u8chunklist put on temp arena
-        U8Array flattened = U8ChunkListFlattenToArray(arena, &outChunkList);
-        *outStr = baseStr8(flattened.data, flattened.len);
+        str16 name16 = Str16FromFromStr8(temp.arena, name);
+        handle._u64 = (u64) LoadLibraryW(name16.data);
     }
-    if(totalStderrSize > 0)
+    baseTempEnd(temp);
+
+    return handle;
+}
+
+void *OSGetExportAddressFromDynamicLibrary(OSHandle dynLib, str8 name)
+{
+    void *ptr = null;
+
+    ArenaTemp temp = baseTempBegin(null, 0);
     {
-        U8Array flattened = U8ChunkListFlattenToArray(arena, &errChunkList);
-        *errStr = baseStr8(flattened.data, flattened.len);
+        // needs '\0' at end
+        str8 nameCopied = Str8PushCopy(temp.arena, name);
+        FARPROC fnptr = GetProcAddress((HMODULE) dynLib._u64, (i8*)nameCopied.data);
+
+        ptr = (void*)fnptr;
     }
+    baseTempEnd(temp);
 
-    CloseHandle(stdoutPread);
-    CloseHandle(stderrPread);
-
-    // Wait for the child process to exit
-    WaitForSingleObject(pi.hProcess, INFINITE);
-
-    CloseHandle(pi.hProcess);
-    CloseHandle(pi.hThread);
-
-    return true;
+    return ptr;
 }
 
 // Date and time
@@ -659,10 +708,9 @@ str8 OSGetEnvironmentVar(Arena *arena, str8 var)
     if(size > 0)
     {
         val.data = arenaPushArray(arena, u8, size);
-        val.len = size - 1;
+        GetEnvironmentVariableA((i8*)var.data, (i8*)val.data, (DWORD)size);
 
-        GetEnvironmentVariableA((i8*)var.data, (i8*)val.data, (DWORD)val.len);
-        val.data[size] = '\0';
+        val.len = size - 1;
     }
 
     return val;

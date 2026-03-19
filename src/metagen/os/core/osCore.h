@@ -132,8 +132,10 @@ typedef struct OSExceptionInfo
     u32 _placeholder;
 }OSExceptionInfo;
 
-#if OS_WIN32
+#if OS_WIN32 == 1
 #include "win32/osCoreWin32.h"
+#elif OS_LINUX == 1
+#include "linux/osCoreLinux.h"
 #else
 #error Platform not defined
 #endif
@@ -142,13 +144,14 @@ OSState *OSInit(Arena *arena);
 OSState *OSGetState(void);
 
 bool OSHandleEquals(OSHandle a, OSHandle b);
-
+bool OSIsHandleValid(OSHandle handle);
 void* OSReserveMemory(u64 size);
 void OSCommitMemory(void *ptr, u64 size);
 void OSDecommitMemory(void *ptr, u64 size);
 void OSFreeMemory(void *ptr, u64 size);
 
 void OSEnableVirtualTerminalSequenceProcessing(void);
+bool OSStdoutIsRedirected(void);
 
 // files
 OSHandle OSFileOpen(str8 path, bool createLeadingDir, OSFileAccessFlags accessFlags, OSFileCreationKind creationKind);
@@ -182,7 +185,14 @@ Str8List OSGetFilePaths(Arena *arena, str8 dir, str8 pattern, bool recursive);
 str8 OSGetProgramPath(Arena *arena);
 str8 OSGetProgramDirectory(Arena *arena);
 str8 OSGetProgramLogsDirectory(Arena *arena);
-bool OSRunProcessEx(struct Arena *arena, str8 app, str8 args, void *peb, str8 *outStr, str8 *errStr);
+// bool OSRunProcessEx(struct Arena *arena, str8 app, str8 args, void *peb, str8 *outStr, str8 *errStr);
+OSHandle OSProcessOpen(struct Arena *arena, str8 app, str8 args, void *environment);
+void OSProcessClose(OSHandle procHandle);
+void OSProcessWait(OSHandle procHandle); //wait on it to finish
+bool OSProcessReadStdoutStderr(struct Arena *arena, OSHandle procHandle, str8 *stdoutStr, str8 *stderrStr);
+
+OSHandle OSLoadDynamicLibrary(str8 name);
+void *OSGetExportAddressFromDynamicLibrary(OSHandle dynLib, str8 name);
 
 // Date and time
 DateTime OSGetSytemTime(void);
@@ -198,15 +208,15 @@ str8 OSGetEnvironmentVar(Arena *arena, str8 var);
 // other
 vec2i OSScreenCoordToClientCoord(OSHandle wndHandle, vec2i screen);
 range2i OSClientRectFromWindow(OSHandle handle);
-vec2i OSGetCursorScreenCoordPos();
+vec2i OSGetCursorScreenCoordPos(void);
 vec2i OSGetCursorClientCoordPos(OSHandle wndHandle);
 
 //threading
-OSHandle OSGetCurrentThread();
+OSHandle OSGetCurrentThread(void);
 void OSSetThreadDebuggerName(OSHandle thread, str8 name);
 str8 OSGetThreadDebuggerName(OSHandle thread);
 
-BASE_CREATE_EFFICIENT_LL_DECLS(OSHandleList, OSHandle);
+BASE_CREATE_EFFICIENT_LL_DECLS(OSHandleList, OSHandle)
 
 global u64 gOSPerformanceFreq;
 global OSState *gOSState;

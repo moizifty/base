@@ -490,7 +490,8 @@ Str8List metagenFindFilesToProcess(Arena *arena, str8 path)
             {
                 if (fileInfo.attrs & OS_FILEATTR_DIR)
                 {
-                    if (!Str8EndsWith(fileInfo.name, STR8_LIT("metagen"), STR_MATCHFLAGS_CASE_INSENSITIVE))
+                    if (!Str8EndsWith(fileInfo.name, STR8_LIT("metagen"), STR_MATCHFLAGS_CASE_INSENSITIVE) &&
+                        !Str8EndsWith(fileInfo.name, STR8_LIT("_defer_temp_metagen"), STR_MATCHFLAGS_CASE_INSENSITIVE))
                     {
                         FindTask *t = arenaPushType(arena, FindTask);
                         t->path = Str8PushFmt(arena, "%S\\%S", task->path, fileInfo.name);
@@ -1144,6 +1145,17 @@ bool metagenDefersProcessScope(Arena *arena, MetagenOutput *output, CLexerState 
 }
 void metagenDefersPass(Arena *arena, Str8List inputPaths)
 {
+    // this kinda needs a rework - todo
+    // small issue, since my .c files include other .c files
+    // for unity builds, these generated files wont be included
+    // unless i do something like the metadata genned files
+    // where you manually include those, but that case is a lil different
+    // as those  files add on to the source files where as this defer pass
+    // is meant to replace the source files
+    // so a better way to do this all would be, to copy all the source files a temp folder
+    // and gen the source files with the same names, that way the include will include the genned ones
+    // this way is much better, cuz then i can just build the main.c in the temp folder
+    // rather then filtering out what files to build etc
     basePrintf("{g}Starting defers pass\n");
 
     DateTime currentTime = OSGetLocalTime();
@@ -1157,7 +1169,7 @@ void metagenDefersPass(Arena *arena, Str8List inputPaths)
 
         MetagenOutput output = {0};
         output.inputPath = inputPath->val;
-        output.impl.path = Str8PushFmt(arena, "%S.defer.gen.c", Str8ChopPast(inputPath->val, STR8_LIT("."), STR_MATCHFLAGS_FIND_LAST));
+        output.impl.path = Str8PushFmt(arena, "_defer_temp_metagen/%S", inputPath->val);
 
         bool foundDefer = false;
         while (clex.tok.kind != CTOK_END_INPUT)
@@ -1176,7 +1188,7 @@ void metagenDefersPass(Arena *arena, Str8List inputPaths)
         {
             if (BASE_ANY(output.impl.raw))
             {
-                OSHandle outputFile = OSFileOpen(output.impl.path, false, OS_FILEACCESS_WRITE, OS_FILECREATION_CREATE_OVERRITE);
+                OSHandle outputFile = OSFileOpen(output.impl.path, true, OS_FILEACCESS_WRITE, OS_FILECREATION_CREATE_OVERRITE);
                 OSFileWriteFmt(outputFile, "/**********************************************************************/\n");
                 OSFileWriteFmt(outputFile, "// GENERATED FILE\n");
                 OSFileWriteFmt(outputFile, "// Input: %S\n", output.inputPath);
@@ -1189,6 +1201,10 @@ void metagenDefersPass(Arena *arena, Str8List inputPaths)
 
                 basePrintf("{b}Found defer, saving file '%S'\n", output.impl.path);
             }
+        }
+        else
+        {
+            OSFileWriteAll(output.impl.path, OSFileReadAll(arena, output.inputPath), true, true);
         }
     }
 

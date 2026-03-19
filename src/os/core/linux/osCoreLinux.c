@@ -125,7 +125,15 @@ bool OSCreateDirectory(str8 path, bool createIntermediateDirs)
         
         BASE_LIST_FOREACH(Str8ListNode, node, pathSplit)
         {
-            path = Str8PushFmt(temp.arena, "%S/%S", path, node->val);
+            if (pathSplit.first == node)
+            {
+                path = node->val;
+            }
+            else
+            {
+                path = Str8PushFmt(temp.arena, "%S/%S", path, node->val);
+            }
+
             if (mkdir((char *)path.data, S_IRWXU) != 0)
             {
                 if (errno != EEXIST)

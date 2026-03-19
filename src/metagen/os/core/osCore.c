@@ -2,11 +2,13 @@
 
 #if OS_WIN32
 #include "win32/osCoreWin32.c"
+#elif OS_LINUX == 1
+#include "linux/osCoreLinux.c"
 #else
 #error Platform not defined
 #endif
 
-BASE_CREATE_EFFICIENT_LL_DEFS(OSHandleList, OSHandle);
+BASE_CREATE_EFFICIENT_LL_DEFS(OSHandleList, OSHandle)
 
 global u64 gOSPerformanceFreq = 0;
 global OSState *gOSState = null;
@@ -27,7 +29,7 @@ u64 OSGetPerformanceFrequency(void)
 }
 f64 OSConvertPerformanceCounterToMillisecondsF64(u64 counter)
 {
-    return (counter * 1000.0) / (f64)gOSPerformanceFreq;
+    return ((f64)counter * 1000.0) / (f64)gOSPerformanceFreq;
 }
 
 bool OSFileWriteAll(str8 path, U8Array bytes, bool createLeadingDir, bool overwrite)

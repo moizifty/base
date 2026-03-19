@@ -311,9 +311,29 @@ bool OSCreateDirectory(str8 path, bool createIntermediateDirs)
 
         if(createIntermediateDirs)
         {
-            if (SHCreateDirectoryEx(null, widePath.data, null) != ERROR_SUCCESS)
+            Str8List pathSplit = Str8Split(temp.arena, path, STR8_LIT("/"), STR_MATCHFLAGS_SLASH_INSENSITIVE, STR_SPLITFLAGS_DISCARD_EMPTY);
+            path = STR8_EMPTY;
+            
+            BASE_LIST_FOREACH(Str8ListNode, node, pathSplit)
             {
-                result = false;
+                if (pathSplit.first == node)
+                {
+                    path = node->val;
+                }
+                else
+                {
+                    path = Str8PushFmt(temp.arena, "%S/%S", path, node->val);
+                }
+
+                widePath = Str16FromFromStr8(temp.arena, path);
+                if (!CreateDirectory(widePath.data, null))
+                {
+                    if (GetLastError() != ERROR_ALREADY_EXISTS)
+                    {
+                        result = false;
+                        break;
+                    }
+                }
             }
         }
         else
