@@ -1,6 +1,6 @@
 /**********************************************************************/
-/* GENERATED FILE
-/* Date-Time: 22/1/2025 - 16:04
+// GENERATED FILE
+// Date-Time: 19/3/2026 - 12:58
 /**********************************************************************/
 
 extern MetagenStructMembArray gDateTimeMembDefsTable;
@@ -12,7 +12,7 @@ extern MetagenStructMembArray grange3fMembDefsTable;
 #define METAGEN_TYPE_vec3f (METAGEN_TYPE_CUSTOM_BEGIN + 2)
 #define METAGEN_TYPE_range3f (METAGEN_TYPE_CUSTOM_BEGIN + 3)
 #define METAGEN_PRINT_MEMB_CUSTOM \
-         case METAGEN_TYPE_DateTime: basePrintStruct(((u8*)(member) + (size*i)), gDateTimeMembDefsTable); break;\
-         case METAGEN_TYPE_vec2f: basePrintStruct(((u8*)(member) + (size*i)), gvec2fMembDefsTable); break;\
-         case METAGEN_TYPE_vec3f: basePrintStruct(((u8*)(member) + (size*i)), gvec3fMembDefsTable); break;\
-         case METAGEN_TYPE_range3f: basePrintStruct(((u8*)(member) + (size*i)), grange3fMembDefsTable); break;\
+         case METAGEN_TYPE_DateTime: basePrintStructEx(((u8*)(member) + (size*i)), gDateTimeMembDefsTable); break;\
+         case METAGEN_TYPE_vec2f: basePrintStructEx(((u8*)(member) + (size*i)), gvec2fMembDefsTable); break;\
+         case METAGEN_TYPE_vec3f: basePrintStructEx(((u8*)(member) + (size*i)), gvec3fMembDefsTable); break;\
+         case METAGEN_TYPE_range3f: basePrintStructEx(((u8*)(member) + (size*i)), grange3fMembDefsTable); break;\

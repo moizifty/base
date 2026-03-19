@@ -151,6 +151,7 @@ void OSDecommitMemory(void *ptr, u64 size);
 void OSFreeMemory(void *ptr, u64 size);
 
 void OSEnableVirtualTerminalSequenceProcessing(void);
+bool OSStdoutIsRedirected(void);
 
 // files
 OSHandle OSFileOpen(str8 path, bool createLeadingDir, OSFileAccessFlags accessFlags, OSFileCreationKind creationKind);

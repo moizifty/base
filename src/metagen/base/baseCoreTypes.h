@@ -20,6 +20,15 @@
 #endif
 
 #define global extern
+#if COMPILER_MSVC
+#pragma section(".ronly", read)
+#pragma comment(linker, "/SECTION:.ronly,R")
+#define readonly __declspec(allocate(".ronly"))
+#elif OS_LINUX
+#define readonly __attribute__((section(".ronly"), used))
+#else 
+#error readonly needs to be defined for the platform
+#endif
 
 typedef int8_t i8;
 typedef int16_t i16;

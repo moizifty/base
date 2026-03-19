@@ -16,6 +16,7 @@ typedef enum CTokKind
     
     CTOK_IDEN,
 
+    CTOK_WHITESPACE,
     CTOK_END_INPUT,
 }CTokKind;
 
@@ -72,6 +73,8 @@ typedef struct CLexerState
     u64 line;
     u64 col;
     u8 *currLocInBuffer;
+
+    bool allowWhitespace;
 }CLexerState;
 
 CTokArray CTokArraySkip(CTokArray arr, u64 amount);
@@ -93,6 +96,7 @@ u8 baseCLexerPeekCharEx(CLexerState *lexerState, u64 amount);
 
 CTok baseCLexerNextFromBuffer(CLexerState *lexerState);
 CTok baseCLexerNext(CLexerState *lexerState);
+CTok baseCLexerNextNonWhitespace(CLexerState *lexerState);
 CTok baseCLexerPeekEx(CLexerState *lexerState, u64 amount);
 CTok baseCLexerPeek(CLexerState *lexerState);
 

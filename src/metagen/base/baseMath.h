@@ -86,7 +86,7 @@
 
 #define Range3f(X, Y)    ((rangef){(X), (Y)})
 
-metagen_introspect()
+metagen_introspect(only: "x", "y")
 typedef struct vec2f
 {
     union
@@ -289,6 +289,7 @@ typedef struct vec4u8
     union
     {
         u8 v[4];
+        u32 asU32;
         struct
         {
             u8 x;
@@ -457,7 +458,7 @@ typedef struct range2i
 
 // 3-dimension range
 
-metagen_introspect(only: "start", "end")
+metagen_introspect()
 typedef struct range3f
 {
     union

@@ -52,6 +52,7 @@ typedef u64 StrSplitFlags;
 enum
 {
     STR_SPLITFLAGS_DISCARD_EMPTY = (1 << 0),
+    STR_SPLITFLAGS_NO_COPY = (1 << 1), // THE str8 in the str8list will not be copies and instead be slices of original str
 };
 
 void Str8ListPushNodeLast(Str8List *l, Str8ListNode *node);
@@ -60,7 +61,8 @@ void Str8ListInsertNode(Str8List *l, Str8ListNode *prev, Str8ListNode *node);
 void Str8ListPushLast(Arena *arena, Str8List *l, str8 value);
 void Str8ListPushFirst(Arena *arena, Str8List *l, str8 value);
 void Str8ListPushInsert(Arena *arena, Str8List *l, Str8ListNode *prev, str8 value);
-void Str8ListPushLastFmt(Arena *arena, Str8List *l, const i8 *fmt, ...);
+void Str8ListPushLastFmt(Arena *arena, Str8List *l, const char *fmt, ...);
+void Str8ListPopNodeLast(Str8List *l);
 
 void Str8ListPushListLast(Arena *arena, Str8List *l, Str8List* a);
 
@@ -76,13 +78,13 @@ str32 baseStr32(u32 *bytes, u64 size);
 u64 baseStr16DataLen(u16 *str);
 
 str8 Str8PushCopy(Arena *arena, str8 str);
-str8 Str8PushFmtV(Arena *arena, const i8 *fmt, va_list args);
-str8 Str8PushFmt(Arena *arena, const i8* fmt, ...);
+str8 Str8PushFmtV(Arena *arena, const char *fmt, va_list args);
+str8 Str8PushFmt(Arena *arena, const char* fmt, ...);
 
 bool Str8IsNullOrEmpty(str8 a);
 i64 Str8Compare(str8 a, str8 b);
 bool Str8Equals(str8 a, str8 b, StrMatchFlags flags);
-bool Str8Contains(str8 a, u8 ch);
+bool Str8Contains(str8 a, str8 needle, StrMatchFlags flags);
 str8 Str8SubStr8(str8 str, u64 start, u64 end);
 u64 Str8FindSubStr8(str8 haystack, str8 needle, u64 start_pos, StrMatchFlags flags);
 str8 Str8Replace(Arena *arena, str8 str, u8 old, u8 new);
@@ -90,6 +92,8 @@ bool Str8StartsWith(str8 str, str8 startsWith, StrMatchFlags flags);
 bool Str8EndsWith(str8 str, str8 endsWith, StrMatchFlags flags);
 str8 Str8Skip(str8 str, i64 amount);
 Str8List Str8Split(Arena *arena, str8 str, str8 splitWith, StrMatchFlags matchFlags, StrSplitFlags splitFlags);
+u64 Str8CountOccurance(str8 str, str8 needle, StrMatchFlags matchFlags);
+str8 Str8FromU8Array(U8Array arr);
 
 str8 Str8Lower(Arena *arena, str8 str);
 
@@ -98,10 +102,11 @@ str8 Str8TrimEnd(str8 str);
 str8 Str8Trim(str8 str);
 str8 Str8ChopPast(str8 str, str8 past, StrMatchFlags flags);
 str8 Str8ChopPastLastSlash(str8 str);
+str8 Str8ChopBefore(str8 str, str8 before, StrMatchFlags flags);
 
 // conversions
-BASE_CREATE_LL_DECLS_DEFS(U16List, u16);
-BASE_CREATE_LL_DECLS_DEFS(U8List, u8);
+BASE_CREATE_LL_DECLS(U16List, u16)
+BASE_CREATE_LL_DECLS(U8List, u8)
 
 typedef struct DecodeCodePointInfo
 {

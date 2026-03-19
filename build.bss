@@ -37,7 +37,7 @@ if (hasflag("metagen"))
 
     exePath = "{cwd}\src\metagen\builds\mg.exe";
 
-    includeArg = "/I" + "src";
+    includeArg = "/I" + "src\\metagen" + " /I" + "src";
     outputName = "/Fe~"{exePath}~"";
     objFolder = "/Fo~"{"{cwd}\builds/"}~"";
     

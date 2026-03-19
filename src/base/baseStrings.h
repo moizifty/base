@@ -93,6 +93,7 @@ bool Str8EndsWith(str8 str, str8 endsWith, StrMatchFlags flags);
 str8 Str8Skip(str8 str, i64 amount);
 Str8List Str8Split(Arena *arena, str8 str, str8 splitWith, StrMatchFlags matchFlags, StrSplitFlags splitFlags);
 u64 Str8CountOccurance(str8 str, str8 needle, StrMatchFlags matchFlags);
+str8 Str8FromU8Array(U8Array arr);
 
 str8 Str8Lower(Arena *arena, str8 str);
 

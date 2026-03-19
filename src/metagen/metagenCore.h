@@ -36,6 +36,7 @@ typedef struct MetagenOutput
     {
         Str8List tables;
         Str8List embeds;
+        Str8List raw;
         str8 path;
     }impl;
 
@@ -126,6 +127,14 @@ typedef struct MetagenTypeDict
     u64 len;
 }MetagenTypeDict;
 
+typedef struct MetagenScope
+{
+    u64 nestLevel;
+    Str8List defers;
+
+    struct MetagenScope *parent;
+}MetagenScope;
+
 extern str8 gMetagenCmdKindStr8Table[METAGEN_CMD_COUNT];
 extern MetagenTypeDict gMetagenTypeDict;
 
@@ -143,4 +152,10 @@ bool metagenCheckType(Arena *arena, MetagenCStruct *type, MetagenTypeDict *dict)
 u64 metagenGetTotalMembersIncludingAnonStructAndUnion(MetagenCStructMembList membs);
 Str8List metagenFindFilesToProcess(Arena *arena, str8 path);
 
+// pass on introspect, embed tags
+CTok metagenGetNextNonWhitespaceTok(Arena *arena, MetagenOutput *output, CLexerState *lex, bool outputWhitespace);
+str8 metagenDefersParseDefer(Arena *arena, MetagenOutput *output, CLexerState *clex);
+bool metagenDefersProcessScope(Arena *arena, MetagenOutput *output, CLexerState *clex, MetagenScope *parent);
+void metagenDefersPass(Arena *arena, Str8List inputPaths);
+void metagenMetadataPass(Arena *arena, str8 baseFolder, Str8List inputPaths);
 #endif

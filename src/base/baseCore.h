@@ -48,6 +48,11 @@
 #define basePrintf baseColPrintf
 #define baseEPrintf baseColEPrintf
 
+#define baseColPrintfV(FMT, VA) (baseColFprintfV(stdout, FMT, VA))
+#define baseColEPrintfV(FMT, VA) (baseColFprintfV((stderr), (FMT), VA))
+#define basePrintfV baseColPrintfV
+#define baseEPrintfV baseColEPrintfV
+
 // idk other stuff
 #define BASE_ISALPHA(c) isalpha((int)(c))
 #define BASE_ISDIGIT(c) isdigit((int)(c))
@@ -246,15 +251,15 @@ inline void NAME##PushNodeFirst(NAME *l, NODENAME *node); \
 inline void NAME##InsertNode(NAME *l, NODENAME *prev, NODENAME *node);
 
 #define BASE_CREATE_EFFICIENT_LL_DEFS(NAME, NODENAME) \
-inline void NAME##PushNodeLast(NAME *l, NODENAME *node) \
+inline void NAME##PushNodeLast(NAME *l, struct NODENAME *node) \
 { \
 	BasePtrListNodePushLast(l, node); \
 } \
-inline void NAME##PushNodeFirst(NAME *l, NODENAME *node) \
+inline void NAME##PushNodeFirst(NAME *l, struct NODENAME *node) \
 { \
 	BasePtrListNodePushFirst(l, node); \
 } \
-inline void NAME##InsertNode(NAME *l, NODENAME *prev, NODENAME *node) \
+inline void NAME##InsertNode(NAME *l, struct NODENAME *prev, struct NODENAME *node) \
 { \
 	BasePtrListNodeInsert(l, prev, node); \
 } \

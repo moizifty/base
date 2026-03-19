@@ -21,7 +21,7 @@ typedef struct CmdLineOptSlot
     CmdLineOptNode *last;
 }CmdLineOptSlot;
 
-BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(CmdLineOptSlotArray, CmdLineOptSlot);
+BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(CmdLineOptSlotArray, CmdLineOptSlot)
 
 typedef struct CmdLineHashMap
 {

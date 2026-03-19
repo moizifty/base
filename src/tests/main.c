@@ -35,8 +35,19 @@ void printFiles(Arena *arena, str8 path)
 
 void ProgramMain(CmdLineHashMap *cmdline)
 {
-
 	Arena *generalArena = arenaAlloc(BASE_GIGABYTES(2));
+	CLexerState clex = baseCLexerInitFromFile(generalArena, STR8_LIT("C:\\Users\\moizi\\OneDrive\\Documents\\Programming\\C\\base\\src\\tests\\main.c"));
+	clex.allowWhitespace = true;
+	baseCLexerLexWholeBuffer(generalArena, &clex);
+
+	for(u64 i = 0; i < clex.lexedToks.len; i++)
+	{
+		basePrintf("%S", clex.lexedToks.data[i].lexeme);
+	}
+
+	basePrintf("Hiiipo\n");
+
+	return;
 	OSHandle proc = OSProcessOpen(generalArena, STR8_EMPTY, STR8_LIT("cmd /k \"echo moiz\""), null);
 
 	if (OSIsHandleValid(proc))

@@ -7,7 +7,7 @@
 #include <ctype.h>
 
 #include "baseCoreTypes.h"
-#include "thirdparty\ts_stb_sprintf.h"
+#include "thirdparty/ts_stb_sprintf.h"
 
 // General
 
@@ -47,6 +47,11 @@
 #define baseColEPrintf(FMT,...) (baseColFprintf((stderr), (FMT), ##__VA_ARGS__))
 #define basePrintf baseColPrintf
 #define baseEPrintf baseColEPrintf
+
+#define baseColPrintfV(FMT, VA) (baseColFprintfV(stdout, FMT, VA))
+#define baseColEPrintfV(FMT, VA) (baseColFprintfV((stderr), (FMT), VA))
+#define basePrintfV baseColPrintfV
+#define baseEPrintfV baseColEPrintfV
 
 // idk other stuff
 #define BASE_ISALPHA(c) isalpha((int)(c))
@@ -109,7 +114,7 @@
 #define BasePtrListNodeInsertEx(list, p, n, prev, next)   (BaseListNodeInsertEx(*(list), p, n, prev, next))
 
 #define BaseListNodeRemoveEx(list, n, prev, next)   (BaseDllRemoveEx((list).first, (list).last, n, prev, next), (list).len--)
-#define BasePtrListNodeRemoveEx(list, n, prev, next)   (BaseDllRemoveEx(*(list), n, prev, next))
+#define BasePtrListNodeRemoveEx(list, n, prev, next)   (BaseListNodeRemoveEx(*(list), n, prev, next))
 
 #define BaseListNodePushLast(list, n)   (BaseListNodePushLastEx((list), (n), prev, next))
 #define BasePtrListNodePushLast(list, n)   (BasePtrListNodePushLastEx((list), (n), prev, next))
@@ -143,12 +148,13 @@ typedef struct NAME \
 	u64 len; \
 	u64 totalSize; \
 }NAME; \
-inline void NAME##PushNodeLast(NAME *l, NODENAME *node); \
-inline void NAME##PushNodeFirst(NAME *l, NODENAME *node); \
-inline void NAME##InsertNode(NAME *l, NODENAME *prev, NODENAME *node); \
-inline void NAME##PushLast(struct Arena *arena, NAME *l, ELEM value); \
-inline void NAME##PushFirst(struct Arena *arena, NAME *l, ELEM value); \
-inline void NAME##PushInsert(struct Arena *arena, NAME *l, NODENAME *prev, ELEM value); \
+void NAME##PushNodeLast(NAME *l, NODENAME *node); \
+void NAME##PushNodeFirst(NAME *l, NODENAME *node); \
+void NAME##InsertNode(NAME *l, NODENAME *prev, NODENAME *node); \
+void NAME##PushLast(struct Arena *arena, NAME *l, ELEM value); \
+void NAME##PushFirst(struct Arena *arena, NAME *l, ELEM value); \
+void NAME##PushInsert(struct Arena *arena, NAME *l, NODENAME *prev, ELEM value); \
+ArrayView NAME##FlattenToArray(struct Arena *arena, NAME *l); \
 
 #define BASE_CREATE_LL_JUST_NODE_DECLS_EX(NAME, NODENAME, ELEM) \
 typedef struct NAME NAME; \
@@ -183,25 +189,25 @@ inline void NAME##InsertNode(NAME *l, NODENAME *prev, NODENAME *node) \
 	l->len += 1; \
 	l->totalSize += sizeof(node->val); \
 } \
-inline void NAME##PushLast(Arena *arena, NAME *l, ELEM value) \
+inline void NAME##PushLast(struct Arena *arena, NAME *l, ELEM value) \
 { \
 	NODENAME *n = arenaPush(arena, sizeof(NODENAME)); \
 	n->val = value; \
 	NAME##PushNodeLast(l, n); \
 } \
-inline void NAME##PushFirst(Arena *arena, NAME *l, ELEM value) \
+inline void NAME##PushFirst(struct Arena *arena, NAME *l, ELEM value) \
 { \
 	NODENAME *n = arenaPush(arena, sizeof(NODENAME)); \
 	n->val = value; \
 	NAME##PushNodeFirst(l, n); \
 } \
-inline void NAME##PushInsert(Arena *arena, NAME *l, NODENAME *prev, ELEM value) \
+inline void NAME##PushInsert(struct Arena *arena, NAME *l, NODENAME *prev, ELEM value) \
 { \
 	NODENAME *n = arenaPush(arena, sizeof(NODENAME)); \
 	n->val = value; \
 	NAME##InsertNode(l, prev, n); \
 } \
-inline ArrayView NAME##FlattenToArray(Arena *arena, NAME *l) \
+inline ArrayView NAME##FlattenToArray(struct Arena *arena, NAME *l) \
 { \
 	ArrayView view = {0}; \
 	view.data = arenaPushNoZero(arena, l->totalSize); \
@@ -245,15 +251,15 @@ inline void NAME##PushNodeFirst(NAME *l, NODENAME *node); \
 inline void NAME##InsertNode(NAME *l, NODENAME *prev, NODENAME *node);
 
 #define BASE_CREATE_EFFICIENT_LL_DEFS(NAME, NODENAME) \
-inline void NAME##PushNodeLast(NAME *l, NODENAME *node) \
+inline void NAME##PushNodeLast(NAME *l, struct NODENAME *node) \
 { \
 	BasePtrListNodePushLast(l, node); \
 } \
-inline void NAME##PushNodeFirst(NAME *l, NODENAME *node) \
+inline void NAME##PushNodeFirst(NAME *l, struct NODENAME *node) \
 { \
 	BasePtrListNodePushFirst(l, node); \
 } \
-inline void NAME##InsertNode(NAME *l, NODENAME *prev, NODENAME *node) \
+inline void NAME##InsertNode(NAME *l, struct NODENAME *prev, struct NODENAME *node) \
 { \
 	BasePtrListNodeInsert(l, prev, node); \
 } \
@@ -278,7 +284,7 @@ BASE_CREATE_ARRAY_VIEW_DEFS(NAME, ELEM)
 #define ARRAY_VIEW_LIT_FROM_SIZED(T, ARRAY)		((T){ARRAY, .len = BASE_ARRAY_SIZE(ARRAY)})
 #define ARRAY_VIEW_LIT(T, ARRAY, SIZE)			((T){ARRAY, .len = SIZE})
 
-BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(U8Array, u8);
+BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(U8Array, u8)
 
 
 #define BASE_U8CHUNKLIST_DEFAULT_CAP	128
@@ -303,20 +309,22 @@ typedef struct U8ChunkList
 }U8ChunkList;
 
 // disable this dumb warning
-#pragma warning( push )
-#pragma warning( disable : 4115)
+// #pragma warning( push )
+// #pragma warning( disable : 4115)
+
+typedef struct Arena Arena;
 void U8ChunkListPushLast(struct Arena *arena, U8ChunkList *l, u8 n);
 void U8ChunkListPushStr8Last(struct Arena *arena, U8ChunkList *l, str8 str);
 U8Array U8ChunkListFlattenToArray(struct Arena *arena, U8ChunkList *l);
-BASE_CREATE_LL_DECLS(U8ArrayList, U8Array);
-#pragma warning( pop ) 
+BASE_CREATE_LL_DECLS(U8ArrayList, U8Array)
+// #pragma warning( pop ) 
 
 
 // program entry related
 typedef struct CmdLineHashMap CmdLineHashMap;
 typedef void(*ProgramMainFunc)(CmdLineHashMap *);
 
-void BaseMainThreadEntry(ProgramMainFunc programMain, i64 argc, i8 **argv);
+void BaseMainThreadEntry(ProgramMainFunc programMain, i64 argc, char **argv);
 
 i64 baseColFprintf(FILE *fp, const char *fmt, ...);
 

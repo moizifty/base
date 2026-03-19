@@ -1,12 +1,12 @@
 /**********************************************************************/
 // GENERATED FILE
 // Input: .\src\base\baseCoreTypes.h
-// Date-Time: 3/10/2025 - 21:01
+// Date-Time: 19/3/2026 - 18:37
 /**********************************************************************/
 
 #include "baseCoreTypes.gen.h"
 
-global MetagenStructMembArray gDateTimeMembDefsTable=
+extern MetagenStructMembArray gDateTimeMembDefsTable=
 {
 	.data=(MetagenStructMemb[8])
 	{

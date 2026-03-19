@@ -89,11 +89,10 @@ void BaseMainThreadEntry(ProgramMainFunc programMain, i64 argc, char **argv)
 
     logThreadOutputToFile();
 }
-i64 baseColFprintf(FILE *fp, const char *fmt, ...)
+i64 baseColFprintfV(FILE *fp, const char *fmt, va_list va)
 {
-    va_list list, list2;
-    va_start(list, fmt);
-    va_start(list2, fmt);
+    va_list copy;
+    va_copy(copy, va);
 
     i64 res = 0;
     ArenaTemp temp = baseTempBegin(null, 0);
@@ -197,18 +196,26 @@ i64 baseColFprintf(FILE *fp, const char *fmt, ...)
         Str8ListPushLastFmt(temp.arena, &strList, BASE_TERMINAL_RESET_CODE, -1);
 
         str8 finalStr = Str8ListJoin(temp.arena, &strList, null);
-        i64 needed = stbsp_vsnprintf(null, 0, (char *)finalStr.data, list) + 1;
+        i64 needed = stbsp_vsnprintf(null, 0, (char *)finalStr.data, va) + 1;
 
         i8 *data = arenaPush(temp.arena, (u64)needed);
-        res = stbsp_vsnprintf((char*)data, (int)needed, (char *)finalStr.data, list2);
+        res = stbsp_vsnprintf((char*)data, (int)needed, (char *)finalStr.data, copy);
 
         fprintf(fp, "%.*s", (int)res, data);
     }
 
     baseTempEnd(temp);
 
-    va_end(list);
+    return res;
+}
+i64 baseColFprintf(FILE *fp, const char *fmt, ...)
+{
+    va_list list;
+    va_start(list, fmt);
 
+    i64 res = baseColFprintfV(fp, fmt, list);
+    
+    va_end(list);
     return res;
 }
 

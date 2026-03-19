@@ -484,6 +484,11 @@ u64 Str8CountOccurance(str8 str, str8 needle, StrMatchFlags matchFlags)
     return count;
 }
 
+str8 Str8FromU8Array(U8Array arr)
+{
+    return baseStr8(arr.data, arr.len);
+}
+
 // conversions
 DecodeCodePointInfo baseStringsDecodeCodepointFromUtf8(u8 *bytes, u64 remainingLen)
 {

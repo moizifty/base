@@ -737,6 +737,7 @@ void metagenFillFlattenedMemb(Arena *arena, MetagenCStruct *type, MetagenCStruct
 }
 bool metagenCheckType(Arena *arena, MetagenCStruct *type, MetagenTypeDict *dict)
 {
+    basePrintf("checking %S\n", type->name);
     // so we dont get divide by 0 errors later
     type->typeInfo.alignment = 1;
     switch (type->checkStatus)
@@ -788,4 +789,408 @@ bool metagenCheckType(Arena *arena, MetagenCStruct *type, MetagenTypeDict *dict)
 
     baseEPrintf("unhandled case in check type '.\n");
     return false;
+}
+
+void metagenMetadataPass(Arena *arena, str8 baseFolder, Str8List inputPaths)
+{
+    basePrintf("{g}Beginning Metagen Metadata pass\n");
+
+    DateTime currentTime = OSGetLocalTime();
+
+    MetagenOutputList allOutputs = {0};
+    MetagenCStructList allIntrospectedStructs = {0};
+
+    BASE_LIST_FOREACH(Str8ListNode, pathNode, inputPaths)
+    {
+        str8 path = pathNode->val;
+
+        MetagenOutput *output = arenaPushType(arena, MetagenOutput);
+        output->inputPath = path;
+        output->header.path = Str8PushFmt(arena, "%S.gen.h", Str8ChopPast(path, STR8_LIT("."), STR_MATCHFLAGS_FIND_LAST));
+        output->impl.path = Str8PushFmt(arena, "%S.gen.c", Str8ChopPast(path, STR8_LIT("."), STR_MATCHFLAGS_FIND_LAST));
+
+        CLexerState clex = baseCLexerInitFromFile(arena, path);
+        baseCLexerLexWholeBuffer(arena, &clex);
+
+        // 1 2 3 4
+        CTok prevTok = {0};
+
+        for(u64 i = 0; i < clex.lexedToks.len; i++)
+        {
+            CTok tok = clex.lexedToks.data[i];
+            CTokArray remaining = {.data = clex.lexedToks.data + i + 1, .len = clex.lexedToks.len - (i + 1)};
+
+            if(tok.kind == CTOK_IDEN)
+            {
+                if (Str8Equals(tok.lexeme, gMetagenCmdKindStr8Table[METAGEN_CMD_EMBED_FILE], 0))
+                {
+                    metagenHandleEmbedFile(arena, output, remaining);
+                }
+                else if (Str8Equals(tok.lexeme, gMetagenCmdKindStr8Table[METAGEN_CMD_INTROSPECT], 0) &&
+                         !Str8Equals(prevTok.lexeme, STR8_LIT("define"), 0))
+                {
+                    metagenHandleIntrospect(arena, output, remaining, &allIntrospectedStructs);
+                }
+            }
+
+            prevTok = tok;
+        }
+
+        MetagenOutputListPushNodeLast(&allOutputs, output);
+    }
+
+    basePrintf("{g}Checking all introspected structs\n");
+    BASE_LIST_FOREACH(MetagenCStruct, type, allIntrospectedStructs)
+    {
+        if(metagenCheckType(arena, type, &gMetagenTypeDict))
+        {
+            Str8ListPushLastFmt(arena, &type->ownerOutput->header.defines, "extern MetagenStructMembArray g%SMembDefsTable;\n", type->name);
+
+            Str8ListPushLastFmt(arena, &type->ownerOutput->impl.tables, "extern MetagenStructMembArray g%SMembDefsTable=\n", type->name);
+            Str8ListPushLastFmt(arena, &type->ownerOutput->impl.tables, "{\n");
+
+            Str8ListPushLastFmt(arena, &type->ownerOutput->impl.tables, "\t.data=(MetagenStructMemb[%llu])\n", type->flattenedMembs.len);
+            //.name = STR8_LIT_COMP_CONST("v"), .type
+            Str8ListPushLastFmt(arena, &type->ownerOutput->impl.tables, "\t{\n");
+
+            for(u64 i = 0; i < type->flattenedMembs.len; i++)
+            {
+                Str8ListPushLastFmt(
+                    arena, 
+                    &type->ownerOutput->impl.tables, 
+                    "\t\t{.name = STR8_LIT_COMP_CONST(\"%S\"), .type = METAGEN_TYPE_%S, .size=%llu, .offset=%llu,", 
+                    type->flattenedMembs.data[i].name,
+                    type->flattenedMembs.data[i].type,
+                    type->flattenedMembs.data[i].typeInfo.size,
+                    type->flattenedMembs.data[i].offset
+                );
+
+                if (type->flattenedMembs.data[i].isArray)
+                {
+                    Str8ListPushLastFmt(arena, &type->ownerOutput->impl.tables, ".isArray=true, .arrayLen=%llu,", type->flattenedMembs.data[i].arrayLength);
+                }
+
+                if (type->flattenedMembs.data[i].isPointer)
+                {
+                    Str8ListPushLastFmt(arena, &type->ownerOutput->impl.tables, ".isPointer=true,");
+                }
+
+                Str8ListPushLastFmt(arena, &type->ownerOutput->impl.tables, "},\n");
+            }
+
+            Str8ListPushLastFmt(arena, &type->ownerOutput->impl.tables, "\t},\n");
+            Str8ListPushLastFmt(arena, &type->ownerOutput->impl.tables, "\t.len=%llu,\n", type->flattenedMembs.len);
+            Str8ListPushLastFmt(arena, &type->ownerOutput->impl.tables, "};\n");
+        }
+        else
+        {
+            baseEPrintf("{r}There was an error whilst introspecting type '%S', see previous error(s) if any\n", type->name);
+        }
+
+        basePrintf("type %S, %llu, %llu\n", type->name, type->typeInfo.size, type->typeInfo.alignment);
+    }
+    
+    basePrintf("{g}Generating output\n");
+    BASE_LIST_FOREACH(MetagenOutput, output, allOutputs)
+    {
+        if (BASE_ANY(output->header.embeds) || 
+            BASE_ANY(output->header.defines) ||
+            BASE_ANY(output->header.tables) ||
+            BASE_ANY(output->header.typedefs))
+        {
+            OSHandle outputFile = OSFileOpen(output->header.path, false, OS_FILEACCESS_WRITE, OS_FILECREATION_CREATE_OVERRITE);
+            OSFileWriteFmt(outputFile, "/**********************************************************************/\n");
+            OSFileWriteFmt(outputFile, "// GENERATED FILE\n");
+            OSFileWriteFmt(outputFile, "// Input: %S\n", output->inputPath);
+            OSFileWriteFmt(outputFile, "// Date-Time: %d/%d/%d - %02d:%02d\n", currentTime.day, currentTime.month, currentTime.year, currentTime.hour, currentTime.min);
+            OSFileWriteFmt(outputFile, "/**********************************************************************/\n\n");
+            //OSFileWriteFmt(outputFile, "#include \"base\\baseCore.h\"\n\n");
+            //OSFileWriteFmt(outputFile, "#include \"base\\baseStrings.h\"\n\n");
+            OSFileWriteFmt(outputFile, "#include \"base/baseMetagen.h\"\n\n");
+
+            BASE_LIST_FOREACH(Str8ListNode, node, output->header.defines)
+            {
+                OSFileWriteStr8(outputFile, node->val);
+            }
+
+            BASE_LIST_FOREACH(Str8ListNode, node, output->header.embeds)
+            {
+                OSFileWriteStr8(outputFile, node->val);
+            }
+
+            BASE_LIST_FOREACH(Str8ListNode, node, output->header.tables)
+            {
+                OSFileWriteStr8(outputFile, node->val);
+            }
+
+            OSFileClose(outputFile);
+        }
+
+        if (BASE_ANY(output->impl.embeds) || 
+            BASE_ANY(output->impl.tables))
+        {
+            str8 headerFileName = Str8SubStr8(output->header.path, Str8ChopPastLastSlash(output->header.path).len + 1, output->header.path.len);
+            OSHandle outputFile = OSFileOpen(output->impl.path, false, OS_FILEACCESS_WRITE, OS_FILECREATION_CREATE_OVERRITE);
+            OSFileWriteFmt(outputFile, "/**********************************************************************/\n");
+            OSFileWriteFmt(outputFile, "// GENERATED FILE\n");
+            OSFileWriteFmt(outputFile, "// Input: %S\n", output->inputPath);
+            OSFileWriteFmt(outputFile, "// Date-Time: %d/%d/%d - %02d:%02d\n", currentTime.day, currentTime.month, currentTime.year, currentTime.hour, currentTime.min);
+            OSFileWriteFmt(outputFile, "/**********************************************************************/\n\n");
+            OSFileWriteFmt(outputFile, "#include \"%S\"\n\n", headerFileName);
+
+            BASE_LIST_FOREACH(Str8ListNode, node, output->impl.embeds)
+            {
+                OSFileWriteStr8(outputFile, node->val);
+            }
+
+            BASE_LIST_FOREACH(Str8ListNode, node, output->impl.tables)
+            {
+                OSFileWriteStr8(outputFile, node->val);
+            }
+
+            OSFileClose(outputFile);
+        }
+    }
+
+    if (BASE_ANY(gMetagenTypeDict))
+    {
+        str8 commonMetagenPath = Str8PushFmt(arena, "%S\\baseMetagenCommon.gen.h", baseFolder);
+        OSHandle outputFile = OSFileOpen(commonMetagenPath, false, OS_FILEACCESS_WRITE, OS_FILECREATION_CREATE_OVERRITE);
+        OSFileWriteFmt(outputFile, "/**********************************************************************/\n");
+        OSFileWriteFmt(outputFile, "// GENERATED FILE\n");
+        OSFileWriteFmt(outputFile, "// Date-Time: %d/%d/%d - %02d:%02d\n", currentTime.day, currentTime.month, currentTime.year, currentTime.hour, currentTime.min);
+        OSFileWriteFmt(outputFile, "/**********************************************************************/\n\n");
+
+        BASE_LIST_FOREACH(MetagenTypeDictSlotEntry, entryNode, gMetagenTypeDict)
+        {
+            OSFileWriteFmt(outputFile, "extern MetagenStructMembArray g%SMembDefsTable;\n", entryNode->type->name);
+        }
+
+        u64 i = 0;
+        BASE_LIST_FOREACH_INDEX(MetagenTypeDictSlotEntry, entryNode, gMetagenTypeDict, i)
+        {
+            OSFileWriteFmt(outputFile, "#define METAGEN_TYPE_%S (METAGEN_TYPE_CUSTOM_BEGIN + %lld)\n", entryNode->type->name, i);
+        }
+
+        OSFileWriteFmt(outputFile, "#define METAGEN_PRINT_MEMB_CUSTOM \\\n");
+        BASE_LIST_FOREACH(MetagenTypeDictSlotEntry, entryNode, gMetagenTypeDict)
+        {
+            OSFileWriteFmt(outputFile, "         case METAGEN_TYPE_%S: basePrintStructEx(((u8*)(member) + (size*i)), g%SMembDefsTable); break;\\\n", entryNode->type->name, entryNode->type->name, entryNode->type->name);
+        }
+
+        OSFileClose(outputFile);
+    }
+
+    basePrintf("{g}Ending Metagen Metadata pass\n");
+}
+
+CTok metagenGetNextNonWhitespaceTok(Arena *arena, MetagenOutput *output, CLexerState *lex, bool outputWhitespace)
+{
+    CTok tok = {0};
+    while((tok = baseCLexerNext(lex)).kind == CTOK_WHITESPACE)
+    {
+        if (outputWhitespace) Str8ListPushLastFmt(arena, &output->impl.raw, "%S", tok.lexeme);
+    }
+
+    return tok;
+}
+str8 metagenDefersParseDefer(Arena *arena, MetagenOutput *output, CLexerState *lex)
+{
+    if (Str8Equals(lex->tok.lexeme, STR8_LIT("BASE_DEFER"), 0))
+    {
+        metagenGetNextNonWhitespaceTok(arena, output, lex, false);
+
+        if (lex->tok.kind == '{')
+        {
+            CTok start = lex->tok;
+            baseCLexerNext(lex);
+
+            u64 numBracketSeen = 1;
+            while(numBracketSeen != 0 && lex->tok.kind != CTOK_END_INPUT)
+            {
+                if (lex->tok.kind == '{') numBracketSeen++;
+                else if (lex->tok.kind == '}') numBracketSeen--;
+
+                // only advance if seen is not 0
+                // you want the tok u end the loop on to be the block end tok
+                if (numBracketSeen != 0)
+                {
+                    metagenGetNextNonWhitespaceTok(arena, output, lex, false);
+                }
+            }
+
+            if (lex->tok.kind == '}')
+            {
+                u64 len = (lex->tok.lexeme.data + lex->tok.lexeme.len) - start.lexeme.data;
+                str8 block = baseStr8(start.lexeme.data, len);
+                baseCLexerNext(lex);
+                return block;
+            }
+            else
+            {
+                baseEPrintf("Expected '}'\n");
+            }
+        }
+        else
+        {
+            baseEPrintf("Expected '{{' after BASE_DEFER\n");
+        }
+    }
+
+    return STR8_EMPTY;
+}
+bool metagenDefersProcessScope(Arena *arena, MetagenOutput *output, CLexerState *clex, MetagenScope *parent)
+{
+    MetagenScope scope = {.nestLevel = parent->nestLevel + 1, .parent = parent};
+    u64 bracketsSeen = 0;
+
+    bool foundDefers = false;
+    if (clex->tok.kind == '{')
+    {
+        Str8ListPushLastFmt(arena, &output->impl.raw, "%S", clex->tok.lexeme);
+        bracketsSeen += 1;
+        
+        baseCLexerNext(clex);
+
+        bool emittedAtReturn = false;
+        while (bracketsSeen != 0 && clex->tok.kind != CTOK_END_INPUT)
+        {
+            if (clex->tok.kind == '{')
+            {
+                if(metagenDefersProcessScope(arena, output, clex, &scope))
+                {
+                    foundDefers = true;
+                }
+
+                continue;
+            }
+            else if (clex->tok.kind == '}')
+            {
+                bracketsSeen--;
+            }
+            else if (Str8Equals(clex->tok.lexeme, STR8_LIT("BASE_DEFER"), 0))
+            {
+                str8 block = metagenDefersParseDefer(arena, output, clex);
+                if (BASE_ANY(block))
+                {
+                    foundDefers = true;
+                    Str8ListPushLast(arena, &scope.defers, block);
+                }
+
+                continue;
+            }
+
+            if (Str8Equals(clex->tok.lexeme, STR8_LIT("return"), 0))
+            {
+                MetagenScope *curr = &scope;
+                while (curr != null)
+                {
+                    BASE_LIST_REVFOREACH(Str8ListNode, node, curr->defers)
+                    {
+                        Str8ListPushLastFmt(arena, &output->impl.raw, "\n// Inserting Defer\n");
+
+                        Str8ListPushLastFmt(arena, &output->impl.raw, "\r");
+
+                        for(u64 t = 0; t < scope.nestLevel; t++)
+                        {
+                            Str8ListPushLastFmt(arena, &output->impl.raw, "    ");
+                        }
+
+                        Str8ListPushLastFmt(arena, &output->impl.raw, "%S\n", node->val);
+
+                        Str8ListPushLastFmt(arena, &output->impl.raw, "\r");
+
+                        for(u64 t = 0; t < scope.nestLevel; t++)
+                        {
+                            Str8ListPushLastFmt(arena, &output->impl.raw, "    ");
+                        }
+                    }
+
+                    curr = curr->parent;
+                }
+
+                emittedAtReturn = true;
+            }
+            else if (bracketsSeen == 0 && emittedAtReturn == false)
+            {
+                BASE_LIST_REVFOREACH(Str8ListNode, node, scope.defers)
+                {
+                    Str8ListPushLastFmt(arena, &output->impl.raw, "\n// Inserting Defer\n");
+
+                    Str8ListPushLastFmt(arena, &output->impl.raw, "\r");
+
+                    for(u64 t = 0; t < scope.nestLevel; t++)
+                    {
+                        Str8ListPushLastFmt(arena, &output->impl.raw, "    ");
+                    }
+
+                    Str8ListPushLastFmt(arena, &output->impl.raw, "%S\n", node->val);
+
+                    Str8ListPushLastFmt(arena, &output->impl.raw, "\r");
+
+                    for(u64 t = 0; t < scope.nestLevel - 1; t++)
+                    {
+                        Str8ListPushLastFmt(arena, &output->impl.raw, "    ");
+                    }
+                }
+            }
+
+            Str8ListPushLastFmt(arena, &output->impl.raw, "%S", clex->tok.lexeme);
+            baseCLexerNext(clex);
+        }
+    }
+
+    return foundDefers;
+}
+void metagenDefersPass(Arena *arena, Str8List inputPaths)
+{
+    basePrintf("{g}Starting defers pass\n");
+
+    DateTime currentTime = OSGetLocalTime();
+
+    BASE_LIST_FOREACH(Str8ListNode, inputPath, inputPaths)
+    {
+        CLexerState clex = baseCLexerInitFromFile(arena, inputPath->val);
+
+        clex.allowWhitespace = true;
+        baseCLexerLexWholeBuffer(arena, &clex);
+
+        MetagenOutput output = {0};
+        output.inputPath = inputPath->val;
+        output.impl.path = Str8PushFmt(arena, "%S.defer.gen.c", Str8ChopPast(inputPath->val, STR8_LIT("."), STR_MATCHFLAGS_FIND_LAST));
+
+        bool foundDefer = false;
+        while (clex.tok.kind != CTOK_END_INPUT)
+        {
+            if (clex.tok.kind == '{')
+            {
+                foundDefer = metagenDefersProcessScope(arena, &output, &clex, &(MetagenScope){.nestLevel = 0});
+                continue;
+            }
+
+            Str8ListPushLastFmt(arena, &output.impl.raw, "%S", clex.tok.lexeme);
+            baseCLexerNext(&clex);
+        }
+
+        if (foundDefer)
+        {
+            if (BASE_ANY(output.impl.raw))
+            {
+                OSHandle outputFile = OSFileOpen(output.impl.path, false, OS_FILEACCESS_WRITE, OS_FILECREATION_CREATE_OVERRITE);
+                OSFileWriteFmt(outputFile, "/**********************************************************************/\n");
+                OSFileWriteFmt(outputFile, "// GENERATED FILE\n");
+                OSFileWriteFmt(outputFile, "// Input: %S\n", output.inputPath);
+                OSFileWriteFmt(outputFile, "// Date-Time: %d/%d/%d - %02d:%02d\n", currentTime.day, currentTime.month, currentTime.year, currentTime.hour, currentTime.min);
+                OSFileWriteFmt(outputFile, "/**********************************************************************/\n\n");
+                
+                OSFileWriteStr8(outputFile, Str8ListJoin(arena, &output.impl.raw, null));
+
+                OSFileClose(outputFile);
+
+                basePrintf("{b}Found defer, saving file '%S'\n", output.impl.path);
+            }
+        }
+    }
+
+    basePrintf("{g}Ending defers pass\n");
 }

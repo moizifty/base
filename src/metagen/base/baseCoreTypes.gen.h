@@ -1,7 +1,9 @@
 /**********************************************************************/
-/* GENERATED FILE
-/* Input: src\base\baseCoreTypes.h
-/* Date-Time: 22/1/2025 - 16:04
+// GENERATED FILE
+// Input: .\src\base\baseCoreTypes.h
+// Date-Time: 19/3/2026 - 12:58
 /**********************************************************************/
+
+#include "base/baseMetagen.h"
 
 extern MetagenStructMembArray gDateTimeMembDefsTable;

@@ -90,7 +90,7 @@ Uri baseUriParseFromStr8(str8 str)
 
                     str8 auth = baseStr8(str.data + authStartIndex, authEndIndex - authStartIndex);
                     
-                    if(Str8Contains(auth, '@'))
+                    if(Str8Contains(auth, STR8_LIT("@"), 0))
                     {
                         u64 userInfoStartIndex = i;
 
@@ -116,7 +116,7 @@ Uri baseUriParseFromStr8(str8 str)
                         .len = (auth.len - ret.hier.userinfo.len) - (BASE_ANY(ret.hier.userinfo) ? 1 : 0),
                     };
 
-                    if (Str8Contains(hostAndMaybePort, ':'))
+                    if (Str8Contains(hostAndMaybePort, STR8_LIT(":"), 0))
                     {
                         u64 colonIndex = Str8FindSubStr8(hostAndMaybePort, STR8_LIT(":"), 0, STR_MATCHFLAGS_FIND_LAST);
                         ret.hier.port = baseStr8(hostAndMaybePort.data + colonIndex + 1, hostAndMaybePort.len - colonIndex - 1);

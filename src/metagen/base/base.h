@@ -1,5 +1,5 @@
 #ifndef BASE_H
-#define BASe_H
+#define BASE_H
 
 #include "baseCtxCrack.h"
 #include "baseCoreTypes.h"
@@ -10,12 +10,11 @@
 #include "baseHash.h"
 #include "baseCmdLine.h"
 #include "baseMath.h"
-#include "baseBitstream.h"
 #include "baseLog.h"
 #include "baseUri.h"
 #include "baseCLexer.h"
 #include "baseMetagen.h"
-
+#include "basePath.h"
 #include "baseCoreTypes.gen.h"
 
 #endif

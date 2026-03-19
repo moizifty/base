@@ -144,8 +144,8 @@ CLexerState baseCLexerInitFromBuffer(U8Array buffer)
     CLexerState ret = {0};
 
     ret.buffer = buffer;
-    ret.ch = ' ';
-    ret.currLocInBuffer = buffer.data;
+    ret.currLocInBuffer = buffer.data + 1;
+    ret.ch = *(ret.currLocInBuffer - 1);
     ret.line = 1;
     ret.col = 1;
     ret.nextTokIndex = 0;
@@ -207,16 +207,53 @@ u8 baseCLexerPeekCharEx(CLexerState *lexerState, u64 amount)
 CTok baseCLexerNextFromBuffer(CLexerState *lexerState)
 {
 LEX_START:
-    while(lexerState->currLocInBuffer <= (lexerState->buffer.data + lexerState->buffer.len) 
-          && (isspace(lexerState->ch) || lexerState->ch == '\0'))
+
+    if (!lexerState->allowWhitespace)
     {
-        baseCLexerAdvanceChar(lexerState);
+        while(lexerState->currLocInBuffer <= (lexerState->buffer.data + lexerState->buffer.len) 
+            && (isspace(lexerState->ch) || lexerState->ch == '\0'))
+        {
+            baseCLexerAdvanceChar(lexerState);
+        }
+    }
+    else
+    {
+        CTokPos pos = {.line = lexerState->line, .col = lexerState->col, .ownerLexer = lexerState, .tokRange.data = lexerState->currLocInBuffer - 1};
+        CTok tok = {.pos = pos};
+
+        if (isspace(lexerState->ch))
+        {
+            tok.lexeme.data = lexerState->currLocInBuffer - 1;
+            while(lexerState->currLocInBuffer <= (lexerState->buffer.data + lexerState->buffer.len) 
+            && (isspace(lexerState->ch)))
+            {
+                tok.lexeme.len++;
+                lexerState->ch = *lexerState->currLocInBuffer;
+                lexerState->currLocInBuffer++;
+            }
+
+            tok.kind = CTOK_WHITESPACE;
+            return tok;
+        }
     }
 
     CTokPos pos = {.line = lexerState->line, .col = lexerState->col, .ownerLexer = lexerState, .tokRange.data = lexerState->currLocInBuffer - 1};
     CTok tok = {.pos = pos};
 
-    if(lexerState->currLocInBuffer > (lexerState->buffer.data + lexerState->buffer.len))
+    // if (isspace(lexerState->ch) || lexerState->ch == '\0')
+    // {
+    //     tok.lexeme.data = lexerState->currLocInBuffer - 1;
+    //     while(lexerState->currLocInBuffer <= (lexerState->buffer.data + lexerState->buffer.len) 
+    //       && (isspace(lexerState->ch) || lexerState->ch == '\0'))
+    //     {
+    //         tok.lexeme.len++;
+    //         lexerState->ch = lexerState->currLocInBuffer++;
+    //     }
+
+    //     return tok;
+    // }
+
+    if(lexerState->currLocInBuffer > (lexerState->buffer.data + lexerState->buffer.len) || lexerState->ch == '\0')
     {
         tok.pos.tokRange.len = 0;
         tok.kind = CTOK_END_INPUT;
@@ -231,6 +268,44 @@ LEX_START:
         }
 
         goto LEX_START;
+    }
+    else if(lexerState->ch == '\'')
+    {
+        u64 tokLen = 1;
+        if(!baseCLexerAdvanceChar(lexerState)) goto LEX_START;
+
+        while(lexerState->ch != '\'')
+        {
+            if (lexerState->ch == '\\')
+            {
+                str8 charLitStr = {0};
+                charLitStr.data = lexerState->currLocInBuffer - 1;
+                charLitStr.len = 2;
+
+                if(baseCLexerGetEscapeCharValue(charLitStr) == '\'')
+                {
+                    tokLen++;
+                    baseCLexerAdvanceChar(lexerState);
+                }
+            }
+
+            tokLen++;
+            if(!baseCLexerAdvanceChar(lexerState))
+            {
+                goto LEX_START;
+            }
+        }
+
+        baseCLexerAdvanceChar(lexerState);
+        tokLen += 1;
+
+        str8 lexeme = {0};
+        lexeme.data =  lexerState->currLocInBuffer - 1 - tokLen;
+        lexeme.len = tokLen;
+
+        tok.pos.tokRange.len = tokLen;
+        tok.kind = CTOK_CHAR_LIT;
+        tok.lexeme = lexeme;
     }
     else if(lexerState->ch == '\"')
     {
@@ -362,6 +437,12 @@ LEX_START:
 CTok baseCLexerNext(CLexerState *lexerState)
 {
     return lexerState->tok = lexerState->lexedToks.data[lexerState->nextTokIndex++];
+}
+CTok baseCLexerNextNonWhitespace(CLexerState *lexerState)
+{
+    while(baseCLexerNext(lexerState).kind == CTOK_WHITESPACE);
+
+    return lexerState->tok;
 }
 CTok baseCLexerPeekEx(CLexerState *lexerState, u64 amount)
 {
