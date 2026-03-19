@@ -11,5 +11,4 @@ fn fib(x)
 
 
 sum = {90, 10, {120, 1290, fib(3)}};
-sum[2][1][0] = "sdsd";
 print(sum[2]);

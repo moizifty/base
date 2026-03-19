@@ -1,2 +1,2 @@
-[] Each scope has its own arena, you release this arena at the end of each block, everything which evals as part of the stmt interp
+[done] Each scope has its own arena, you release this arena at the end of each block, everything which evals as part of the stmt interp
    uses the scopes arena
