@@ -6,7 +6,7 @@ readonly BssSymTableSlotEntry gBsSymTableSlotEntryEmpty = {0};
 
 BASE_CREATE_EFFICIENT_LL_DEFS(BssSymTableSlotEntryList, BssSymTableSlotEntry)
 
-BssScope *bssAllocScope(BssInterp *interp, Arena *scopesArena, BssScope *parent, bool isScopeInFunction)
+BssScope *bssAllocScope(Arena *scopesArena, BssScope *parent, bool isScopeInFunction)
 {
     BssScope *scope = arenaPushType(scopesArena, BssScope);
     scope->parent = parent;
@@ -29,13 +29,13 @@ BssSymTableSlotEntry *bssScopeFindEntry(BssScope *scope, str8 name)
 
     return scope->parent ? bssScopeFindEntry(scope->parent, name) : BSS_SYMTABLE_SLOT_ENTRY_ZERO;
 }
-bool bssScopePushEntry(BssInterp *interp, BssScope *scope, str8 name, BssSymTableSlotEntry **out)
+bool bssScopePushEntry(BssScope *scope, str8 name, BssSymTableSlotEntry **out)
 {
     BssSymTableSlotEntry *existing = bssScopeFindEntry(scope, name);
     bool exists = existing != BSS_SYMTABLE_SLOT_ENTRY_ZERO;
     if (!exists)
     {
-        existing = arenaPushType(interp->arena, BssSymTableSlotEntry);
+        existing = arenaPushType(scope->scopeArena, BssSymTableSlotEntry);
         existing->name = name;
         existing->scopeDefinedIn = scope;
         

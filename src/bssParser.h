@@ -17,6 +17,7 @@ BssAstExprList bssParserParseExprList(BssInterp *interp, BssTokKind endKind);
 
 BssAstStmt *bssParserParseStmtIf(BssInterp *interp);
 BssAstStmt *bssParserParseStmtWhile(BssInterp *interp);
+BssAstStmt *bssParserParseStmtFor(BssInterp *interp);
 
 bool bssParserParseLexed(BssInterp *interp);
 bool bssParserParseFile(BssInterp *interp, str8 file);

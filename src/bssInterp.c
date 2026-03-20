@@ -17,7 +17,7 @@ void bssInterpreterError(BssInterp *interp, BssTokPos start, BssTokPos end, i8 *
 
 BssScope *bssInterpreterCreateFuncScopeAndPushArgs(BssInterp *interp, BssTokList params, BssAstExprList args)
 {
-    BssScope *fnScope = bssAllocScope(interp, arenaAllocDefault(), interp->rootScope, true);
+    BssScope *fnScope = bssAllocScope(arenaAllocDefault(), interp->rootScope, true);
     BssScope *prevScope = interp->currScope;
 
     // todo put in temp arena
@@ -43,7 +43,7 @@ BssScope *bssInterpreterCreateFuncScopeAndPushArgs(BssInterp *interp, BssTokList
     BASE_LIST_FOREACH_INDEX(BssTokListNode, param, params, index)
     {
         BssSymTableSlotEntry *paramEntry = BSS_SYMTABLE_SLOT_ENTRY_ZERO;
-        bssScopePushEntry(interp, interp->currScope, param->val.lexeme, &paramEntry);
+        bssScopePushEntry(interp->currScope, param->val.lexeme, &paramEntry);
 
         paramEntry->value = argValues.data[index];
     }
@@ -88,11 +88,54 @@ BssValue *bssInterpreterInterpFunc(BssInterp *interp, Arena *scopeArena, BssAstF
     return value;
 }
 
+BssValue *bssInterpreterInterpExprDotAccess(BssInterp *interp, Arena *scopeArena, BssAstExpr *expr, BssSymTableSlotEntry **outSym)
+{
+    *outSym = BSS_SYMTABLE_SLOT_ENTRY_ZERO;
+
+    BssValue *lhs = bssInterpreterInterpExpr(interp, scopeArena, expr->bin.left);
+    if (lhs != BSS_VALUE_ZERO)
+    {
+        if (lhs->kind == BSS_VALUE_OBJECT)
+        {
+            str8 iden = expr->bin.right->iden.lexeme;
+            *outSym = bssScopeFindEntry(lhs->obj, iden);
+            if (*outSym == BSS_SYMTABLE_SLOT_ENTRY_ZERO)
+            {
+                bssInterpreterError(interp,
+                                    expr->bin.right->startTok.pos,
+                                    expr->bin.right->endTok.pos,
+                                    "'%S' not found in object",
+                                    iden);
+
+                return BSS_VALUE_ZERO;
+            }
+
+            return (*outSym)->value;
+        }
+        else
+        {
+            bssInterpreterError(interp,
+                                expr->bin.left->startTok.pos,
+                                expr->bin.left->endTok.pos,
+                                "Expected lhs of dot operator to be of type obj.");
+
+            return BSS_VALUE_ZERO;
+        }
+    }
+
+    return BSS_VALUE_ZERO;
+}
 BssValue *bssInterpreterInterpExprBinary(BssInterp *interp, Arena *scopeArena, BssAstExpr *expr)
 {
     BssValue *value = BSS_VALUE_ZERO;
-
     BssValue *lhs = bssInterpreterInterpExpr(interp, scopeArena, expr->bin.left);
+
+    if (expr->bin.op.kind == '.')
+    {
+        BssSymTableSlotEntry *outSym = BSS_SYMTABLE_SLOT_ENTRY_ZERO;
+        return bssInterpreterInterpExprDotAccess(interp, scopeArena, expr, &outSym);
+    }
+
     BssValue *rhs = bssInterpreterInterpExpr(interp, scopeArena, expr->bin.right);
     if (lhs != BSS_VALUE_ZERO && rhs != BSS_VALUE_ZERO)
     {
@@ -181,6 +224,27 @@ BssValue *bssInterpreterInterpExprBinary(BssInterp *interp, Arena *scopeArena, B
                     return BSS_VALUE_ZERO;
                 }break;
             }
+        }
+        else if (lhs->kind == BSS_VALUE_ARRAY || rhs->kind == BSS_VALUE_ARRAY)
+        {
+            BssValue *arr = (lhs->kind == BSS_VALUE_ARRAY) ? lhs : rhs;
+            BssValue *item = (lhs->kind == BSS_VALUE_ARRAY) ? rhs : lhs;
+
+            switch (expr->bin.op.kind)
+            {
+                case '+':
+                {
+                    BssValueListPushNodeLast(&arr->array, item);
+                }break;
+
+                default:
+                {
+                    bssInterpreterError(interp, expr->startTok.pos, expr->endTok.pos, "Operator '%S' not valid with array", expr->bin.op.lexeme);
+                    return BSS_VALUE_ZERO;
+                }break;
+            }
+
+            return arr;
         }
         else if (lhs->kind == BSS_VALUE_STRING || rhs->kind == BSS_VALUE_STRING)
         {
@@ -383,7 +447,7 @@ BssValue *bssInterpreterInterpExpr(BssInterp *interp, Arena *scopeArena, BssAstE
                     {
                         BssBuiltinFunc *builtin = bssBuiltinFunctionFindEntry(interp, fnIden);
 
-                        value = builtin->func(interp, expr);
+                        value = builtin->func(interp, scopeArena, expr);
                     }
                     else
                     {
@@ -451,6 +515,7 @@ BssValue *bssInterpreterInterpExpr(BssInterp *interp, Arena *scopeArena, BssAstE
             // empty compounds are treated like arrays
             bool isArray = true;
 
+            u64 numNamed = 0;
             // validate named expressions are idens, on the lhs
             bool valid = true;
             BASE_LIST_FOREACH(BssAstNamedExpr, ne, expr->compound)
@@ -464,18 +529,34 @@ BssValue *bssInterpreterInterpExpr(BssInterp *interp, Arena *scopeArena, BssAstE
                         bssInterpreterError(interp, ne->lhs->startTok.pos, ne->lhs->endTok.pos, "Expected an identifier in named expression.");
                         valid = false;
                     }
+
+                    numNamed += 1;
                 }
+            }
+
+            if (!isArray && numNamed != expr->compound.len)
+            {
+                bssInterpreterError(interp, expr->startTok.pos, expr->endTok.pos, "All expressions need to be either named or unnamed.");
+                return BSS_VALUE_ZERO;
             }
 
             if(valid)
             {
                 BssValueList values = {0};
+                BssScope *scope = !isArray ? bssAllocScope(scopeArena, null, false) : BSS_SCOPE_ZERO;
 
                 BASE_LIST_FOREACH(BssAstNamedExpr, ne, expr->compound)
                 {
                     if (ne->isNamed)
                     {
-                        // todo named expressions, i.e objects
+                        BssSymTableSlotEntry *entry = BSS_SYMTABLE_SLOT_ENTRY_ZERO;
+                        bssScopePushEntry(scope, ne->lhs->iden.lexeme, &entry);
+
+                        entry->value = bssInterpreterInterpExpr(interp, scopeArena, ne->rhs);
+                        if (entry->value == BSS_VALUE_ZERO)
+                        {
+                            return BSS_VALUE_ZERO;
+                        }
                     }
                     else
                     {
@@ -491,7 +572,14 @@ BssValue *bssInterpreterInterpExpr(BssInterp *interp, Arena *scopeArena, BssAstE
                     }
                 }
 
-                value = bssAllocValueArray(scopeArena, values);
+                if (isArray)
+                {
+                    value = bssAllocValueArray(scopeArena, values);
+                }
+                else
+                {
+                    value = bssAllocValueObj(scopeArena, scope);
+                }
             }
         }break;
 
@@ -500,7 +588,6 @@ BssValue *bssInterpreterInterpExpr(BssInterp *interp, Arena *scopeArena, BssAstE
             BssSymTableSlotEntry *entry = bssScopeFindEntry(interp->currScope, expr->iden.lexeme);
             if (entry != BSS_SYMTABLE_SLOT_ENTRY_ZERO)
             {
-                // todo implement value copying
                 value = entry->value;
             }
             else
@@ -522,7 +609,6 @@ BssValue *bssInterpreterInterpExpr(BssInterp *interp, Arena *scopeArena, BssAstE
 BssValue *bssInterpreterInterpLValueExprAndGetSym(BssInterp *interp, Arena *scopeArena, BssAstExpr *expr, BssSymTableSlotEntry **outSym)
 {
     *outSym = BSS_SYMTABLE_SLOT_ENTRY_ZERO;
-    BssAstExpr *curr = expr;
     if (expr->kind == BSS_AST_EXPR_IDEN)
     {
         str8 iden = expr->iden.lexeme;
@@ -578,6 +664,11 @@ BssValue *bssInterpreterInterpLValueExprAndGetSym(BssInterp *interp, Arena *scop
             }
         }
     }
+    else if (expr->kind == BSS_AST_EXPR_BINARY && expr->bin.op.kind == '.')
+    {
+        BssValue *val = bssInterpreterInterpExprDotAccess(interp, scopeArena, expr, outSym);
+        return val;
+    }
     else
     {
         bssInterpreterError(interp, expr->startTok.pos, expr->endTok.pos, "Expression does not evaluate to an assignable value.");
@@ -602,7 +693,7 @@ bool bssInterpreterInterpStmt(BssInterp *interp, Arena *scopeArena, BssAstStmt *
             {
                 str8 iden = stmt->assign.lhs->iden.lexeme;
                 BssSymTableSlotEntry *entry = BSS_SYMTABLE_SLOT_ENTRY_ZERO;
-                bssScopePushEntry(interp, interp->currScope, iden, &entry);
+                bssScopePushEntry(interp->currScope, iden, &entry);
 
                 if (entry != BSS_SYMTABLE_SLOT_ENTRY_ZERO)
                 {
@@ -615,17 +706,20 @@ bool bssInterpreterInterpStmt(BssInterp *interp, Arena *scopeArena, BssAstStmt *
                 BssSymTableSlotEntry *entry = BSS_SYMTABLE_SLOT_ENTRY_ZERO;
                 BssValue *val = bssInterpreterInterpLValueExprAndGetSym(interp, scopeArena, stmt->assign.lhs, &entry);
 
-                if (entry != BSS_SYMTABLE_SLOT_ENTRY_ZERO)
+                if (entry != BSS_SYMTABLE_SLOT_ENTRY_ZERO && val != BSS_VALUE_ZERO)
                 {
                     BssValue *newValue = BSS_VALUE_ZERO;
                     ArenaTemp temp = baseTempBegin(&scopeArena, 1);
                     {
                         newValue = bssInterpreterInterpExpr(interp, temp.arena, stmt->assign.rhs);
-                        newValue = bssAllocValueCopy(entry->scopeDefinedIn->scopeArena, newValue);
-                        newValue->next = val->next;
-                        newValue->prev = val->prev;
+                        if (newValue != BSS_VALUE_ZERO)
+                        {
+                            newValue = bssAllocValueCopy(entry->scopeDefinedIn->scopeArena, newValue);
+                            newValue->next = val->next;
+                            newValue->prev = val->prev;
 
-                        *val = *newValue;
+                            *val = *newValue;
+                        }
                     }
 
                     baseTempEnd(temp);
@@ -633,9 +727,20 @@ bool bssInterpreterInterpStmt(BssInterp *interp, Arena *scopeArena, BssAstStmt *
                     return newValue != BSS_VALUE_ZERO;
                 }
             }
+            else if (stmt->assign.lhs->kind == BSS_AST_EXPR_BINARY && stmt->assign.lhs->bin.op.kind == '.')
+            {
+                BssSymTableSlotEntry *entry = BSS_SYMTABLE_SLOT_ENTRY_ZERO;
+                BssValue *val = bssInterpreterInterpLValueExprAndGetSym(interp, scopeArena, stmt->assign.lhs, &entry);
+
+                if (entry != BSS_SYMTABLE_SLOT_ENTRY_ZERO && val != BSS_VALUE_ZERO)
+                {
+                    entry->value = bssInterpreterInterpExpr(interp, entry->scopeDefinedIn->scopeArena, stmt->assign.rhs);
+                    return entry->value != BSS_VALUE_ZERO;
+                }
+            }
             else
             {
-                bssInterpreterError(interp, stmt->startTok.pos, stmt->endTok.pos, "Unhandled stmt assign type.");
+                bssInterpreterError(interp, stmt->startTok.pos, stmt->endTok.pos, "Lhs is not a valid LValue");
             }
         }break;
         
@@ -675,39 +780,31 @@ bool bssInterpreterInterpStmt(BssInterp *interp, Arena *scopeArena, BssAstStmt *
 
         case BSS_AST_STMT_WHILE:
         {
-            BssValue *condValue = bssInterpreterInterpExpr(interp, scopeArena, stmt->whileStmt.cond);
-            if (condValue != BSS_VALUE_ZERO)
+            bool loop = false;
+
+            do
             {
-                if (condValue->kind == BSS_VALUE_BOOL)
+                BssScope *blockScope = bssAllocScope(arenaAllocDefault(), interp->currScope, interp->currScope->isScopeInFunction);
+                BssScope *prev = interp->currScope;
+                interp->currScope = blockScope;
+
+                BssValue *condValue = bssInterpreterInterpExpr(interp, blockScope->scopeArena, stmt->whileStmt.cond);
+                bool valid = condValue != BSS_VALUE_ZERO && 
+                                condValue->kind == BSS_VALUE_BOOL;
+
+                if (valid)
                 {
-                    bool loop = false;
-
-                    do
+                    loop = condValue->num;
+                    if (loop)
                     {
-                        BssScope *blockScope = bssAllocScope(interp, arenaAllocDefault(), interp->currScope, interp->currScope->isScopeInFunction);
-                        BssScope *prev = interp->currScope;
-                        interp->currScope = blockScope;
-
-                        BssValue *condValue = bssInterpreterInterpExpr(interp, blockScope->scopeArena, stmt->whileStmt.cond);
-                        loop = condValue != BSS_VALUE_ZERO && 
-                               condValue->kind == BSS_VALUE_BOOL && 
-                               condValue->num == true;
-
-                        if (loop)
+                        if(bssInterpreterInterpBlock(interp, stmt->whileStmt.block, false) == BSS_VALUE_ZERO)
                         {
-                            if(bssInterpreterInterpBlock(interp, stmt->whileStmt.block, false) == BSS_VALUE_ZERO)
-                            {
-                                arenaFree(blockScope->scopeArena);
-                                return false;
-                            }
-
-                            interp->currScope = prev;
+                            arenaFree(blockScope->scopeArena);
+                            return false;
                         }
 
-                        arenaFree(blockScope->scopeArena);
-                    }while(loop);
-
-                    return true;
+                        interp->currScope = prev;
+                    }
                 }
                 else
                 {
@@ -715,8 +812,61 @@ bool bssInterpreterInterpStmt(BssInterp *interp, Arena *scopeArena, BssAstStmt *
                                         stmt->whileStmt.cond->startTok.pos,
                                         stmt->whileStmt.cond->endTok.pos,
                                         "Expected expression of boolean type for while condition");
+                    arenaFree(blockScope->scopeArena);
+                    return false;
+                }
+
+                arenaFree(blockScope->scopeArena);
+            }while(loop);
+
+            return true;
+        }break;
+
+        case BSS_AST_STMT_FOR:
+        {
+            ArenaTemp temp = baseTempBegin(&interp->currScope->scopeArena, 1);
+            {
+                BssValue *containerValue = bssInterpreterInterpExpr(interp, temp.arena, stmt->forStmt.container);
+
+                if (containerValue != BSS_VALUE_ZERO &&
+                    containerValue->kind == BSS_VALUE_ARRAY)
+                {
+                    BASE_LIST_FOREACH(BssValue, v, containerValue->array)
+                    {
+                        BssScope *blockScope = bssAllocScope(arenaAllocDefault(), interp->currScope, interp->currScope->isScopeInFunction);
+                        BssScope *prev = interp->currScope;
+                        interp->currScope = blockScope;
+                        
+                        BssSymTableSlotEntry *idenEntry = BSS_SYMTABLE_SLOT_ENTRY_ZERO;
+                        bssScopePushEntry(blockScope, stmt->forStmt.iden.lexeme, &idenEntry);
+                        idenEntry->value = v;
+
+                        if(bssInterpreterInterpBlock(interp, stmt->forStmt.block, false) == BSS_VALUE_ZERO)
+                        {
+                            arenaFree(blockScope->scopeArena);
+                            baseTempEnd(temp);
+                            return false;
+                        }
+
+                        interp->currScope = prev;
+                        arenaFree(blockScope->scopeArena);
+
+                    }
+                }
+                else
+                {
+                    bssInterpreterError(interp,
+                                        stmt->forStmt.container->startTok.pos,
+                                        stmt->forStmt.container->endTok.pos,
+                                        "Expected container expression of array type");
+                    baseTempEnd(temp);
+                    
+                    return false;
                 }
             }
+
+            baseTempEnd(temp);
+            return true;
         }break;
 
         case BSS_AST_STMT_RET:
@@ -760,7 +910,7 @@ BssValue *bssInterpreterInterpBlock(BssInterp *interp, BssAstBlock *block, bool 
 
     if (createBlock)
     {
-        BssScope *scope = bssAllocScope(interp, arenaAllocDefault(), prevScope, prevScope->isScopeInFunction);
+        BssScope *scope = bssAllocScope(arenaAllocDefault(), prevScope, prevScope->isScopeInFunction);
         interp->currScope = scope;
     }
     
@@ -794,6 +944,11 @@ bool bssInterpreterInterpParsed(BssInterp *interp)
 
     bssBuiltinFunctionPushEntry(interp, STR8_LIT("print"), 1, bssBuiltinPrint);
     bssBuiltinFunctionPushEntry(interp, STR8_LIT("run"), 1, bssBuiltinRun);
+    bssBuiltinFunctionPushEntry(interp, STR8_LIT("len"), 1, bssBuiltinLen);
+    bssBuiltinFunctionPushEntry(interp, STR8_LIT("tostring"), 1, bssBuiltinToString);
+    bssBuiltinFunctionPushEntry(interp, STR8_LIT("join"), 1, bssBuiltinJoin);
+    bssBuiltinFunctionPushEntry(interp, STR8_LIT("qoute"), 1, bssBuiltinQoute);
+    bssBuiltinFunctionPushEntry(interp, STR8_LIT("getenv"), 1, bssBuiltinGetenv);
 
     bool result = true;
     BASE_LIST_FOREACH(BssAstTopLevel, toplevel, interp->parser->file->toplevels)

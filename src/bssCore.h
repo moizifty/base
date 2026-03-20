@@ -115,20 +115,8 @@ typedef struct BssParser
     struct BssAstFile *file;
 }BssParser;
 
-
-typedef struct BssValueObjMemb
-{
-    struct BssValueObjMemb *next;
-    struct BssValueObjMemb *prev;
-
-    str8 name;
-    struct BssValue *val;
-}BssValueObjMemb;
-
-BASE_CREATE_EFFICIENT_LL_DECLS(BssValueObjMembList, BssValueObjMemb);
-
 typedef struct BssValue BssValue;
-BASE_CREATE_EFFICIENT_LL_DECLS(BssValueList, BssValue);
+BASE_CREATE_EFFICIENT_LL_DECLS(BssValueList, BssValue)
 
 typedef struct BssValue
 {
@@ -141,7 +129,7 @@ typedef struct BssValue
     union
     {
         i64 num; //bool, int, char
-        BssValueObjMemb obj;
+        struct BssScope *obj;
         BssValueList array;
 
         struct 
@@ -167,7 +155,7 @@ typedef struct BssValue
 
 BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(BssValueArray, BssValue*)
 
-typedef struct BssValue *(*BssFunc)(struct BssInterp *interp, struct BssAstExpr *expr);
+typedef struct BssValue *(*BssFunc)(struct BssInterp *interp, Arena *scopeArena, struct BssAstExpr *expr);
 typedef struct BssBuiltinFunc
 {
     str8 name;
@@ -221,6 +209,7 @@ BssValue *bssAllocValueStr8(Arena *arena, str8 val);
 BssValue *bssAllocValueBool(Arena *arena, bool val);
 BssValue *bssAllocValueFn(Arena *arena, struct BssAstFunc *ast);
 BssValue *bssAllocValueArray(Arena *arena, BssValueList values);
+BssValue *bssAllocValueObj(Arena *arena, struct BssScope *scope);
 
 str8 Str8FromBssValue(Arena *arena, BssValue *value);
 #endif

@@ -6,7 +6,7 @@ baselib = "{onedrivefolder}\Documents\Programming\C\base\src";
 print(baselib);
 
 this = {
-    src = {"{cwd}\_defer_temp_metagen\src\main.c"},
+    src = {"{cwd}\src\main.c"},
     libs = {
         ""
     },

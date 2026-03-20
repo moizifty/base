@@ -8,8 +8,6 @@
 
 #include "os/core/osEntryPoint.c"
 
-#define BASE_DEFER
-
 void ProgramMain(CmdLineHashMap *line)
 {
     Arena *arena = arenaAllocDefault();
@@ -18,6 +16,7 @@ void ProgramMain(CmdLineHashMap *line)
 
     if(!bssInterpreterInterpFile(&interp, STR8_LIT("tests/test.bss")))
     {
+        baseEPrintf("{r}Failed to interp file.\n");
         return;
     }
     

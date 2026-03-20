@@ -1,14 +1,41 @@
-
-fn some(x)
+fn prefix(array, p)
 {
-    return 200;
+    val = {};
+    for a in array
+    {
+        val = val + tostring(p + a); 
+    }
+    return val;
 }
 
-fn fib(x)
+fn compile(paths, includes, flags, output)
 {
-    return {some(x) + 2000};
+    paths = join(qoute(paths), " ");
+    includes = join(prefix(qoute(includes), "/I"), " ");
+    output = "/Fe" + qoute(output);
+    objFolder = "/Fo" + qoute("./builds/");
+    flags = join(flags, " ");
+
+    command = "cl.exe {paths} {includes} {output} {flags} {objFolder}";
+    commandOutput = run(command);
+
+    print(commandOutput.out);
+    print(commandOutput.err);
 }
 
+onedrivefolder = getenv("onedrive");
+baselib = "{onedrivefolder}\Documents\Programming\C\base\src";
 
-sum = {90, 10, {120, 1290, fib(3)}};
-print(sum[2]);
+src = {
+    "src/main.c",
+};
+
+includes = {
+    "{baselib}",
+};
+
+flags = {
+    "/Zi",
+};
+
+compile(src, includes, flags, "builds/main_test.exe");

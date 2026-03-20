@@ -20,8 +20,8 @@ typedef enum BssAstStmtKind
     BSS_AST_STMT_ASSIGN,
     BSS_AST_STMT_RET,
     BSS_AST_STMT_IF,
-    BSS_AST_STMT_FOR,
     BSS_AST_STMT_WHILE,
+    BSS_AST_STMT_FOR,
     BSS_AST_STMT_CONT,
     BSS_AST_STMT_BREAK,
 }BssAstStmtKind;
@@ -34,8 +34,8 @@ typedef enum BssAstExprKind
     BSS_AST_EXPR_UNARY,
     BSS_AST_EXPR_FUNCCALL,
     BSS_AST_EXPR_COMPOUND,
-    BSS_AST_EXPR_ACCESS,
     BSS_AST_EXPR_SUBSCRIPT,
+    BSS_AST_EXPR_ACCESS,
 }BssAstExprKind;
 
 typedef struct BssAstExpr BssAstExpr;
@@ -126,6 +126,13 @@ typedef struct BssAstStmt
             BssAstExpr *cond;
             struct BssAstBlock *block;
         }whileStmt;
+
+        struct
+        {
+            BssTok iden;
+            BssAstExpr *container;
+            struct BssAstBlock *block;
+        }forStmt;
     };
 }BssAstStmt;
 
@@ -201,5 +208,4 @@ BssAstExpr *bssAllocExprUnary(BssInterp *interp, BssTok start, BssTok end, BssAs
 BssAstExpr *bssAllocExprFnCall(BssInterp *interp, BssTok start, BssTok end, BssAstExpr *lhs, BssAstExprList args);
 BssAstExpr *bssAllocExprCompound(BssInterp *interp, BssTok start, BssTok end, BssAstNamedExprList compound);
 BssAstExpr *bssAllocExprSubscript(BssInterp *interp, BssTok start, BssTok end, BssAstExpr *container, BssAstExpr *index);
-
 #endif

@@ -41,8 +41,8 @@ typedef struct BssScope
 global BssScope gBssScopeEmpty;
 global BssSymTableSlotEntry gBsSymTableSlotEntryEmpty;
 
-BssScope *bssAllocScope(BssInterp *interp, Arena *scopesArena, BssScope *parent, bool isScopeInFunction);
+BssScope *bssAllocScope(Arena *scopesArena, BssScope *parent, bool isScopeInFunction);
 BssSymTableSlotEntry *bssScopeFindEntry(BssScope *scope, str8 name);
-bool bssScopePushEntry(BssInterp *interp, BssScope *scope, str8 name, BssSymTableSlotEntry **out);
+bool bssScopePushEntry(BssScope *scope, str8 name, BssSymTableSlotEntry **out);
 
 #endif

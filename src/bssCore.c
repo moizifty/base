@@ -137,7 +137,7 @@ void bssBuiltinFunctionPushEntry(BssInterp *interp, str8 name, int numParams, Bs
     BssBuiltinFuncListPushNodeLast(&interp->builtins, builtin);
 
     BssSymTableSlotEntry *entry = BSS_SYMTABLE_SLOT_ENTRY_ZERO;
-    bssScopePushEntry(interp, interp->rootScope, name, &entry);
+    bssScopePushEntry(interp->rootScope, name, &entry);
 
     entry->name = name;
     entry->value = arenaPushType(interp->arena, BssValue);
@@ -248,12 +248,22 @@ BssValue *bssAllocValueCopy(Arena *arena, BssValue *other)
     *value = *other;
 
     // handle all allocated types
-    
     if (value->kind == BSS_VALUE_STRING)
     {
         value->str = Str8PushCopy(arena, other->str);
     }
-    else if (value->kind == BSS_VALUE_ARRAY)
+    else if (value->kind == BSS_VALUE_OBJECT)
+    {
+        value->obj = bssAllocScope(arena, null, false);
+
+        BASE_LIST_FOREACH(BssSymTableSlotEntry, entry, other->obj->symTable.entries)
+        {
+            BssSymTableSlotEntry *copyEntry = BSS_SYMTABLE_SLOT_ENTRY_ZERO;
+            bssScopePushEntry(value->obj, entry->name, &copyEntry);
+            copyEntry->value = bssAllocValueCopy(arena, entry->value);
+        }
+    }
+    else if(value->kind == BSS_VALUE_ARRAY)
     {
         value->array = (BssValueList){0};
         BASE_LIST_FOREACH(BssValue, v, other->array)
@@ -300,6 +310,13 @@ BssValue *bssAllocValueArray(Arena *arena, BssValueList values)
 
     return value;
 }
+BssValue *bssAllocValueObj(Arena *arena, BssScope *scope)
+{
+    BssValue *value = bssAllocValue(arena, BSS_VALUE_OBJECT);
+    value->obj = scope;
+
+    return value;
+}
 
 str8 Str8FromBssValue(Arena *arena, BssValue *value)
 {
@@ -309,6 +326,30 @@ str8 Str8FromBssValue(Arena *arena, BssValue *value)
         case BSS_VALUE_INT: return Str8PushFmt(arena, "%lld", value->num);
         case BSS_VALUE_BOOL: return value->num ? STR8_LIT("true") : STR8_LIT("false");
         case BSS_VALUE_STRING: return value->str;
+        case BSS_VALUE_OBJECT:
+        {
+            str8 val = STR8_EMPTY;
+            ArenaTemp temp = baseTempBegin(&arena, 1);
+            {
+                Str8List list = {0};
+                Str8ListPushLastFmt(temp.arena, &list, "{");
+                BASE_LIST_FOREACH(BssSymTableSlotEntry, entry, value->obj->symTable.entries)
+                {
+                    Str8ListPushLastFmt(temp.arena, &list, "%S = %S", entry->name, Str8FromBssValue(temp.arena, entry->value));
+                    if (entry != value->obj->symTable.entries.last)
+                    {
+                        Str8ListPushLastFmt(temp.arena, &list, ", ");
+                    }
+                }
+                Str8ListPushLastFmt(temp.arena, &list, "}");
+
+                val = Str8ListJoin(arena, &list, null);
+            }
+
+            baseTempEnd(temp);
+
+            return val;
+        }break;
         case BSS_VALUE_ARRAY:
         {
             str8 val = STR8_EMPTY;
@@ -321,16 +362,17 @@ str8 Str8FromBssValue(Arena *arena, BssValue *value)
                     Str8ListPushLast(temp.arena, &list, Str8FromBssValue(temp.arena, v));
                     if (v != value->array.last)
                     {
-                        Str8ListPushLastFmt(temp.arena, &list, ",");
+                        Str8ListPushLastFmt(temp.arena, &list, ", ");
                     }
                 }
                 Str8ListPushLastFmt(temp.arena, &list, "}");
 
                 val = Str8ListJoin(arena, &list, null);
-                return val;
             }
 
             baseTempEnd(temp);
+
+            return val;
         }break;
 
         default:

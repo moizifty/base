@@ -19,6 +19,7 @@ BssPrecedenceTableEntry gBssPrecedenceTable[TOK_KIND_END + 1] =
 
     ['('] = {.precedence = 100, .prefix = null, .infix = bssParserParseExprFnCall},
     ['['] = {.precedence = 100, .prefix = null, .infix = bssParserParseExprSubscript},
+    ['.'] = {.precedence = 100, .prefix = null, .infix = bssParserParseExprBinary},
 };
 
 
@@ -50,6 +51,11 @@ BssAstStmt *bssParserParseStmt(BssInterp *interp)
         case TOK_WHILE_KW:
         {
             ast = bssParserParseStmtWhile(interp);
+        }break;
+
+        case TOK_FOR_KW:
+        {
+            ast = bssParserParseStmtFor(interp);
         }break;
 
         case TOK_RET_KW:
@@ -237,7 +243,7 @@ BssAstFunc *bssParserParseFunc(BssInterp *interp)
                             ast->params = params;
 
                             BssSymTableSlotEntry *entry = BSS_SYMTABLE_SLOT_ENTRY_ZERO;
-                            bssScopePushEntry(interp, interp->rootScope, iden.lexeme, &entry);
+                            bssScopePushEntry(interp->rootScope, iden.lexeme, &entry);
 
                             entry->value = bssAllocValueFn(interp->rootScope->scopeArena, ast);
                         }
@@ -362,6 +368,49 @@ BssAstStmt *bssParserParseStmtWhile(BssInterp *interp)
     else
     {
         bssParserError(interp, "Expected 'while' kw, instead got '%S'", BSS_PARSER_CURR_TOK.lexeme);
+    }
+
+    return ast;
+}
+BssAstStmt *bssParserParseStmtFor(BssInterp *interp)
+{
+    BssAstStmt *ast = BSS_AST_STMT_ZERO;
+    BssTok start = BSS_PARSER_CURR_TOK;
+
+    if (BSS_PARSER_MATCH(TOK_FOR_KW))
+    {
+        BSS_PARSER_NEXT_TOK();
+
+        if (BSS_PARSER_MATCH(TOK_IDEN) && BSS_PARSER_PEEK_TOK(1).kind == TOK_IN_KW)
+        {
+            BssTok iden = BSS_PARSER_CURR_TOK;
+            BSS_PARSER_NEXT_TOK(); //iden
+            BSS_PARSER_NEXT_TOK(); //in
+
+            BssAstExpr *container = bssParserParseExpr(interp, 0);
+            if (container != BSS_AST_EXPR_ZERO)
+            {
+                BssAstBlock *block = bssParserParseBlock(interp);
+                if (block != BSS_AST_BLOCK_ZERO)
+                {
+                    ast = arenaPushType(interp->arena, BssAstStmt);
+                    ast->startTok = start;
+                    ast->endTok = block->endTok;
+                    ast->kind = BSS_AST_STMT_FOR;
+                    ast->forStmt.iden = iden;
+                    ast->forStmt.block = block;
+                    ast->forStmt.container = container;
+                }
+            }
+        }
+        else
+        {
+            bssParserError(interp, "Expected identifier followed by 'in kw.");
+        }
+    }
+    else
+    {
+        bssParserError(interp, "Expected 'for' kw, instead got '%S'", BSS_PARSER_CURR_TOK.lexeme);
     }
 
     return ast;
@@ -612,6 +661,21 @@ BssAstExpr *bssParserParseExprBinary(BssInterp *interp, BssAstExpr *left, BssTok
             }
         }break;
 
+        case '.':
+        {
+            if (BSS_PARSER_MATCH(TOK_IDEN))
+            {
+                BssAstExpr *rhs = bssAllocExprIden(interp, BSS_PARSER_CURR_TOK, BSS_PARSER_CURR_TOK, BSS_PARSER_CURR_TOK);
+                BSS_PARSER_NEXT_TOK();
+                
+                expr = bssAllocExprBinary(interp, left->startTok, rhs->endTok, left, rhs, op);
+            }
+            else
+            {
+                bssParserError(interp, "Expected identifier after access operator, instead got '%S'", BSS_PARSER_CURR_TOK.lexeme);
+            }
+        }break;
+
         default:
         {
             bssParserError(interp, "Unregognised binary operator '%S'", op.lexeme);
@@ -670,7 +734,7 @@ bool bssParserParseLexed(BssInterp *interp)
 {
     interp->parser = arenaPushType(interp->arena, BssParser);
     interp->parser->file = arenaPushType(interp->arena, BssAstFile);
-    interp->rootScope = bssAllocScope(interp, arenaAllocDefault(), null, false);
+    interp->rootScope = bssAllocScope(arenaAllocDefault(), null, false);
 
     BssAstTopLevelList toplevels = bssParserParseTopLevels(interp);
     interp->parser->file->toplevels = toplevels;
