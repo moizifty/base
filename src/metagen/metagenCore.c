@@ -9,6 +9,7 @@ extern str8 gMetagenCmdKindStr8Table[METAGEN_CMD_COUNT] =
     [METAGEN_CMD_INTROSPECT] = STR8_LIT_COMP_CONST("metagen_introspect"),
     [METAGEN_CMD_INTROSPECT_EXCLUDE] = STR8_LIT_COMP_CONST("metagen_introspectexclude"),
     [METAGEN_CMD_EMBED_FILE] = STR8_LIT_COMP_CONST("metagen_embedfile"),
+    [METAGEN_CMD_DEFER] = STR8_LIT_COMP_CONST("metagen_defer"),
 };
 
 extern MetagenTypeDict gMetagenTypeDict = {0};
@@ -491,7 +492,7 @@ Str8List metagenFindFilesToProcess(Arena *arena, str8 path)
                 if (fileInfo.attrs & OS_FILEATTR_DIR)
                 {
                     if (!Str8EndsWith(fileInfo.name, STR8_LIT("metagen"), STR_MATCHFLAGS_CASE_INSENSITIVE) &&
-                        !Str8EndsWith(fileInfo.name, STR8_LIT("_defer_temp_metagen"), STR_MATCHFLAGS_CASE_INSENSITIVE))
+                        !Str8EndsWith(fileInfo.name, METAGEN_DEFER_TEMP_FOLDER_NAME, STR_MATCHFLAGS_CASE_INSENSITIVE))
                     {
                         FindTask *t = arenaPushType(arena, FindTask);
                         t->path = Str8PushFmt(arena, "%S\\%S", task->path, fileInfo.name);
@@ -792,7 +793,7 @@ bool metagenCheckType(Arena *arena, MetagenCStruct *type, MetagenTypeDict *dict)
     return false;
 }
 
-void metagenMetadataPass(Arena *arena, str8 baseFolder, Str8List inputPaths)
+void metagenMetadataPass(Arena *arena, str8 baseFolder, Str8List *inputPaths)
 {
     basePrintf("{g}Beginning Metagen Metadata pass\n");
 
@@ -801,7 +802,7 @@ void metagenMetadataPass(Arena *arena, str8 baseFolder, Str8List inputPaths)
     MetagenOutputList allOutputs = {0};
     MetagenCStructList allIntrospectedStructs = {0};
 
-    BASE_LIST_FOREACH(Str8ListNode, pathNode, inputPaths)
+    BASE_LIST_FOREACH(Str8ListNode, pathNode, *inputPaths)
     {
         str8 path = pathNode->val;
 
@@ -908,6 +909,7 @@ void metagenMetadataPass(Arena *arena, str8 baseFolder, Str8List inputPaths)
             //OSFileWriteFmt(outputFile, "#include \"base\\baseCore.h\"\n\n");
             //OSFileWriteFmt(outputFile, "#include \"base\\baseStrings.h\"\n\n");
             OSFileWriteFmt(outputFile, "#include \"base/baseMetagen.h\"\n\n");
+            OSFileWriteFmt(outputFile, "#include \"base/baseMetagenCommon.gen.h\"\n\n");
 
             BASE_LIST_FOREACH(Str8ListNode, node, output->header.defines)
             {
@@ -925,6 +927,8 @@ void metagenMetadataPass(Arena *arena, str8 baseFolder, Str8List inputPaths)
             }
 
             OSFileClose(outputFile);
+
+            Str8ListPushLast(arena, inputPaths, output->header.path);
         }
 
         if (BASE_ANY(output->impl.embeds) || 
@@ -950,6 +954,8 @@ void metagenMetadataPass(Arena *arena, str8 baseFolder, Str8List inputPaths)
             }
 
             OSFileClose(outputFile);
+
+            Str8ListPushLast(arena, inputPaths, output->impl.path);
         }
     }
 
@@ -997,7 +1003,7 @@ CTok metagenGetNextNonWhitespaceTok(Arena *arena, MetagenOutput *output, CLexerS
 }
 str8 metagenDefersParseDefer(Arena *arena, MetagenOutput *output, CLexerState *lex)
 {
-    if (Str8Equals(lex->tok.lexeme, STR8_LIT("BASE_DEFER"), 0))
+    if (Str8Equals(lex->tok.lexeme, gMetagenCmdKindStr8Table[METAGEN_CMD_DEFER], 0))
     {
         metagenGetNextNonWhitespaceTok(arena, output, lex, false);
 
@@ -1034,7 +1040,7 @@ str8 metagenDefersParseDefer(Arena *arena, MetagenOutput *output, CLexerState *l
         }
         else
         {
-            baseEPrintf("Expected '{{' after BASE_DEFER\n");
+            baseEPrintf("Expected '{{' after '%S'\n", gMetagenCmdKindStr8Table[METAGEN_CMD_DEFER]);
         }
     }
 
@@ -1069,7 +1075,7 @@ bool metagenDefersProcessScope(Arena *arena, MetagenOutput *output, CLexerState 
             {
                 bracketsSeen--;
             }
-            else if (Str8Equals(clex->tok.lexeme, STR8_LIT("BASE_DEFER"), 0))
+            else if (Str8Equals(clex->tok.lexeme, gMetagenCmdKindStr8Table[METAGEN_CMD_DEFER], 0))
             {
                 str8 block = metagenDefersParseDefer(arena, output, clex);
                 if (BASE_ANY(block))
@@ -1169,14 +1175,17 @@ void metagenDefersPass(Arena *arena, Str8List inputPaths)
 
         MetagenOutput output = {0};
         output.inputPath = inputPath->val;
-        output.impl.path = Str8PushFmt(arena, "_defer_temp_metagen/%S", inputPath->val);
+        output.impl.path = Str8PushFmt(arena, "%S/%S", METAGEN_DEFER_TEMP_FOLDER_NAME, inputPath->val);
 
         bool foundDefer = false;
         while (clex.tok.kind != CTOK_END_INPUT)
         {
             if (clex.tok.kind == '{')
             {
-                foundDefer = metagenDefersProcessScope(arena, &output, &clex, &(MetagenScope){.nestLevel = 0});
+                if(metagenDefersProcessScope(arena, &output, &clex, &(MetagenScope){.nestLevel = 0}))
+                {
+                    foundDefer = true;
+                }
                 continue;
             }
 

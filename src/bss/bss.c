@@ -2,9 +2,8 @@
 
 #include "bssCore.c"
 #include "bssLexer.c"
-#include "bssAST.c"
+#include "bssAst.c"
+#include "bssScope.c"
 #include "bssParser.c"
-#include "bssTypes.c"
-#include "bssScopes.c"
-#include "bssChecker.c"
+#include "bssBuiltins.c"
 #include "bssInterp.c"

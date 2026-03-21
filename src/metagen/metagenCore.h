@@ -10,7 +10,7 @@
 #define METAGEN_TOK_MATCH_KIND(T, K) ((T).kind == (K))
 #define METAGEN_TOK_MATCH_LEXEME(T, L) (Str8Equals((T).lexeme, (L), 0))
 #define METAGEN_TOK_MATCH_KIND_LEXEME(T, K, L) (METAGEN_TOK_MATCH_KIND(T, K) && METAGEN_TOK_MATCH_LEXEME(T, L))
-
+#define METAGEN_DEFER_TEMP_FOLDER_NAME (STR8_LIT("metagen_defer_temp"))
 typedef enum MetagenCmdKind
 {
     METAGEN_CMD_GEN_TABLE,
@@ -18,6 +18,7 @@ typedef enum MetagenCmdKind
     METAGEN_CMD_INTROSPECT,
     METAGEN_CMD_INTROSPECT_EXCLUDE,
     METAGEN_CMD_EMBED_FILE,
+    METAGEN_CMD_DEFER,
     METAGEN_CMD_COUNT,
 }MetagenCmdKind;
 
@@ -156,6 +157,6 @@ Str8List metagenFindFilesToProcess(Arena *arena, str8 path);
 CTok metagenGetNextNonWhitespaceTok(Arena *arena, MetagenOutput *output, CLexerState *lex, bool outputWhitespace);
 str8 metagenDefersParseDefer(Arena *arena, MetagenOutput *output, CLexerState *clex);
 bool metagenDefersProcessScope(Arena *arena, MetagenOutput *output, CLexerState *clex, MetagenScope *parent);
+void metagenMetadataPass(Arena *arena, str8 baseFolder, Str8List *inputPaths);
 void metagenDefersPass(Arena *arena, Str8List inputPaths);
-void metagenMetadataPass(Arena *arena, str8 baseFolder, Str8List inputPaths);
 #endif

@@ -302,6 +302,86 @@ str8 OSGetFullPath(struct Arena *arena, str8 path)
     return ret;
 }
 
+bool OSFileDelete(str8 path)
+{
+    ArenaTemp temp = baseTempBegin(null, 0);
+
+    str16 wide = Str16FromFromStr8(temp.arena, path);
+    bool result = DeleteFileW((LPCWSTR)wide.data);
+
+    baseTempEnd(temp);
+
+    return result;
+}
+bool OSDirectoryDelete(str8 path, bool recursive)
+{
+    ArenaTemp temp = baseTempBegin(null, 0);
+    bool result = true;
+    if (recursive)
+    {
+        Str8List allPaths = {0};
+        typedef struct FindTask
+        {
+            str8 path;
+
+            struct FindTask *next;
+            struct FindTask *prev;
+        }FindTask;
+
+        FindTask initialTask = {.path = Str8PushFmt(temp.arena, "%S", path)};
+
+        FindTask *firstTask = &initialTask;
+        FindTask *lastTask = &initialTask;
+
+        for(FindTask *task = firstTask; task != null; task = task->next)
+        {
+            OSFileFindIter *iter = OSFindFileBegin(temp.arena, Str8PushFmt(temp.arena, "%S\\*", task->path), null);
+            if (iter != null)
+            {
+                for(OSFileInfo fileInfo = {0}; OSFindFileNext(temp.arena, iter, &fileInfo); )
+                {
+                    if (fileInfo.attrs & OS_FILEATTR_DIR)
+                    {
+                        FindTask *t = arenaPushType(temp.arena, FindTask);
+                        t->path = Str8PushFmt(temp.arena, "%S\\%S", task->path, fileInfo.name);
+
+                        BaseDllNodePushLast(firstTask, lastTask, t);
+                        Str8ListPushLast(temp.arena, &allPaths, Str8PushFmt(temp.arena, "%S\\%S", task->path, fileInfo.name));
+                    }
+                    else
+                    {
+                        Str8ListPushFirst(temp.arena, &allPaths, Str8PushFmt(temp.arena, "%S\\%S", task->path, fileInfo.name));
+                    }
+                }
+
+                OSFindFileEnd(iter);
+            }
+        }
+
+        BASE_LIST_FOREACH(Str8ListNode, pathNode, allPaths)
+        {
+            result = result && OSPathDelete(pathNode->val, recursive);
+        }
+    }
+
+    str16 widePath = Str16FromFromStr8(temp.arena, path);
+    result = result && RemoveDirectory((LPCWSTR)widePath.data);
+    baseTempEnd(temp);
+
+    return result;
+}
+bool OSPathDelete(str8 path, bool recursive)
+{
+    if (OSPathIsDirectory(path))
+    {
+        return OSDirectoryDelete(path, recursive);
+    }
+    else
+    {
+        return OSFileDelete(path);
+    }
+}
+
 bool OSCreateDirectory(str8 path, bool createIntermediateDirs)
 {
     bool result = true;
@@ -451,6 +531,8 @@ Str8List OSGetFilePaths(Arena *arena, str8 dir, str8 pattern, bool recursive)
             }
         }
     }
+
+    OSFindFileEnd(findIter);
 
     return ret;
 }
@@ -704,6 +786,9 @@ str8 OSGetEnvironmentVar(Arena *arena, str8 var)
 {
     str8 val = STR8_LIT("");
 
+    ArenaTemp temp = baseTempBegin(&arena, 1);
+    var = Str8PushFmt(arena, "%S", var);
+    
     i64 size = GetEnvironmentVariableA((i8*)var.data, null, 0);
     if(size > 0)
     {
@@ -713,6 +798,7 @@ str8 OSGetEnvironmentVar(Arena *arena, str8 var)
         val.len = size - 1;
     }
 
+    baseTempEnd(temp);
     return val;
 }
 

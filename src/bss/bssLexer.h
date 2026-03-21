@@ -1,31 +1,20 @@
 #ifndef BSS_LEXER_H
 #define BSS_LEXER_H
 
-#include "base/baseCore.h"
-#include "base/baseStrings.h"
-#include "base/baseMemory.h"
+#include "bssCore.h"
 
-#include "bss\bssCore.h"
+#include "os/core/osCore.h"
+#include "bssLexer.h"
 
-void BssTokChunkListPushLast(Arena *arena, BssTokChunkList *l, BssTok tok);
-BssTokArray BssTokChunkListFlattenToArray(Arena *arena, BssTokChunkList *l);
+bool bssLexerAdvanceChar(BssInterp *interp);
+u8 bssLexerPeekCharEx(BssInterp *interp, u64 amount);
+u8 bssLexerPeekChar(BssInterp *interp);
 
-bool bssLexerInitFromFile(struct BSSInterpretorState *iState, str8 filePath);
-bool bssLexerInitFromBuffer(struct BSSInterpretorState *iState, U8Array buffer);
+BssTok bssLexerLexNextTok(BssInterp *interp);
 
-BssTokArray bssLexerLexWholeBuffer(struct BSSInterpretorState *iState);
+bool bssLexerFromBuffer(BssInterp *interp, U8Array buf);
+bool bssLexerLexFile(BssInterp *interp, str8 file);
+BssTok bssLexerGetNextTok(BssInterp *interp);
+BssTok bssLexerPeekTok(BssInterp *interp, u64 amount);
 
-bool bssLexerAdvanceChar(struct BSSInterpretorState *iState);
-u8 bssLexerPeekChar(struct BSSInterpretorState *iState);
-u8 bssLexerPeekCharEx(struct BSSInterpretorState *iState, u64 amount);
-
-BssTok bssLexerNextFromBuffer(struct BSSInterpretorState *iState);
-BssTok bssLexerNext(struct BSSInterpretorState *iState);
-BssTok bssLexerPeekEx(struct BSSInterpretorState *iState, u64 amount);
-BssTok bssLexerPeek(struct BSSInterpretorState *iState);
-
-void bssLexerPrint(struct BSSInterpretorState *iState, char *fmt, ...);
-void bssLexerError(struct BSSInterpretorState *iState, char *fmt, ...);
-
-void bssLexerPrintTokenRange(BssTok start, BssTok end);
 #endif

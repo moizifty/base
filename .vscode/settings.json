@@ -1,7 +1,7 @@
 {
     "files.associations": {
         "*.amp": "jai",
-        "*.bss": "csharp",
+        "*.bss": "python",
         "*.h": "c",
         "*.c": "c",
         "compressionLZ.C": "c",

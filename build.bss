@@ -1,54 +1,81 @@
-print("~nBuilding {cwd}~n~n");
+fn prefix(array, p)
+{
+    val = {};
+    for a in array
+    {
+        val = val + tostring(p + a); 
+    }
+    return val;
+}
 
-this = {
-    src = quoteit(getfiles("{cwd}\src\", "*.c", true)),
-    objs = {
-        ""
-    },
-    libs = {
-        ""
-    },
-};
+fn compile(paths, includes, flags, output)
+{
+    paths = join(qoute(paths), " ");
+    includes = join(prefix(qoute(includes), "/I"), " ");
+    output = "/Fe" + qoute(output);
+    objFolder = "/Fo" + qoute("./builds/");
+    flags = join(flags, " ");
 
+    command = "cl.exe {paths} {includes} {output} {flags} {objFolder} /Wall /wd4062 /wd4063 /wd4061 /wd4255 /wd4201 /wd4774 /wd4668 /wd4464 /wd5045 /wd4820 /DBUILD_CONSOLE_APP";
+    commandOutput = run(command);
+
+    print(commandOutput.out);
+    print(commandOutput.err);
+}
+
+onedrivefolder = getenv("onedrive");
+
+fn compilemain()
+{
+    baselib = "{onedrivefolder}\Documents\Programming\C\base\src";
+
+    src = {
+        "src/tests/main.c",
+    };
+
+    includes = {
+        "{baselib}",
+        "src",
+    };
+
+    flags = {
+        "/Zi",
+    };
+
+    compile(src, includes, flags, "builds/main.exe");
+}
+
+fn compilemetagen()
+{
+    baselib = "{onedrivefolder}\Documents\Programming\C\base\src";
+
+    src = {
+        "src/metagen/metagenEntryPoint.c",
+    };
+
+    includes = {
+        "{baselib}",
+        "src/metagen",
+    };
+
+    flags = {
+        "/Zi",
+    };
+
+    compile(src, includes, flags, "src/metagen/builds/mg.exe");
+}
+
+
+print("~nBuilding~n~n");
 
 if hasflag("build")
 {
-    compiler = "cl";
-
-    exePath = "{cwd}\builds\main.exe";
-
-    includeArg = "/I" + "src";
-    outputName = "/Fe~"{exePath}~"";
-    objFolder = "/Fo~"{"{cwd}\builds/"}~"";
-    
-    command = "{compiler} /Zi {includeArg} src\tests\main.c {outputName} {objFolder} /Wall /wd4062 /wd4063 /wd4061 /wd4255 /wd4201 /wd4774 /wd4668 /wd4464 /wd5045 /wd4820 /DBUILD_CONSOLE_APP ";
-    output = run command;
-
-    print("{output.stdout}~n");
-    print("{output.stderr}~n");
-
-    deleteObjsCommand = run "del ~"{"{cwd}\builds\*.obj"}~"";
-    print("{deleteObjsCommand}");
+    compilemain();
 }
 
 if (hasflag("metagen"))
 {
-    compiler = "cl";
-
-    exePath = "{cwd}\src\metagen\builds\mg.exe";
-
-    includeArg = "/I" + "src\\metagen" + " /I" + "src";
-    outputName = "/Fe~"{exePath}~"";
-    objFolder = "/Fo~"{"{cwd}\builds/"}~"";
-    
-    command = "{compiler} /Zi {includeArg} src\metagen\metagenEntryPoint.c {outputName} {objFolder} /Wall /wd4062 /wd4063 /wd4061 /wd4255 /wd4201 /wd4774 /wd4668 /wd4464 /wd5045 /wd4820 /DBUILD_CONSOLE_APP ";
-    output = run command;
-
-    print("{output.stdout}~n");
-    print("{output.stderr}~n");
-
-    deleteObjsCommand = run "del ~"{"{cwd}\builds\*.obj"}~"";
-    print("{deleteObjsCommand}");
+    compilemetagen();
 }
 
-print("~nFinished Building {cwd}~n");
+print("~nFinished Building~n");

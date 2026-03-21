@@ -9,6 +9,7 @@
 #define metagen_introspectexclude(...)
 #define metagen_genprintstructmemb(...)
 #define metagen_embedfile(name, path, mode)
+#define metagen_defer
 
 #define basePrintStruct(T, S) basePrintStructEx(&(S), (g##T##MembDefsTable))
 

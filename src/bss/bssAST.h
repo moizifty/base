@@ -1,207 +1,211 @@
 #ifndef BSS_AST_H
 #define BSS_AST_H
 
-#include "base/baseCore.h"
-#include "base/baseMemory.h"
 #include "bssCore.h"
-#include "bssTypes.h"
 
-typedef enum ASTStmtKind ASTStmtKind;
-typedef enum ASTExprKind ASTExprKind;
+#define BSS_AST_POS_DEFS                 \
+                        BssTok startTok; \
+                        BssTok endTok;   \
 
-typedef struct ASTProject ASTProject;
-typedef struct ASTStmt ASTStmt;
-typedef struct ASTBlock ASTBlock;
-typedef struct ASTExpr ASTExpr;
-typedef struct ASTNamedExpr ASTNamedExpr;
+typedef enum BssAstTopLevelKind
+{
+    BSS_AST_TOP_LEVEL_NONE, // ZII
+    BSS_AST_TOP_LEVEL_STMT,
+    BSS_AST_TOP_LEVEL_FUNC,
+}BssAstTopLevelKind;
 
-typedef struct ASTStmtList ASTStmtList;
-typedef struct ASTExprList ASTExprList;
-typedef struct ASTNamedExprList ASTNamedExprList;
+typedef enum BssAstStmtKind
+{
+    BSS_AST_STMT_EXPR,
+    BSS_AST_STMT_ASSIGN,
+    BSS_AST_STMT_RET,
+    BSS_AST_STMT_IF,
+    BSS_AST_STMT_WHILE,
+    BSS_AST_STMT_FOR,
+    BSS_AST_STMT_CONT,
+    BSS_AST_STMT_BREAK,
+}BssAstStmtKind;
 
-typedef enum ASTStmtKind
-{ 
-    AST_STMT_ASSIGN,
-    AST_STMT_EXPR,
+typedef enum BssAstExprKind
+{
+    BSS_AST_EXPR_LIT,
+    BSS_AST_EXPR_IDEN,
+    BSS_AST_EXPR_BINARY,
+    BSS_AST_EXPR_UNARY,
+    BSS_AST_EXPR_FUNCCALL,
+    BSS_AST_EXPR_COMPOUND,
+    BSS_AST_EXPR_SUBSCRIPT,
+    BSS_AST_EXPR_ACCESS,
+}BssAstExprKind;
+
+typedef struct BssAstExpr BssAstExpr;
+typedef struct BssAstNamedExpr BssAstNamedExpr;
+BASE_CREATE_EFFICIENT_LL_DECLS(BssAstExprList, BssAstExpr)
+BASE_CREATE_EFFICIENT_LL_DECLS(BssAstNamedExprList, BssAstNamedExpr)
+
+typedef struct BssAstExpr
+{
+    BSS_AST_POS_DEFS
+
+    struct BssAstExpr *next;
+    struct BssAstExpr *prev;
     
-    AST_STMT_PROJ_DECL,
-    AST_STMT_BUILD,
-    AST_STMT_IF,
-    AST_STMT_FOR_LOOP,
-    AST_STMT_BLOCK,
-}ASTStmtKind;
-
-typedef enum ASTExprKind
-{ 
-    AST_EXPR_IDEN,
-    AST_EXPR_LIT,
-    AST_EXPR_MEMBER_ACCESS,
-    AST_EXPR_INDEX_ACCESS,
-    AST_EXPR_BINARY,
-    AST_EXPR_FUNC_CALL,
-    AST_EXPR_COMPOUND_LIT,
-    AST_EXPR_RUN,
-}ASTExprKind;
-
-typedef struct ASTStmt
-{ 
-    BssTok startTok;
-    BssTok endTok;
-
-    struct ASTStmt *next;
-    struct ASTStmt *prev;
-
-    ASTStmtKind kind;
+    BssAstExprKind kind;
     union
     {
+        BssTok lit, iden;
+        BssAstNamedExprList compound;
+
         struct
         {
-            ASTExpr *lhs;
-            ASTExpr *rhs;
+            struct BssAstExpr *left;
+            struct BssAstExpr *right;
+            BssTok op;
+        }bin;
+
+        struct
+        {
+            BssTok op;
+            struct BssAstExpr *expr;
+        }unary;
+
+        struct 
+        {
+            BssAstExpr *lhs;
+            BssAstExprList args;
+        }call;
+        
+        struct
+        {
+            BssAstExpr *container;
+            BssAstExpr *index;
+        }subscript;
+    };
+}BssAstExpr;
+
+typedef struct BssAstNamedExpr
+{
+    BSS_AST_POS_DEFS
+
+    struct BssAstNamedExpr *next;
+    struct BssAstNamedExpr *prev;
+
+    bool isNamed;
+
+    struct BssAstExpr *lhs;
+    struct BssAstExpr *rhs;
+}BssAstNamedExpr;
+
+typedef struct BssAstStmt
+{
+    BSS_AST_POS_DEFS
+
+    struct BssAstStmt *next;
+    struct BssAstStmt *prev;
+    
+    BssAstStmtKind kind;
+    union
+    {
+        BssAstExpr *expr, *retExpr;
+        
+        struct
+        {
+            BssAstExpr *lhs;
+            BssAstExpr *rhs;
         }assign;
 
         struct
         {
+            BssAstExpr *cond;
+            struct BssAstBlock *thenBlock;
+            struct BssAstBlock *elseBlock;
+        }ifStmt;
+
+        struct
+        {
+            BssAstExpr *cond;
+            struct BssAstBlock *block;
+        }whileStmt;
+
+        struct
+        {
             BssTok iden;
-            ASTExpr *assign;
-        }proj;
-
-        struct
-        {
-            ASTExpr *expr;
-
-            ASTExpr *buildArgs;
-        }build;
-
-        struct
-        {
-            ASTExpr *cond;
-
-            ASTBlock *then;
-            ASTBlock *elseblock;
-        }ifstmt;
-
-        struct
-        {
-            BssTok item;
-
-            ASTExpr *container;
-            ASTBlock *block;
-
-            struct BssSymTableSlotEntry *itEntry;
+            BssAstExpr *container;
+            struct BssAstBlock *block;
         }forStmt;
-
-        ASTBlock *block;
-        ASTExpr *expr;
     };
-}ASTStmt;
+}BssAstStmt;
 
-BASE_CREATE_EFFICIENT_LL_DECLS(ASTStmtList, ASTStmt);
+BASE_CREATE_EFFICIENT_LL_DECLS(BssAstStmtList, BssAstStmt)
 
-typedef struct ASTBlock
+typedef struct BssAstBlock
 {
-    BssTok startTok;
-    BssTok endTok;
+    BSS_AST_POS_DEFS
 
-    ASTStmtList stmts;
-}ASTBlock;
+    BssAstStmtList stmts;
+}BssAstBlock;
 
-typedef struct ASTNamedExpr
-{ 
-    BssTok startTok;
-    BssTok endTok;
-    
-    struct ASTNamedExpr *next;
-    struct ASTNamedExpr *prev;
+typedef struct BssAstFunc
+{
+    BSS_AST_POS_DEFS
 
-    bool hasName;
+    BssTok iden;
+    BssTokList params;
 
-    ASTExpr *exprLhs;
-    ASTExpr *exprRhs;
-}ASTNamedExpr;
+    BssAstBlock *block;
+}BssAstFunc;
 
-BASE_CREATE_EFFICIENT_LL_DECLS(ASTNamedExprList, ASTNamedExpr);
+typedef struct BssAstTopLevel
+{
+    BSS_AST_POS_DEFS
 
-typedef struct ASTExpr
-{ 
-    BssTok startTok;
-    BssTok endTok;
-
-    ASTExprKind kind;
+    struct BssAstTopLevel *next;
+    struct BssAstTopLevel *prev;
+    BssAstTopLevelKind kind;
     union
     {
-        BssTok iden;
-        BssTok lit;
-
-        struct
-        {
-            ASTExpr *lhs;
-            BssTok memb;
-        } membAccess;
-
-        struct
-        {
-            ASTExpr *lhs;
-            ASTExpr *indexExpr;
-        } index;
-
-        struct
-        {
-            ASTExpr *lhs;
-            BssTok op;
-            ASTExpr *rhs;
-        } binaryOp;
-
-        struct
-        {
-            ASTExpr *func;
-            ASTNamedExprList args;
-        }funcCall;
-
-        struct
-        {
-            ASTNamedExprList membs;
-        }compoundLit;
-
-        struct
-        {
-            ASTExpr *expr;
-        }run;
+        BssAstFunc *func;
+        BssAstStmt *stmt;
     };
+}BssAstTopLevel;
 
-    BssType *checkType;
-    struct BssScope *scope;
-    struct BssSymTableSlotEntry *idenEntry;
-    struct BssValue *value;
-}ASTExpr;
+BASE_CREATE_EFFICIENT_LL_DECLS(BssAstTopLevelList, BssAstTopLevel);
 
-typedef struct ASTProject
+typedef struct BssAstFile
 {
-    BssTok startTok;
-    BssTok endTok;
+    BSS_AST_POS_DEFS
 
-    ASTStmtList stmts;
-}ASTProject;
+    BssAstTopLevelList toplevels;
+}BssAstFile;
 
-ASTStmt *bssAllocASTStmt(Arena *arena, ASTStmtKind kind, BssTok startTok, BssTok endTok);
-ASTStmt *bssAllocASTStmtAssign(Arena *arena, ASTExpr *lhs, ASTExpr *rhs);
-ASTStmt *bssAllocASTStmtExpr(Arena *arena, ASTExpr *expr);
-ASTStmt *bssAllocASTStmtProjDecl(Arena *arena, BssTok iden, ASTExpr *expr);
-ASTStmt *bssAllocASTStmtBuild(Arena *arena, ASTExpr *expr, ASTExpr *buildArgs);
-ASTStmt *bssAllocASTStmtIf(Arena *arena, ASTExpr *cond, ASTBlock *thenBlock, ASTBlock *elseBlock);
-ASTStmt *bssAllocASTStmtFor(Arena *arena, BssTok iden, ASTExpr *container, ASTBlock *block);
-ASTStmt *bssAllocASTStmtBlock(Arena *arena, ASTBlock *block);
+typedef BssAstExpr* (*BssPrecedencePrefixFunc) (BssInterp *);
+typedef BssAstExpr* (*BssPrecedenceInfixFunc) (BssInterp *, BssAstExpr *left, BssTok op);
 
-ASTExpr *bssAllocASTExpr(Arena *arena, ASTExprKind kind, BssTok startTok, BssTok endTok);
-ASTExpr *bssAllocASTExprIden(Arena *arena, BssTok iden);
-ASTExpr *bssAllocASTExprLit(Arena *arena, BssTok lit);
-ASTExpr *bssAllocASTExprMembAccess(Arena *arena, BssTok startTok, BssTok endTok, ASTExpr *lhs, BssTok memb);
-ASTExpr *bssAllocASTExprIndex(Arena *arena, BssTok startTok, BssTok endTok, ASTExpr *lhs, ASTExpr *index);
-ASTExpr *bssAllocASTExprBinary(Arena *arena, BssTok startTok, BssTok endTok, BssTok op, ASTExpr *lhs, ASTExpr *rhs);
-ASTExpr *bssAllocASTExprFunc(Arena *arena, BssTok startTok, BssTok endTok, ASTExpr *expr, ASTNamedExprList args);
-ASTExpr *bssAllocASTExprCompound(Arena *arena, BssTok startTok, BssTok endTok, ASTNamedExprList exprs);
-ASTExpr *bssAllocASTExprRun(Arena *arena, BssTok startTok, BssTok endTok, ASTExpr *expr);
+typedef struct BssPrecedenceTableEntry
+{
+    BssPrecedencePrefixFunc prefix;
+    BssPrecedenceInfixFunc infix;
+    u64 precedence;
+}BssPrecedenceTableEntry;
 
-ASTNamedExpr *bssAllocASTNamedExpr(Arena *arena, BssTok startTok, BssTok endTok, bool hasName, ASTExpr *lhs, ASTExpr *rhs);
+#define BSS_AST_EXPR_ZERO (&gBssAstExprEmpty)
+#define BSS_AST_STMT_ZERO (&gBssAstStmtEmpty)
+#define BSS_AST_BLOCK_ZERO (&gBssAstBlockEmpty)
+#define BSS_AST_FUNC_ZERO (&gBssAstFuncEmpty)
+#define BSS_AST_TOP_LEVEL_ZERO (&gBssAstTopLevelEmpty)
 
+global BssAstExpr gBssAstExprEmpty;
+global BssAstStmt gBssAstStmtEmpty;
+global BssAstBlock gBssAstBlockEmpty;
+global BssAstFunc gBssAstFuncEmpty;
+global BssAstTopLevel gBssAstTopLevelEmpty;
+
+BssAstExpr *bssAllocExpr(BssInterp *interp, BssTok start, BssTok end, BssAstExprKind kind);
+BssAstExpr *bssAllocExprLit(BssInterp *interp, BssTok start, BssTok end, BssTok lit);
+BssAstExpr *bssAllocExprIden(BssInterp *interp, BssTok start, BssTok end, BssTok iden);
+BssAstExpr *bssAllocExprBinary(BssInterp *interp, BssTok start, BssTok end, BssAstExpr *lhs, BssAstExpr *rhs, BssTok op);
+BssAstExpr *bssAllocExprUnary(BssInterp *interp, BssTok start, BssTok end, BssAstExpr *rhs, BssTok op);
+BssAstExpr *bssAllocExprFnCall(BssInterp *interp, BssTok start, BssTok end, BssAstExpr *lhs, BssAstExprList args);
+BssAstExpr *bssAllocExprCompound(BssInterp *interp, BssTok start, BssTok end, BssAstNamedExprList compound);
+BssAstExpr *bssAllocExprSubscript(BssInterp *interp, BssTok start, BssTok end, BssAstExpr *container, BssAstExpr *index);
 #endif

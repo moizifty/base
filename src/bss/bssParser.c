@@ -1,578 +1,755 @@
-#include "base/baseThreads.h"
 #include "bssParser.h"
+#include "bssLexer.h"
+#include "bssScope.h"
 
-void bssParserError(BSSInterpretorState *iState, BssTok tok, char *msg, ...)
+BssPrecedenceTableEntry gBssPrecedenceTable[TOK_KIND_END + 1] =
 {
-    va_list args;
-    va_start(args, msg);
+    [TOK_EQ_OP] = {.precedence = 1, .prefix = null, .infix = bssParserParseExprBinary},
+    [TOK_NEQ_OP] = {.precedence = 1, .prefix = null, .infix = bssParserParseExprBinary},
+    [TOK_LOGICAL_AND_OP] = {.precedence = 11, .prefix = null, .infix = bssParserParseExprBinary},
+    [TOK_LOGICAL_OR_OP] = {.precedence = 10, .prefix = null, .infix = bssParserParseExprBinary},
 
-    baseColEPrintf("{Bu}%S (%lld: %lld)",tok.pos.ownerLexer->filePath, tok.pos.line, tok.pos.col);
-    baseColEPrintf("{B}\n        --> Parser Error:\033[0m ");
+    ['<'] = {.precedence = 11, .prefix = null, .infix = bssParserParseExprBinary},
+    ['>'] = {.precedence = 11, .prefix = null, .infix = bssParserParseExprBinary},
 
-    ArenaTemp temp = baseTempBegin(&iState->parserArena, 1);
+    ['+'] = {.precedence = 20, .prefix = null, .infix = bssParserParseExprBinary},
+    ['-'] = {.precedence = 20, .prefix = null, .infix = bssParserParseExprBinary},
+    ['/'] = {.precedence = 30, .prefix = null, .infix = bssParserParseExprBinary},
+    ['*'] = {.precedence = 30, .prefix = null, .infix = bssParserParseExprBinary},
+
+    ['('] = {.precedence = 100, .prefix = null, .infix = bssParserParseExprFnCall},
+    ['['] = {.precedence = 100, .prefix = null, .infix = bssParserParseExprSubscript},
+    ['.'] = {.precedence = 100, .prefix = null, .infix = bssParserParseExprBinary},
+};
+
+
+void bssParserError(BssInterp *interp, i8 *fmt, ...)
+{
+    BssTokPos pos = BSS_PARSER_CURR_TOK.pos;
+    va_list va;
+    va_start(va, fmt);
+    baseColEPrintf("{Bu}%S (%lld, %lld)", pos.ownerLexer->path, pos.line, pos.col);
+    baseColEPrintf("{B}\n        --> Parser Error: ");
+    baseEPrintfV(fmt, va);
+
+    bssPrintSourceRange(BSS_PARSER_CURR_TOK.pos, BSS_PARSER_CURR_TOK.pos, 2);
+
+    va_end(va);
+}
+
+BssAstStmt *bssParserParseStmt(BssInterp *interp)
+{
+    BssAstStmt *ast = BSS_AST_STMT_ZERO;
+
+    switch (BSS_PARSER_CURR_TOK.kind)
     {
-        i64 needed = stbsp_vsnprintf(null, 0, msg, args) + 1;
-        i8 *buf = arenaPush(temp.arena, needed);
-
-        stbsp_vsnprintf(buf, (int)needed, msg, args);
-
-        baseColEPrintf("%s", buf);
-    }
-    baseTempEnd(temp);
-
-    baseColEPrintf("\n        |\n");
-    
-    const int NUM_CONTEXT_LINES = 3;
-    
-    size_t tokLen = (tok.kind != TOK_END_INPUT)  ? tok.lexeme.len : 1;
-    int currLine = 0;
-    i8 *currCh = (i8 *)tok.pos.tokRange.data;
-    int colnum = 0;
-
-    i8 *bufStart = (i8 *)tok.pos.ownerLexer->buffer.data;
-    i8 *bufEnd = (i8 *)(bufStart + tok.pos.ownerLexer->buffer.len);
-
-    while( (currLine != -NUM_CONTEXT_LINES) && (currCh != bufStart)) 
-    {
-        while((currCh != bufStart) && (*(--currCh) != '\n'));
-
-        if(*currCh == '\n') 
+        case TOK_IF_KW:
         {
-            currLine--;
-            if(currLine != -NUM_CONTEXT_LINES) currCh--;
-        }
-    }
+            ast = bssParserParseStmtIf(interp);
+        }break;
 
-    // if(*currCh == '\n') 
-    // {
-    //     currLine++;
-    //     currCh++;
-    // }
-
-    for(; currLine < NUM_CONTEXT_LINES; currLine++)
-    {
-        fprintf(stderr, "%7lld | ", tok.pos.line + currLine);
-
-        while((*currCh != '\n') && (currCh != bufEnd))
+        case TOK_WHILE_KW:
         {
-            if(currLine == 0) colnum++;
+            ast = bssParserParseStmtWhile(interp);
+        }break;
 
-            if((currCh >= (i8 *)tok.pos.tokRange.data) && (currCh < ((i8 *)tok.pos.tokRange.data) + tokLen))
+        case TOK_FOR_KW:
+        {
+            ast = bssParserParseStmtFor(interp);
+        }break;
+
+        case TOK_RET_KW:
+        {
+            BssTok start = BSS_PARSER_CURR_TOK;
+            BSS_PARSER_NEXT_TOK();
+
+            BssAstExpr *expr = BSS_AST_EXPR_ZERO;
+
+            if (!BSS_PARSER_MATCH(';'))
             {
-                if(isspace(*currCh))
+                expr = bssParserParseExpr(interp, 0);
+                if (expr == BSS_AST_EXPR_ZERO)
                 {
-                    baseColEPrintf("{ur}%c", (*currCh));
+                    return BSS_AST_STMT_ZERO;
                 }
-                else
-                {
-                    baseColEPrintf("{r}%c", (*currCh));
-                }
+            }
+
+            if (BSS_PARSER_MATCH(';'))
+            {
+                BSS_PARSER_NEXT_TOK();
+
+                ast = arenaPushType(interp->arena, BssAstStmt);
+                ast->kind = BSS_AST_STMT_RET;
+                ast->startTok = start;
+                ast->endTok = (expr == BSS_AST_EXPR_ZERO) ? start : expr->endTok;
+                ast->retExpr = expr;
             }
             else
             {
-                baseColEPrintf("%c", (*currCh));
+                bssParserError(interp, "Expected ';' end of statement instead got '%S'\n", BSS_PARSER_CURR_TOK.lexeme);
+                return BSS_AST_STMT_ZERO;
             }
-
-            currCh++;
-        }
-
-        if(currLine == 0)
-        {
-            fputc('\n', stderr);
-            fprintf(stderr, "        | ");
-            for(i8 *c = currCh - colnum; c < (i8 *)tok.pos.tokRange.data; c++)
-            {
-                if(isspace(*c))
-                    fputc((char)*c, stderr);
-                else fputc(' ', stderr);
-
-            }
-
-            for(u64 i = 0; i < tokLen; i++) 
-            {
-                baseColEPrintf("{r}^");
-            }
-        }
-        
-        if(currCh != bufEnd) currCh++;
-        else break;
-        fputc('\n', stderr);
-    }
-    
-    fputc('\n', stderr);
-    va_end(args);
-}
-
-void bssParserProject(BSSInterpretorState *iState)
-{
-    ASTStmtList stmts = bssParserStmtList(iState, TOK_END_INPUT);
-
-    BssTok startTok, endTok;
-    if(BASE_ANY(stmts))
-    {
-        startTok = stmts.first->startTok;
-        endTok = stmts.last->endTok;
-    }
-    else
-    {
-        startTok = iState->lState.tok;
-        endTok = startTok;
-    }
-
-    ASTProject *project = arenaPushType(iState->parserArena, ASTProject);
-    project->startTok = startTok;
-    project->endTok = endTok;
-    project->stmts = stmts;
-
-    iState->pState.proj = project;
-}
-
-bool bssParserDoesStmtNeedSemiColon(ASTStmt *stmt)
-{
-    switch(stmt->kind)
-    {
-        case AST_STMT_BLOCK:
-        case AST_STMT_IF:
-        case AST_STMT_FOR_LOOP:
-        {
-            return false;
-        }
-
-        default: return true;
-    }
-}
-
-ASTStmt *bssParserStmt(BSSInterpretorState *iState)
-{
-    ASTStmt *stmt = null;
-
-    switch(PARSER_CURR_TOK(iState).kind)
-    {
-        case TOK_PROJECT:
-        {
-            PARSER_ADV_TOK(iState);
-
-            BssTok iden = {0};
-            if(PARSER_CURR_TOK(iState).kind != TOK_IDEN)
-            {
-                bssParserError(iState, PARSER_CURR_TOK(iState), "Expected identifier instead got '%S'", PARSER_CURR_TOK(iState).lexeme);
-            }
-
-            iden = PARSER_CURR_TOK(iState);
-            PARSER_ADV_TOK(iState);
-
-            if(PARSER_CURR_TOK(iState).kind != '=')
-            {
-                bssParserError(iState, PARSER_CURR_TOK(iState), "Expected '=' instead got '%S'", PARSER_CURR_TOK(iState).lexeme);
-            }
-
-            PARSER_ADV_TOK(iState);
-
-            ASTExpr *expr = bssParserExpr(iState);
-
-            stmt = bssAllocASTStmtProjDecl(iState->parserArena, iden, expr);
-        }break;
-
-        case TOK_BUILD:
-        {
-            PARSER_ADV_TOK(iState);
-
-            ASTExpr *expr = bssParserExpr(iState);
-
-            ASTExpr *args = bssParserExpr(iState);
-
-            stmt = bssAllocASTStmtBuild(iState->parserArena, expr, args);
-        }break;
-        
-        case TOK_IF:
-        {
-            PARSER_ADV_TOK(iState);
-
-            ASTExpr *expr = bssParserExpr(iState);
-            ASTBlock *block = bssParserBlock(iState);
-            ASTBlock *elseblock = null;
-
-            if (PARSER_CURR_TOK(iState).kind == TOK_ELSE)
-            {
-                PARSER_ADV_TOK(iState);
-                elseblock = bssParserBlock(iState);
-            }
-
-            stmt = bssAllocASTStmtIf(iState->parserArena, expr, block, elseblock);
-        }break;
-
-        case TOK_FOR:
-        {
-            PARSER_ADV_TOK(iState);
-
-            BssTok iden = {0};
-            if(PARSER_CURR_TOK(iState).kind != TOK_IDEN)
-            {
-                bssParserError(iState, PARSER_CURR_TOK(iState), "Expected identifier instead got '%S'", PARSER_CURR_TOK(iState).lexeme);
-            }
-
-            iden = PARSER_CURR_TOK(iState);
-            PARSER_ADV_TOK(iState);
-
-            if(PARSER_CURR_TOK(iState).kind != TOK_IN)
-            {
-                bssParserError(iState, PARSER_CURR_TOK(iState), "Expected identifier instead got '%S'", PARSER_CURR_TOK(iState).lexeme);
-            }
-
-            PARSER_ADV_TOK(iState);
-
-            ASTExpr *expr = bssParserExpr(iState);
-            ASTBlock *block = bssParserBlock(iState);
-
-            stmt = bssAllocASTStmtFor(iState->parserArena, iden, expr, block);
-        }break;
-
-        case (BssTokKind)'{':
-        {
-            ASTBlock *block = bssParserBlock(iState);
-            stmt = bssAllocASTStmtBlock(iState->parserArena, block);
         }break;
 
         default:
         {
-            ASTExpr *lhs = bssParserExpr(iState);
-            if(PARSER_CURR_TOK(iState).kind == '=')
-            {
-                PARSER_ADV_TOK(iState);
+            BssAstExpr *lhs = bssParserParseExpr(interp, 0);
 
-                ASTExpr *rhs = bssParserExpr(iState);
-                stmt = bssAllocASTStmtAssign(iState->parserArena, lhs, rhs);
-            }
-            else
+            if (lhs != BSS_AST_EXPR_ZERO)
             {
-                stmt = bssAllocASTStmtExpr(iState->parserArena, lhs);
+                if (BSS_PARSER_MATCH('='))
+                {
+                    BSS_PARSER_NEXT_TOK();
+
+                    BssAstExpr *rhs = bssParserParseExpr(interp, 0);
+
+                    ast = arenaPushType(interp->arena, BssAstStmt);
+                    ast->startTok = lhs->startTok;
+                    ast->endTok = rhs->endTok;
+                    ast->kind = BSS_AST_STMT_ASSIGN;
+                    ast->assign.lhs = lhs;
+                    ast->assign.rhs = rhs;
+                }
+                else
+                {
+                    ast = arenaPushType(interp->arena, BssAstStmt);
+                    ast->startTok = lhs->startTok;
+                    ast->endTok = lhs->endTok;
+                    ast->kind = BSS_AST_STMT_EXPR;
+                    ast->expr = lhs;
+                }
+
+                if (BSS_PARSER_MATCH(';'))
+                {
+                    BSS_PARSER_NEXT_TOK();
+                }
+                else
+                {
+                    bssParserError(interp, "Expected ';' end of statement instead got '%S'\n", BSS_PARSER_CURR_TOK.lexeme);
+                    return BSS_AST_STMT_ZERO;
+                }
             }
         }break;
     }
 
-    return stmt;
+    return ast;
 }
-ASTStmtList bssParserStmtList(BSSInterpretorState *iState, BssTokKind tokToEndParse)
+BssAstBlock *bssParserParseBlock(BssInterp *interp)
 {
-    ASTStmtList list = {0};
-    
-    while ((PARSER_CURR_TOK(iState).kind != tokToEndParse) &&
-           (PARSER_CURR_TOK(iState).kind != TOK_END_INPUT))
-    {
-        ASTStmt *stmt = bssParserStmt(iState);
+    BssAstBlock *ast = BSS_AST_BLOCK_ZERO;
 
-        if(bssParserDoesStmtNeedSemiColon(stmt))
+    BssTok start = {0};
+    BssAstStmtList list = {0};
+
+    if (BSS_PARSER_MATCH('{'))
+    {
+        start = BSS_PARSER_CURR_TOK;
+        BSS_PARSER_NEXT_TOK();
+
+        while(!BSS_PARSER_MATCH('}') && !BSS_PARSER_MATCH(TOK_END_INPUT))
         {
-            if (PARSER_CURR_TOK(iState).kind == ';')
+            BssAstStmt *stmt = bssParserParseStmt(interp);
+            if (stmt != BSS_AST_STMT_ZERO)
             {
-                PARSER_ADV_TOK(iState);
+                BssAstStmtListPushNodeLast(&list, stmt);
             }
             else
             {
-                bssParserError(iState, PARSER_CURR_TOK(iState), "Expected a semi colon after statement, instead got '%S'", PARSER_CURR_TOK(iState).lexeme);
+                break;
             }
         }
 
-        ASTStmtListPushNodeLast(&list, stmt);
+        if(BSS_PARSER_MATCH('}'))
+        {
+            ast = arenaPushType(interp->arena, BssAstBlock);
+            ast->startTok = start;
+            ast->endTok = BSS_PARSER_CURR_TOK;
+            ast->stmts = list;
+
+            BSS_PARSER_NEXT_TOK();
+        }
+        else
+        {
+            bssParserError(interp, "Expected '}' but instead got '%S'", BSS_PARSER_CURR_TOK.lexeme);
+        }
+    }
+
+    return ast;
+}
+
+BssTokList bssParserParseTokList(BssInterp *interp)
+{
+    BssTokList list = {0};
+
+    while (BSS_PARSER_MATCH(TOK_IDEN))
+    {
+        BssTokListPushLast(interp->arena, &list, BSS_PARSER_CURR_TOK);
+        BSS_PARSER_NEXT_TOK();
+
+        if (BSS_PARSER_MATCH(','))
+        {
+            BSS_PARSER_NEXT_TOK();
+        }
+        else
+        {
+            break;
+        }
+    }
+
+    return list;
+}
+BssAstFunc *bssParserParseFunc(BssInterp *interp)
+{
+    BssAstFunc *ast = BSS_AST_FUNC_ZERO;
+
+    BssTok start = {0};
+    BssTok iden = {0};
+    if (BSS_PARSER_MATCH(TOK_FN_KW))
+    {
+        start = BSS_PARSER_CURR_TOK;
+        BSS_PARSER_NEXT_TOK();
+
+        if (BSS_PARSER_MATCH(TOK_IDEN))
+        {
+            iden = BSS_PARSER_CURR_TOK;
+
+            if (bssScopeFindEntry(interp->rootScope, iden.lexeme) != BSS_SYMTABLE_SLOT_ENTRY_ZERO)
+            {
+                bssParserError(interp, "Function '%S' already defined", iden.lexeme);
+            }
+            else
+            {
+                BSS_PARSER_NEXT_TOK();
+
+                if (BSS_PARSER_MATCH('('))
+                {
+                    BSS_PARSER_NEXT_TOK();
+
+                    BssTokList params = bssParserParseTokList(interp);
+                    if (BSS_PARSER_MATCH(')'))
+                    {
+                        BSS_PARSER_NEXT_TOK();
+
+                        BssAstBlock *block = bssParserParseBlock(interp);
+
+                        if (block != BSS_AST_BLOCK_ZERO)
+                        {
+                            ast = arenaPushType(interp->arena, BssAstFunc);
+                            ast->startTok = start;
+                            ast->endTok = block->endTok;
+                            ast->iden = iden;
+                            ast->block = block;
+                            ast->params = params;
+
+                            BssSymTableSlotEntry *entry = BSS_SYMTABLE_SLOT_ENTRY_ZERO;
+                            bssScopePushEntry(interp->rootScope, iden.lexeme, &entry);
+
+                            entry->value = bssAllocValueFn(interp->rootScope->scopeArena, ast);
+                        }
+                    }
+                    else
+                    {
+                        bssParserError(interp, "Expected closing ')' instead got '%S'", BSS_PARSER_CURR_TOK.lexeme);
+                    }
+                }
+                else
+                {
+                    bssParserError(interp, "Expected '(' instead got '%S'", BSS_PARSER_CURR_TOK.lexeme);
+                }
+            }
+        }
+        else
+        {
+            bssParserError(interp, "Expected 'identifier' instead got '%S'", BSS_PARSER_CURR_TOK.lexeme);
+        }
+    }
+    else
+    {
+        bssParserError(interp, "Expected 'fn' instead got '%S'", BSS_PARSER_CURR_TOK.lexeme);
+    }
+    return ast;
+}
+
+BssAstStmt *bssParserParseStmtIf(BssInterp *interp)
+{
+    BssAstStmt *ast = BSS_AST_STMT_ZERO;
+    BssTok start = BSS_PARSER_CURR_TOK;
+
+    if (BSS_PARSER_MATCH(TOK_IF_KW))
+    {
+        BSS_PARSER_NEXT_TOK();
+
+        BssAstExpr *cond = bssParserParseExpr(interp, 0);
+        if (cond != BSS_AST_EXPR_ZERO)
+        {
+            BssAstBlock *thenBlock = bssParserParseBlock(interp);
+
+            if (thenBlock != BSS_AST_BLOCK_ZERO)
+            {
+                BssTok end = thenBlock->endTok;
+                BssAstBlock *elseBlock = BSS_AST_BLOCK_ZERO;
+                if (BSS_PARSER_MATCH(TOK_ELSE_KW))
+                {
+                    BSS_PARSER_NEXT_TOK();
+
+                    if (BSS_PARSER_MATCH(TOK_IF_KW))
+                    {
+                        BssAstStmt *elseIf = bssParserParseStmtIf(interp);
+                        if (elseIf != BSS_AST_STMT_ZERO)
+                        {
+                            elseBlock = arenaPushType(interp->arena, BssAstBlock);
+                            elseBlock->startTok = elseIf->startTok;
+                            elseBlock->endTok = elseIf->endTok;
+
+                            BssAstStmtListPushNodeLast(&elseBlock->stmts, elseIf);
+                        }
+                        else
+                        {
+                            return BSS_AST_STMT_ZERO;
+                        }
+                    }
+                    else
+                    {
+                        elseBlock = bssParserParseBlock(interp);
+                        if (elseBlock == BSS_AST_BLOCK_ZERO)
+                        {
+                            return BSS_AST_STMT_ZERO;
+                        }
+                    }
+
+                    end = elseBlock->endTok;
+                }
+
+                ast = arenaPushType(interp->arena, BssAstStmt);
+                ast->startTok = start;
+                ast->endTok = end;
+                ast->kind = BSS_AST_STMT_IF;
+                ast->ifStmt.cond = cond;
+                ast->ifStmt.thenBlock = thenBlock;
+                ast->ifStmt.elseBlock = elseBlock;
+            }
+        }
+    }
+    else
+    {
+        bssParserError(interp, "Expected 'if' kw, instead got '%S'", BSS_PARSER_CURR_TOK.lexeme);
+    }
+
+    return ast;
+}
+BssAstStmt *bssParserParseStmtWhile(BssInterp *interp)
+{
+    BssAstStmt *ast = BSS_AST_STMT_ZERO;
+    BssTok start = BSS_PARSER_CURR_TOK;
+
+    if (BSS_PARSER_MATCH(TOK_WHILE_KW))
+    {
+        BSS_PARSER_NEXT_TOK();
+
+        BssAstExpr *cond = bssParserParseExpr(interp, 0);
+        if (cond != BSS_AST_EXPR_ZERO)
+        {
+            BssAstBlock *block = bssParserParseBlock(interp);
+
+            if (block != BSS_AST_BLOCK_ZERO)
+            {
+                BssTok end = block->endTok;
+
+                ast = arenaPushType(interp->arena, BssAstStmt);
+                ast->startTok = start;
+                ast->endTok = end;
+                ast->kind = BSS_AST_STMT_WHILE;
+                ast->whileStmt.cond = cond;
+                ast->whileStmt.block = block;
+            }
+        }
+    }
+    else
+    {
+        bssParserError(interp, "Expected 'while' kw, instead got '%S'", BSS_PARSER_CURR_TOK.lexeme);
+    }
+
+    return ast;
+}
+BssAstStmt *bssParserParseStmtFor(BssInterp *interp)
+{
+    BssAstStmt *ast = BSS_AST_STMT_ZERO;
+    BssTok start = BSS_PARSER_CURR_TOK;
+
+    if (BSS_PARSER_MATCH(TOK_FOR_KW))
+    {
+        BSS_PARSER_NEXT_TOK();
+
+        if (BSS_PARSER_MATCH(TOK_IDEN) && BSS_PARSER_PEEK_TOK(1).kind == TOK_IN_KW)
+        {
+            BssTok iden = BSS_PARSER_CURR_TOK;
+            BSS_PARSER_NEXT_TOK(); //iden
+            BSS_PARSER_NEXT_TOK(); //in
+
+            BssAstExpr *container = bssParserParseExpr(interp, 0);
+            if (container != BSS_AST_EXPR_ZERO)
+            {
+                BssAstBlock *block = bssParserParseBlock(interp);
+                if (block != BSS_AST_BLOCK_ZERO)
+                {
+                    ast = arenaPushType(interp->arena, BssAstStmt);
+                    ast->startTok = start;
+                    ast->endTok = block->endTok;
+                    ast->kind = BSS_AST_STMT_FOR;
+                    ast->forStmt.iden = iden;
+                    ast->forStmt.block = block;
+                    ast->forStmt.container = container;
+                }
+            }
+        }
+        else
+        {
+            bssParserError(interp, "Expected identifier followed by 'in kw.");
+        }
+    }
+    else
+    {
+        bssParserError(interp, "Expected 'for' kw, instead got '%S'", BSS_PARSER_CURR_TOK.lexeme);
+    }
+
+    return ast;
+}
+
+BssAstTopLevel *bssParserParseTopLevel(BssInterp *interp)
+{
+    BssAstTopLevel *ast = BSS_AST_TOP_LEVEL_ZERO; 
+
+    switch (BSS_PARSER_CURR_TOK.kind)
+    {
+        case TOK_FN_KW:
+        {
+            BssAstFunc *func = bssParserParseFunc(interp);
+            if (func != BSS_AST_FUNC_ZERO)
+            {
+                ast = arenaPushType(interp->arena, BssAstTopLevel);
+                ast->kind = BSS_AST_TOP_LEVEL_FUNC;
+                ast->func = func;
+                ast->startTok = ast->func->startTok;
+                ast->endTok = ast->func->startTok;
+            }
+        }break;
+
+        default:
+        {
+            BssAstStmt *stmt = bssParserParseStmt(interp);
+            if (stmt != BSS_AST_STMT_ZERO)
+            {
+                ast = arenaPushType(interp->arena, BssAstTopLevel);
+                ast->kind = BSS_AST_TOP_LEVEL_STMT;
+                ast->stmt = stmt;
+                ast->startTok = ast->stmt->startTok;
+                ast->endTok = ast->stmt->startTok;
+            }
+        }break;
+    }
+
+    return ast;
+}
+
+BssAstTopLevelList bssParserParseTopLevels(BssInterp *interp)
+{
+    BssAstTopLevelList list = {0};
+
+    while (!BSS_PARSER_MATCH(TOK_END_INPUT))
+    {
+        BssAstTopLevel *topLevel = bssParserParseTopLevel(interp);
+        if (topLevel != BSS_AST_TOP_LEVEL_ZERO)
+        {
+            BssAstTopLevelListPushNodeLast(&list, topLevel);
+        }
+        else
+        {
+            break;
+        }
     }
 
     return list;
 }
 
-ASTBlock *bssParserBlock(BSSInterpretorState *iState)
+BssAstExpr *bssParserParsePrefix(BssInterp *interp)
 {
-    ASTBlock *block = null;
-    
-    BssTok start = {0}, end = {0};
-    if(PARSER_CURR_TOK(iState).kind == '{')
-    {
-        start = PARSER_CURR_TOK(iState);
-
-        PARSER_ADV_TOK(iState);
-
-        ASTStmtList stmts = bssParserStmtList(iState, '}');
-        
-        if(PARSER_CURR_TOK(iState).kind == '}')
-        {
-            end = PARSER_CURR_TOK(iState);
-            PARSER_ADV_TOK(iState);
-        }
-        else
-        {
-            bssParserError(iState, PARSER_CURR_TOK(iState), "Expected '}' to close block instead got '%S'", PARSER_CURR_TOK(iState).lexeme);
-        }
-
-        block = arenaPushType(iState->parserArena, ASTBlock);
-        block->stmts = stmts;
-        block->endTok = end;
-        block->startTok = start;
-    }
-
-    return block;
-}
-
-ASTExpr *bssParserExpr(BSSInterpretorState *iState)
-{
-    ASTExpr *expr = null;
-
-    expr = bssParserExprEq(iState);
-    while((PARSER_CURR_TOK(iState).kind == '+'))
-    {
-        BssTok op = PARSER_CURR_TOK(iState);
-        PARSER_ADV_TOK(iState);
-
-        ASTExpr *rhs = bssParserExprEq(iState);
-        
-        expr = bssAllocASTExprBinary(iState->parserArena, expr->startTok, rhs->endTok, op, expr, rhs);
-    }
-
-    return expr;
-}
-ASTExpr *bssParserExprEq(BSSInterpretorState *iState)
-{
-    ASTExpr *expr = null;
-
-    expr = bssParserExprLogical(iState);
-    while((PARSER_CURR_TOK(iState).kind == TOK_EQ_OP) || 
-          (PARSER_CURR_TOK(iState).kind == TOK_NEQ_OP))
-    {
-        BssTok op = PARSER_CURR_TOK(iState);
-        PARSER_ADV_TOK(iState);
-
-        ASTExpr *rhs = bssParserExprLogical(iState);
-        
-        expr = bssAllocASTExprBinary(iState->parserArena, expr->startTok, rhs->endTok, op, expr, rhs);
-    }
-
-    return expr;
-}
-ASTExpr *bssParserExprLogical(BSSInterpretorState *iState)
-{
-    ASTExpr *expr = null;
-
-    expr = bssParserExprPost(iState);
-    while((PARSER_CURR_TOK(iState).kind == TOK_LOGICAL_OR_OP))
-    {
-        BssTok op = PARSER_CURR_TOK(iState);
-        PARSER_ADV_TOK(iState);
-
-        ASTExpr *rhs = bssParserExprPost(iState);
-        
-        expr = bssAllocASTExprBinary(iState->parserArena, expr->startTok, rhs->endTok, op, expr, rhs);
-    }
-
-    return expr;
-}
-ASTExpr *bssParserExprPost(BSSInterpretorState *iState)
-{
-    ASTExpr *expr = bssParserExprPrimary(iState);
-
-    while (((PARSER_CURR_TOK(iState).kind == '[') || 
-            (PARSER_CURR_TOK(iState).kind == '.') || 
-            (PARSER_CURR_TOK(iState).kind == '(')))
-    {
-        if(PARSER_CURR_TOK(iState).kind == '[')
-        {
-            PARSER_ADV_TOK(iState);
-
-            ASTExpr *index = bssParserExpr(iState);
-
-            if(PARSER_CURR_TOK(iState).kind == ']')
-            {
-                BssTok endtok = PARSER_CURR_TOK(iState);
-                PARSER_ADV_TOK(iState);
-
-                expr = bssAllocASTExprIndex(iState->parserArena, expr->startTok, endtok, expr, index);
-            }
-            else
-            {
-                bssParserError(iState, PARSER_CURR_TOK(iState), "Expected closing ']' instead got '%S'", PARSER_CURR_TOK(iState).lexeme);
-            }
-        }
-        else if(PARSER_CURR_TOK(iState).kind == '.')
-        {
-            PARSER_ADV_TOK(iState);
-
-            if(PARSER_CURR_TOK(iState).kind == TOK_IDEN)
-            {
-                BssTok memb = PARSER_CURR_TOK(iState);
-                expr = bssAllocASTExprMembAccess(iState->parserArena, expr->startTok, memb, expr, memb);
-
-                PARSER_ADV_TOK(iState);
-            }
-            else
-            {
-                bssParserError(iState, PARSER_CURR_TOK(iState), "Expected an identifier after '.' but instead got '%S'", PARSER_CURR_TOK(iState).lexeme);
-            }
-        }
-        else if(PARSER_CURR_TOK(iState).kind == '(')
-        {
-            PARSER_ADV_TOK(iState);
-
-            BssTok endToken = {0};
-
-            ASTNamedExprList argsList = {0};
-
-            if(PARSER_CURR_TOK(iState).kind == ')')
-            {
-                endToken = PARSER_CURR_TOK(iState);
-                PARSER_ADV_TOK(iState);
-            }
-            else
-            {
-                argsList = bssParserNamedExprList(iState, ')');
-
-                if(PARSER_CURR_TOK(iState).kind == ')')
-                {
-                    endToken = PARSER_CURR_TOK(iState);
-                    PARSER_ADV_TOK(iState);
-                }
-                else
-                {
-                    bssParserError(iState, PARSER_CURR_TOK(iState), "Expected ')' to end argument lists for function call, instead got '%S'", PARSER_CURR_TOK(iState).lexeme);
-                }
-            }
-
-            expr = bssAllocASTExprFunc(iState->parserArena, expr->startTok, endToken, expr, argsList);
-        }
-    }
-
-    return expr;
-}
-ASTExpr *bssParserExprPrimary(BSSInterpretorState *iState)
-{
-    ASTExpr *expr = null;
-    switch(PARSER_CURR_TOK(iState).kind)
+    BssAstExpr *expr = BSS_AST_EXPR_ZERO;
+    switch (BSS_PARSER_CURR_TOK.kind)
     {
         case TOK_INT_LIT:
         case TOK_BOOL_LIT:
+        case TOK_CHAR_LIT:
         case TOK_STR_LIT:
         {
-            expr = bssAllocASTExprLit(iState->parserArena, PARSER_CURR_TOK(iState));
+            expr = bssAllocExprLit(interp, BSS_PARSER_CURR_TOK, BSS_PARSER_CURR_TOK, BSS_PARSER_CURR_TOK);
 
-            PARSER_ADV_TOK(iState);
-        }break;
-
-        case '(':
-        {
-            PARSER_ADV_TOK(iState);
-
-            expr = bssParserExpr(iState);
-
-            if(PARSER_CURR_TOK(iState).kind == ')')
-            {
-                PARSER_ADV_TOK(iState);
-            }
-            else
-            {
-                bssParserError(iState, PARSER_CURR_TOK(iState), "Expected a ')' after expression, instead got' '%S'", PARSER_CURR_TOK(iState).lexeme);
-            }
-
+            BSS_PARSER_NEXT_TOK();
         }break;
 
         case TOK_IDEN:
         {
-            expr = bssAllocASTExprIden(iState->parserArena, PARSER_CURR_TOK(iState));
+            expr = bssAllocExprIden(interp, BSS_PARSER_CURR_TOK, BSS_PARSER_CURR_TOK, BSS_PARSER_CURR_TOK);
 
-            PARSER_ADV_TOK(iState);
+            BSS_PARSER_NEXT_TOK();
+        }break;
+
+        case '+':
+        case '-':
+        {
+            BssTok op = BSS_PARSER_CURR_TOK;
+            BSS_PARSER_NEXT_TOK();
+            expr = bssParserParsePrefix(interp);
+            if (expr != BSS_AST_EXPR_ZERO)
+            {
+                expr = bssAllocExprUnary(interp, op, expr->endTok, expr, op);
+            }
+        }break;
+
+        case '(':
+        {
+            BSS_PARSER_NEXT_TOK();
+            expr = bssParserParseExpr(interp, 0);
+
+            if (BSS_PARSER_MATCH(')'))
+            {
+                BSS_PARSER_NEXT_TOK();
+            }
+            else
+            {
+                bssParserError(interp, "Expected closing ')', instead got '%S'", BSS_PARSER_CURR_TOK.lexeme);
+            }
         }break;
 
         case '{':
         {
-            ASTNamedExprList membs = {0};
-            BssTok startTok = PARSER_CURR_TOK(iState);
-            BssTok endTok = {0};
+            BssTok startTok = BSS_PARSER_CURR_TOK;
+            BSS_PARSER_NEXT_TOK();
 
-            PARSER_ADV_TOK(iState);
+            BssTok endTok = BSS_PARSER_CURR_TOK;
 
-            if(PARSER_CURR_TOK(iState).kind == '}')
+            BssAstNamedExprList list = {0};
+            while (!BSS_PARSER_MATCH('}') && !BSS_PARSER_MATCH(TOK_END_INPUT))
             {
-                endTok = PARSER_CURR_TOK(iState);
-                PARSER_ADV_TOK(iState);
-            }
-            else 
-            {
-                membs = bssParserNamedExprList(iState, '}');
-
-                if(PARSER_CURR_TOK(iState).kind == '}')
+                bool isNamed = false;
+                BssAstExpr *lhs = bssParserParseExpr(interp, 0);
+                BssAstExpr *rhs = BSS_AST_EXPR_ZERO;
+                if (lhs != BSS_AST_EXPR_ZERO)
                 {
-                    endTok = PARSER_CURR_TOK(iState);
+                    if (BSS_PARSER_MATCH('='))
+                    {
+                        isNamed = true;
 
-                    PARSER_ADV_TOK(iState);
+                        BSS_PARSER_NEXT_TOK();
+
+                        rhs = bssParserParseExpr(interp, 0);
+                        if (rhs == BSS_AST_EXPR_ZERO)
+                        {
+                            return BSS_AST_EXPR_ZERO;
+                        }
+                    }
+
+                    BssAstNamedExpr *ne = arenaPushType(interp->arena, BssAstNamedExpr);
+                    ne->startTok = lhs->startTok;
+                    ne->endTok = (isNamed) ? rhs->endTok : lhs->endTok;
+                    ne->isNamed = isNamed;
+                    ne->lhs = lhs;
+                    ne->rhs = rhs;
+
+                    BssAstNamedExprListPushNodeLast(&list, ne);
+
+                    if (BSS_PARSER_MATCH(','))
+                    {
+                        BSS_PARSER_NEXT_TOK();
+                    }
+                    else
+                    {
+                        break;
+                    }
                 }
                 else
                 {
-                    bssParserError(iState, PARSER_CURR_TOK(iState), "Expected '}' to end compound literal but instead got '%S'", PARSER_CURR_TOK(iState).lexeme);
+                    return BSS_AST_EXPR_ZERO;
                 }
             }
 
-            expr = bssAllocASTExprCompound(iState->parserArena, startTok, endTok, membs);
-        }break;
+            if (BSS_PARSER_MATCH('}'))
+            {
+                endTok = BSS_PARSER_CURR_TOK;
+                BSS_PARSER_NEXT_TOK();
 
-        case TOK_RUN:
-        {
-            BssTok startTok = PARSER_CURR_TOK(iState);
-
-            PARSER_ADV_TOK(iState);
-            ASTExpr *e = bssParserExpr(iState);
-
-            expr = bssAllocASTExprRun(iState->parserArena, startTok, e->endTok, e);
-
+                expr = bssAllocExprCompound(interp, startTok, endTok, list);
+            }
+            else
+            {
+                bssParserError(interp, "Expected '}' to close compound list instead got '%S'", BSS_PARSER_CURR_TOK.lexeme);
+            }
         }break;
 
         default:
         {
-            bssParserError(iState, PARSER_CURR_TOK(iState), "Unexpected tok to begin expression, got '%S'", PARSER_CURR_TOK(iState).lexeme);
+            bssParserError(interp, "Not a valid expression");
         }break;
     }
 
     return expr;
 }
 
-ASTNamedExpr *bssParserNamedExpr(BSSInterpretorState *iState)
+BssAstExpr *bssParserParseExprFnCall(BssInterp *interp, BssAstExpr *left, BssTok op)
 {
-    ASTExpr *exprLhs = bssParserExpr(iState);
-    ASTExpr *exprRhs = null;
+    BASE_UNUSED_PARAM(op);
 
-    if(PARSER_CURR_TOK(iState).kind == '=')
+    BssAstExpr *expr = BSS_AST_EXPR_ZERO;
+
+    BssAstExprList list = bssParserParseExprList(interp, ')');
+    if (BSS_PARSER_MATCH(')'))
     {
-        if(exprLhs->kind == AST_EXPR_IDEN)
+        expr = bssAllocExprFnCall(interp, left->startTok, BSS_PARSER_CURR_TOK, left, list);
+
+        BSS_PARSER_NEXT_TOK();
+    }
+    else
+    {
+        bssParserError(interp, "Expected ')' instead got '%S'", BSS_PARSER_CURR_TOK.lexeme);
+    }
+    return expr;
+}
+BssAstExpr *bssParserParseExprSubscript(BssInterp *interp, BssAstExpr *left, BssTok op)
+{
+    BASE_UNUSED_PARAM(op);
+
+    BssAstExpr *expr = BSS_AST_EXPR_ZERO;
+
+    BssAstExpr *index = bssParserParseExpr(interp, 0);
+
+    if (index != BSS_AST_EXPR_ZERO)
+    {
+        if (BSS_PARSER_MATCH(']'))
         {
-            PARSER_ADV_TOK(iState);
-            exprRhs = bssParserExpr(iState); 
+            BssTok end = BSS_PARSER_CURR_TOK;
+            BSS_PARSER_NEXT_TOK();
+
+            expr = bssAllocExprSubscript(interp, left->startTok, end, left, index);
         }
         else
         {
-            bssParserError(iState, PARSER_CURR_TOK(iState), "Expected a identifier tok for beginning named expression");
+            bssParserError(interp, "Expected ']', instead got '%S'", BSS_PARSER_CURR_TOK.lexeme);
         }
     }
 
-    bool hasName = (exprRhs != null);
-    ASTNamedExpr *ret = bssAllocASTNamedExpr(iState->parserArena, exprLhs->startTok, (hasName) ? exprRhs->endTok : exprLhs->endTok, hasName, exprLhs, exprRhs);
-    
-    return ret;
+    return expr;
 }
-ASTNamedExprList bssParserNamedExprList(BSSInterpretorState *iState,  BssTokKind tokToEndParse)
+BssAstExpr *bssParserParseExprBinary(BssInterp *interp, BssAstExpr *left, BssTok op)
 {
-    ASTNamedExprList list = {0};
-    
-    while ((PARSER_CURR_TOK(iState).kind != tokToEndParse) &&
-           (PARSER_CURR_TOK(iState).kind != TOK_END_INPUT))
-    {
-        ASTNamedExpr *namedExpr = bssParserNamedExpr(iState);
-        ASTNamedExprListPushNodeLast(&list, namedExpr);
+    BssAstExpr *expr = BSS_AST_EXPR_ZERO;
 
-        if(PARSER_CURR_TOK(iState).kind == ',')
+    switch (op.kind)
+    {
+        case '+':
+        case '-':
+        case '/':
+        case '*':
+        case '>':
+        case '<':
+        case TOK_LOGICAL_OR_OP:
+        case TOK_LOGICAL_AND_OP:
+        case TOK_EQ_OP:
+        case TOK_NEQ_OP:
         {
-            PARSER_ADV_TOK(iState);
-        }
-        else if((PARSER_CURR_TOK(iState).kind != tokToEndParse) &&
-                (PARSER_CURR_TOK(iState).kind != TOK_END_INPUT))
+            BssAstExpr *rhs = bssParserParseExpr(interp, gBssPrecedenceTable[op.kind].precedence);
+            if (rhs != BSS_AST_EXPR_ZERO)
+            {
+                expr = bssAllocExprBinary(interp, left->startTok, rhs->endTok, left, rhs, op);
+            }
+        }break;
+
+        case '.':
         {
-            bssParserError(iState, PARSER_CURR_TOK(iState), "Expected a ',' after expression, instead got '%S'", PARSER_CURR_TOK(iState).lexeme);
+            if (BSS_PARSER_MATCH(TOK_IDEN))
+            {
+                BssAstExpr *rhs = bssAllocExprIden(interp, BSS_PARSER_CURR_TOK, BSS_PARSER_CURR_TOK, BSS_PARSER_CURR_TOK);
+                BSS_PARSER_NEXT_TOK();
+                
+                expr = bssAllocExprBinary(interp, left->startTok, rhs->endTok, left, rhs, op);
+            }
+            else
+            {
+                bssParserError(interp, "Expected identifier after access operator, instead got '%S'", BSS_PARSER_CURR_TOK.lexeme);
+            }
+        }break;
+
+        default:
+        {
+            bssParserError(interp, "Unregognised binary operator '%S'", op.lexeme);
+        }break;
+    }
+
+    return expr;
+}
+
+BssAstExpr *bssParserParseExpr(BssInterp *interp, u64 currPrecedence)
+{
+    BssAstExpr *lhs = bssParserParsePrefix(interp);
+    if (lhs != BSS_AST_EXPR_ZERO)
+    {
+        while(currPrecedence < gBssPrecedenceTable[BSS_PARSER_CURR_TOK.kind].precedence)
+        {
+            BssTok op = BSS_PARSER_CURR_TOK;
+            BSS_PARSER_NEXT_TOK();
+
+            lhs = gBssPrecedenceTable[op.kind].infix(interp, lhs, op);
         }
     }
-    
+
+    return lhs;
+}
+
+BssAstExprList bssParserParseExprList(BssInterp *interp, BssTokKind endKind)
+{
+    BssAstExprList list = {0};
+    while (!BSS_PARSER_MATCH(endKind) &&
+           !BSS_PARSER_MATCH(TOK_END_INPUT))
+    {
+        BssAstExpr *expr = bssParserParseExpr(interp, 0);
+        if (expr != BSS_AST_EXPR_ZERO)
+        {
+            if (BSS_PARSER_MATCH(',') || 
+                BSS_PARSER_MATCH(endKind))
+            {
+                if (BSS_PARSER_MATCH(',')) BSS_PARSER_NEXT_TOK();
+                BssAstExprListPushNodeLast(&list, expr);
+                continue;
+            }
+            else
+            {
+                bssParserError(interp, "Expected ',' after arg, instead got '%S'", BSS_PARSER_CURR_TOK.lexeme);
+            }
+        }
+        
+        break;
+    }
 
     return list;
+}
+
+bool bssParserParseLexed(BssInterp *interp)
+{
+    interp->parser = arenaPushType(interp->arena, BssParser);
+    interp->parser->file = arenaPushType(interp->arena, BssAstFile);
+    interp->rootScope = bssAllocScope(arenaAllocDefault(), null, false);
+
+    BssAstTopLevelList toplevels = bssParserParseTopLevels(interp);
+    interp->parser->file->toplevels = toplevels;
+    interp->parser->file->startTok = toplevels.first ? toplevels.first->startTok : (BssTok){0};
+    interp->parser->file->endTok = toplevels.last ? toplevels.first->endTok : (BssTok){0};
+
+    return true;
+}
+bool bssParserParseFile(BssInterp *interp, str8 file)
+{
+    if (bssLexerLexFile(interp, file))
+    {
+        return bssParserParseLexed(interp);
+    }
+
+    return false;
 }

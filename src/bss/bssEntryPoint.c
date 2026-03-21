@@ -1,38 +1,34 @@
 #include "base/base.h"
-
-#include "os/os.h"
-#include "bss\bss.h"
+#include "os/core/osCore.h"
+#include "bss.h"
 
 #include "base/base.c"
-#include "os/os.c"
-#include "bss\bss.c"
+#include "os/core/osCore.c"
+#include "bss.c"
 
 #include "os/core/osEntryPoint.c"
 
-void ProgramMain(CmdLineHashMap *cmdline)
+void ProgramMain(CmdLineHashMap *line)
 {
-    if (!BASE_ANY(cmdline->originalInputs))
+    if (line->originalInputs.len < 1)
     {
-        baseColEPrintf("No arguments passed, expected atleast a file.\n");
+        baseEPrintf("{r}Expected atleast 1 arg for bss interp");
+    }
+
+    Arena *arena = arenaAllocDefault();
+
+    BssInterp interp = {.arena = arena};
+
+    for(Str8ListNode *flag = line->originalInputs.first->next; flag != null; flag = flag->next)
+    {
+        Str8ListPushLast(arena, &interp.flags, flag->val);
+    }
+
+    if(!bssInterpreterInterpFile(&interp, line->originalInputs.first->val))
+    {
+        baseEPrintf("{r}Failed to interp file.\n");
         return;
     }
-
-    Arena *arena = arenaAlloc(BASE_GIGABYTES(8));
-
-    Str8List buildFlags = {0};
-    str8 file = cmdline->originalInputs.first->val;
-
-    for(Str8ListNode *n = cmdline->originalInputs.first->next; n != null; n = n->next)
-    {
-        Str8ListPushLast(arena, &buildFlags, n->val);
-    }
     
-    BSSInterpretorState iState = 
-    {
-        .lexerArena = arena,
-        .parserArena = arena,
-        .checkerArena = arena,
-        .buildFlags = buildFlags
-    };
-    bssInterpFile(&iState, file);
+    return;
 }

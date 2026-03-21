@@ -1,20 +1,25 @@
 #ifndef BSS_INTERP_H
 #define BSS_INTERP_H
 
+#include "base/baseCore.h"
+
 #include "bssCore.h"
 #include "bssLexer.h"
-#include "bssChecker.h"
-#include "bssTypes.h"
-#include "bssScopes.h"
+#include "bssAst.h"
+#include "bssScope.h"
 
-void bssInterpError(struct BSSInterpretorState *iState, BssTok start, BssTok end, char *msg, ...);
-void bssInterpPrint(char *msg, ...);
+void bssInterpreterError(BssInterp *interp, BssTokPos start, BssTokPos end, i8 *fmt, ...);
 
-void bssInterpWholeProject(struct BSSInterpretorState *iState);
+BssScope *bssInterpreterCreateFuncScopeAndPushArgs(BssInterp *interp, BssTokList params, BssAstExprList args);
+BssValue *bssInterpreterInterpFunc(BssInterp *interp, Arena *scopeArena, BssAstFunc *func, BssAstExpr *callingExpr);
+BssValue *bssInterpreterInterpExprBinary(BssInterp *interp, Arena *scopeArena, BssAstExpr *expr);
+BssValue *bssInterpreterInterpExpr(BssInterp *interp, Arena *scopeArena, BssAstExpr *expr);
+BssValue *bssInterpreterInterpLValueExprAndGetSym(BssInterp *interp, Arena *scopeArena, BssAstExpr *expr, BssSymTableSlotEntry **outSym);
 
-void bssInterpStmts(struct BSSInterpretorState *iState, ASTStmtList stmts);
-void bssInterpStmt(struct BSSInterpretorState *iState, ASTStmt *stmt);
-Str8List bssInterpProcessFormatString(struct BSSInterpretorState *iState, ASTExpr *stringLit, str8 in);
-void bssInterpExpr(struct BSSInterpretorState *iState, ASTExpr *expr);
+bool bssInterpreterInterpStmt(BssInterp *interp, Arena *scopeArena, BssAstStmt *stmt);
+BssValue *bssInterpreterInterpBlock(BssInterp *interp, BssAstBlock *block, bool createBlock);
+
+bool bssInterpreterInterpParsed(BssInterp *interp);
+bool bssInterpreterInterpFile(BssInterp *interp, str8 file);
 
 #endif

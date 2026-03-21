@@ -1,153 +1,76 @@
-#include "bssAST.h"
+#include "bssAst.h"
 
-BASE_CREATE_EFFICIENT_LL_DEFS(ASTStmtList, ASTStmt);
-BASE_CREATE_EFFICIENT_LL_DEFS(ASTNamedExprList, ASTNamedExpr);
+readonly BssAstExpr gBssAstExprEmpty = {0};
+readonly BssAstStmt gBssAstStmtEmpty = {0};
+readonly BssAstBlock gBssAstBlockEmpty = {0};
+readonly BssAstFunc gBssAstFuncEmpty = {0};
+readonly BssAstTopLevel gBssAstTopLevelEmpty = {0};
 
-ASTStmt *bssAllocASTStmt(Arena *arena, ASTStmtKind kind, BssTok startTok, BssTok endTok)
+BASE_CREATE_EFFICIENT_LL_DEFS(BssAstStmtList, BssAstStmt)
+BASE_CREATE_EFFICIENT_LL_DEFS(BssAstExprList, BssAstExpr)
+BASE_CREATE_EFFICIENT_LL_DEFS(BssAstTopLevelList, BssAstTopLevel)
+BASE_CREATE_EFFICIENT_LL_DEFS(BssAstNamedExprList, BssAstNamedExpr)
+
+BssAstExpr *bssAllocExpr(BssInterp *interp, BssTok start, BssTok end, BssAstExprKind kind)
 {
-    ASTStmt *s = arenaPushType(arena, ASTStmt);
-    s->kind = kind;
-    s->startTok = startTok;
-    s->endTok = endTok;
+    BssAstExpr *ast = arenaPushType(interp->arena, BssAstExpr);
+    ast->startTok = start;
+    ast->endTok = end;
+    ast->kind = kind;
 
-    return s;
+    return ast;
 }
-ASTStmt *bssAllocASTStmtAssign(Arena *arena, ASTExpr *lhs, ASTExpr *rhs)
+BssAstExpr *bssAllocExprLit(BssInterp *interp, BssTok start, BssTok end, BssTok lit)
 {
-    ASTStmt *s = bssAllocASTStmt(arena, AST_STMT_ASSIGN, lhs->startTok, rhs->endTok);
-    s->assign.lhs = lhs;
-    s->assign.rhs = rhs;
+    BssAstExpr *ast = bssAllocExpr(interp, start, end, BSS_AST_EXPR_LIT);
+    ast->lit = lit;
 
-    return s;
+    return ast;
 }
-ASTStmt *bssAllocASTStmtExpr(Arena *arena, ASTExpr *expr)
+BssAstExpr *bssAllocExprIden(BssInterp *interp, BssTok start, BssTok end, BssTok iden)
 {
-    ASTStmt *s = bssAllocASTStmt(arena, AST_STMT_EXPR, expr->startTok, expr->endTok);
-    s->expr = expr;
+    BssAstExpr *ast = bssAllocExpr(interp, start, end, BSS_AST_EXPR_IDEN);
+    ast->iden = iden;
 
-    return s;
+    return ast;
 }
-ASTStmt *bssAllocASTStmtProjDecl(Arena *arena, BssTok iden, ASTExpr *expr)
+BssAstExpr *bssAllocExprBinary(BssInterp *interp, BssTok start, BssTok end, BssAstExpr *lhs, BssAstExpr *rhs, BssTok op)
 {
-    ASTStmt *s = bssAllocASTStmt(arena, AST_STMT_PROJ_DECL, iden, expr->endTok);
-    s->proj.iden = iden;
-    s->proj.assign = expr;
+    BssAstExpr *ast = bssAllocExpr(interp, start, end, BSS_AST_EXPR_BINARY);
+    ast->bin.left = lhs;
+    ast->bin.right = rhs;
+    ast->bin.op = op;
 
-    return s;
+    return ast; 
 }
-ASTStmt *bssAllocASTStmtBuild(Arena *arena, ASTExpr *expr, ASTExpr *buildArgs)
+BssAstExpr *bssAllocExprUnary(BssInterp *interp, BssTok start, BssTok end, BssAstExpr *rhs, BssTok op)
 {
-    ASTStmt *s = bssAllocASTStmt(arena, AST_STMT_BUILD, expr->startTok, (buildArgs) ? buildArgs->endTok : expr->endTok);
-    s->build.expr = expr;
-    s->build.buildArgs = buildArgs;
+    BssAstExpr *ast = bssAllocExpr(interp, start, end, BSS_AST_EXPR_UNARY);
+    ast->unary.expr = rhs;
+    ast->unary.op = op;
 
-    return s;
+    return ast; 
 }
-ASTStmt *bssAllocASTStmtIf(Arena *arena, ASTExpr *cond, ASTBlock *thenBlock, ASTBlock *elseBlock)
+BssAstExpr *bssAllocExprFnCall(BssInterp *interp, BssTok start, BssTok end, BssAstExpr *lhs, BssAstExprList args)
 {
-    ASTStmt *s = bssAllocASTStmt(arena, AST_STMT_IF, cond->startTok, (elseBlock) ? elseBlock->endTok : thenBlock->endTok);
-    s->ifstmt.cond = cond;
-    s->ifstmt.then = thenBlock;
-    s->ifstmt.elseblock = elseBlock;
+    BssAstExpr *ast = bssAllocExpr(interp, start, end, BSS_AST_EXPR_FUNCCALL);
+    ast->call.lhs = lhs;
+    ast->call.args = args;
 
-    return s;
+    return ast; 
 }
-ASTStmt *bssAllocASTStmtFor(Arena *arena, BssTok iden, ASTExpr *container, ASTBlock *block)
+BssAstExpr *bssAllocExprCompound(BssInterp *interp, BssTok start, BssTok end, BssAstNamedExprList compound)
 {
-    ASTStmt *s = bssAllocASTStmt(arena, AST_STMT_FOR_LOOP, iden, block->endTok);
-    s->forStmt.item = iden;
-    s->forStmt.container = container;
-    s->forStmt.block = block;
+    BssAstExpr *ast = bssAllocExpr(interp, start, end, BSS_AST_EXPR_COMPOUND);
+    ast->compound = compound;
 
-    return s;
+    return ast; 
 }
-ASTStmt *bssAllocASTStmtBlock(Arena *arena, ASTBlock *block)
+BssAstExpr *bssAllocExprSubscript(BssInterp *interp, BssTok start, BssTok end, BssAstExpr *container, BssAstExpr *index)
 {
-    ASTStmt *s = bssAllocASTStmt(arena, AST_STMT_BLOCK, block->startTok, block->endTok);
-    s->block = block;
+    BssAstExpr *ast = bssAllocExpr(interp, start, end, BSS_AST_EXPR_SUBSCRIPT);
+    ast->subscript.container = container;
+    ast->subscript.index = index;
 
-    return s;
-}
-
-ASTExpr *bssAllocASTExpr(Arena *arena, ASTExprKind kind, BssTok startTok, BssTok endTok)
-{
-    ASTExpr *e = arenaPushType(arena, ASTExpr);
-    e->kind = kind;
-    e->startTok = startTok;
-    e->endTok = endTok;
-
-    return e;
-}
-ASTExpr *bssAllocASTExprIden(Arena *arena, BssTok iden)
-{
-    ASTExpr *e = bssAllocASTExpr(arena, AST_EXPR_IDEN, iden, iden);
-    e->iden = iden;
-
-    return e;
-}
-ASTExpr *bssAllocASTExprLit(Arena *arena, BssTok lit)
-{
-    ASTExpr *e = bssAllocASTExpr(arena, AST_EXPR_LIT, lit, lit);
-    e->lit = lit;
-
-    return e;
-}
-ASTExpr *bssAllocASTExprMembAccess(Arena *arena, BssTok startTok, BssTok endTok, ASTExpr *lhs, BssTok memb)
-{
-    ASTExpr *e = bssAllocASTExpr(arena, AST_EXPR_MEMBER_ACCESS, startTok, endTok);
-    e->membAccess.lhs = lhs;
-    e->membAccess.memb = memb;
-
-    return e;
-}
-ASTExpr *bssAllocASTExprIndex(Arena *arena, BssTok startTok, BssTok endTok, ASTExpr *lhs, ASTExpr *index)
-{
-    ASTExpr *e = bssAllocASTExpr(arena, AST_EXPR_INDEX_ACCESS, startTok, endTok);
-    e->index.lhs = lhs;
-    e->index.indexExpr = index;
-
-    return e;
-}
-ASTExpr *bssAllocASTExprBinary(Arena *arena, BssTok startTok, BssTok endTok, BssTok op, ASTExpr *lhs, ASTExpr *rhs)
-{
-    ASTExpr *e = bssAllocASTExpr(arena, AST_EXPR_BINARY, startTok, endTok);
-    e->binaryOp.lhs = lhs;
-    e->binaryOp.rhs = rhs;
-    e->binaryOp.op = op;
-
-    return e;
-}
-ASTExpr *bssAllocASTExprFunc(Arena *arena, BssTok startTok, BssTok endTok, ASTExpr *expr, ASTNamedExprList args)
-{
-    ASTExpr *e = bssAllocASTExpr(arena, AST_EXPR_FUNC_CALL, startTok, endTok);
-    e->funcCall.args = args;
-    e->funcCall.func = expr;
-
-    return e;
-}
-ASTExpr *bssAllocASTExprCompound(Arena *arena, BssTok startTok, BssTok endTok, ASTNamedExprList exprs)
-{
-    ASTExpr *e = bssAllocASTExpr(arena, AST_EXPR_COMPOUND_LIT, startTok, endTok);
-    e->compoundLit.membs = exprs;
-
-    return e;
-}
-ASTExpr *bssAllocASTExprRun(Arena *arena, BssTok startTok, BssTok endTok, ASTExpr *expr)
-{
-    ASTExpr *e = bssAllocASTExpr(arena, AST_EXPR_RUN, startTok, endTok);
-    e->run.expr = expr;
-
-    return e;
-}
-
-ASTNamedExpr *bssAllocASTNamedExpr(Arena *arena, BssTok startTok, BssTok endTok, bool hasName, ASTExpr *lhs, ASTExpr *rhs)
-{
-    ASTNamedExpr *e = arenaPushType(arena, ASTNamedExpr);
-    e->startTok = startTok;
-    e->endTok = endTok;
-    e->hasName = hasName;
-    e->exprLhs = lhs;
-    e->exprRhs = rhs;
-    
-    return e;
+    return ast; 
 }

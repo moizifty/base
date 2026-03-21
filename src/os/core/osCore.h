@@ -173,6 +173,10 @@ u64 OSGetFileSize(str8 path);
 u64 OSGetFileSizeFromHandle(OSHandle handle);
 str8 OSGetFullPath(struct Arena *arena, str8 path);
 
+bool OSFileDelete(str8 path);
+bool OSDirectoryDelete(str8 path, bool recursive);
+bool OSPathDelete(str8 path, bool recursive);
+
 bool OSCreateDirectory(str8 path, bool createIntermediateDirs);
 
 OSFileFindIter *OSFindFileBegin(struct Arena *arena, str8 path, OSFileFindOptionalParams *opt);

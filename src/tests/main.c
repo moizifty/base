@@ -82,9 +82,6 @@ void ProgramMain(CmdLineHashMap *cmdline)
 
 	OSNetSocketClose(socket);
 	
-	BSSInterpretorState bs = {.lexerArena = generalArena, .parserArena = generalArena, .checkerArena = generalArena};
-	bssInterpFile(&bs, STR8_LIT("C:\\Users\\moizi\\OneDrive\\Documents\\Programming\\C\\base\\src\\bss\\tests\\test.bss"));
-	
 	OSGfxState *state = OSGfxInit(generalArena);
 	OSHandle window = OSGfxWindowOpen(STR8_LIT("Test"), Vec2i(-1, -1), Vec2i(-1, -1));
 	

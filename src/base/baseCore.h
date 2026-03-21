@@ -248,7 +248,8 @@ typedef struct NAME \
 }NAME; \
 inline void NAME##PushNodeLast(NAME *l, NODENAME *node); \
 inline void NAME##PushNodeFirst(NAME *l, NODENAME *node); \
-inline void NAME##InsertNode(NAME *l, NODENAME *prev, NODENAME *node);
+inline void NAME##InsertNode(NAME *l, NODENAME *prev, NODENAME *node); \
+inline struct NODENAME *NAME##PopNodeLast(NAME *l);
 
 #define BASE_CREATE_EFFICIENT_LL_DEFS(NAME, NODENAME) \
 inline void NAME##PushNodeLast(NAME *l, struct NODENAME *node) \
@@ -262,6 +263,17 @@ inline void NAME##PushNodeFirst(NAME *l, struct NODENAME *node) \
 inline void NAME##InsertNode(NAME *l, struct NODENAME *prev, struct NODENAME *node) \
 { \
 	BasePtrListNodeInsert(l, prev, node); \
+} \
+inline struct NODENAME *NAME##PopNodeLast(NAME *l) \
+{ \
+	if (BASE_ANY_PTR(l)) \
+	{ \
+		l->len--; \
+		struct NODENAME *last = l->last; \
+	    BasePtrListNodeRemove(l, l->last); \
+		return last; \
+	} \
+	return null; \
 } \
 
 #define BASE_CREATE_ARRAY_VIEW_DECLS_EX(NAME, ELEM)   \

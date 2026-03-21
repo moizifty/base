@@ -2,28 +2,24 @@
 #define BSS_PARSER_H
 
 #include "bssCore.h"
-#include "bssLexer.h"
-#include "bssAST.h"
+#include "bssAst.h"
 
-#define PARSER_CURR_TOK(iCS)    ((iCS)->lState.tok)
-#define PARSER_ADV_TOK(iCS)    ((iCS)->lState.tok = bssLexerNext((iCS)))
+#define BSS_PARSER_MATCH(KIND)   ((BSS_PARSER_CURR_TOK).kind == (KIND))
+#define BSS_PARSER_CURR_TOK (interp->lexer->tokArray.data[interp->lexer->currTokIndex])
+#define BSS_PARSER_PEEK_TOK(N) (bssLexerPeekTok(interp, N))
+#define BSS_PARSER_NEXT_TOK() (bssLexerGetNextTok(interp))
 
-void bssParserError(struct BSSInterpretorState *iState, BssTok tok, char *msg, ...);
+BssAstExpr *bssParserParseExprFnCall(BssInterp *interp, BssAstExpr *left, BssTok op);
+BssAstExpr *bssParserParseExprSubscript(BssInterp *interp, BssAstExpr *left, BssTok op);
+BssAstExpr *bssParserParseExprBinary(BssInterp *interp, BssAstExpr *left, BssTok op);
+BssAstExpr *bssParserParseExpr(BssInterp *interp, u64 currPrecedence);
+BssAstExprList bssParserParseExprList(BssInterp *interp, BssTokKind endKind);
 
-void bssParserProject(struct BSSInterpretorState *iState);
+BssAstStmt *bssParserParseStmtIf(BssInterp *interp);
+BssAstStmt *bssParserParseStmtWhile(BssInterp *interp);
+BssAstStmt *bssParserParseStmtFor(BssInterp *interp);
 
-ASTStmt *bssParserStmt(struct BSSInterpretorState *iState);
-ASTStmtList bssParserStmtList(struct BSSInterpretorState *iState, BssTokKind tokToEndParse);
-
-ASTBlock *bssParserBlock(struct BSSInterpretorState *iState);
-
-ASTExpr *bssParserExpr(struct BSSInterpretorState *iState);
-ASTExpr *bssParserExprEq(struct BSSInterpretorState *iState);
-ASTExpr *bssParserExprLogical(struct BSSInterpretorState *iState);
-ASTExpr *bssParserExprPost(struct BSSInterpretorState *iState);
-ASTExpr *bssParserExprPrimary(struct BSSInterpretorState *iState);
-
-ASTNamedExpr *bssParserNamedExpr(struct BSSInterpretorState *iState);
-ASTNamedExprList bssParserNamedExprList(struct BSSInterpretorState *iState, BssTokKind tokToEndParse);
+bool bssParserParseLexed(BssInterp *interp);
+bool bssParserParseFile(BssInterp *interp, str8 file);
 
 #endif
