@@ -16,18 +16,22 @@ Base library provides a metagenerator for C source code its under `src/metagen` 
 
 Eg if you a structure like so:
 
+```
 src
 |--- main.c 
 |--- another.c <-- this has a defer statement
 |--- another.h 
+```
 
 metagen if passed the `defers` arg will generate:
 
+```
 metagen_defers_temp
 |--- src
      |--- main.c
      |--- another.c
      |--- another.h
+```
 
 And you then compiler `main.c` from `metagen_defers_temp` instead.
 
