@@ -27,7 +27,7 @@ onedrivefolder = getenv("onedrive");
 baselib = "{onedrivefolder}\Documents\Programming\C\base\src";
 
 src = {
-    "src/main.c",
+    "metagen_defer_temp/src/bssEntryPoint.c",
 };
 
 includes = {
@@ -38,4 +38,9 @@ flags = {
     "/Zi",
 };
 
-compile(src, includes, flags, "builds/main_test.exe");
+compile(src, includes, flags, "builds/bss.exe");
+
+if hasflag("sds")
+{
+    print("helllo");
+}

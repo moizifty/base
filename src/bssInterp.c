@@ -1,6 +1,7 @@
 #include "bssParser.h"
 #include "bssInterp.h"
 #include "bssBuiltins.h"
+#include "base/baseMetagen.h"
 
 void bssInterpreterError(BssInterp *interp, BssTokPos start, BssTokPos end, i8 *fmt, ...)
 {
@@ -68,8 +69,15 @@ BssValue *bssInterpreterInterpFunc(BssInterp *interp, Arena *scopeArena, BssAstF
 
     BssScope *fnScope = bssInterpreterCreateFuncScopeAndPushArgs(interp, func->params, callingExpr->call.args);
     BssScope *prevLastScope = interp->lastFnCalleeScope;
+
+    metagen_defer
+    {
+        arenaFree(fnScope->scopeArena);
+        interp->currScope = interp->lastFnCalleeScope;
+        interp->lastFnCalleeScope = prevLastScope;
+    }
+
     interp->lastFnCalleeScope = interp->currScope;
-    
     interp->currScope = fnScope;
     interp->currScope->isReturnedSignaled = false;
 
@@ -80,10 +88,6 @@ BssValue *bssInterpreterInterpFunc(BssInterp *interp, Arena *scopeArena, BssAstF
     // it will get free below in arenaFree
     // so copy it
     value = bssAllocValueCopy(interp->lastFnCalleeScope->scopeArena, value);
-
-    arenaFree(fnScope->scopeArena);
-    interp->currScope = interp->lastFnCalleeScope;
-    interp->lastFnCalleeScope = prevLastScope;
 
     return value;
 }
@@ -624,37 +628,36 @@ BssValue *bssInterpreterInterpLValueExprAndGetSym(BssInterp *interp, Arena *scop
             if (val->kind == BSS_VALUE_ARRAY)
             {
                 BssValue *newValue = BSS_VALUE_ZERO;
+                
                 ArenaTemp temp = baseTempBegin(&scopeArena, 1);
-                {
-                    BssValue *indexValue = bssInterpreterInterpExpr(interp, temp.arena, expr->subscript.index);
+                metagen_defer {baseTempEnd(temp);}
 
-                    if (indexValue != BSS_VALUE_ZERO)
+                BssValue *indexValue = bssInterpreterInterpExpr(interp, temp.arena, expr->subscript.index);
+
+                if (indexValue != BSS_VALUE_ZERO)
+                {
+                    if (indexValue->num >= val->array.len)
                     {
-                        if (indexValue->num >= val->array.len)
+                        bssInterpreterError(interp, 
+                                            expr->subscript.index->startTok.pos, 
+                                            expr->subscript.index->endTok.pos, 
+                                            "Trying to index container of size '%lld' with index '%lld'",
+                                            val->array.len,
+                                            indexValue->num);
+                    }
+                    else
+                    {
+                        i64 i = 0;
+                        BASE_LIST_FOREACH_INDEX(BssValue, v, val->array, i)
                         {
-                            bssInterpreterError(interp, 
-                                                expr->subscript.index->startTok.pos, 
-                                                expr->subscript.index->endTok.pos, 
-                                                "Trying to index container of size '%lld' with index '%lld'",
-                                                val->array.len,
-                                                indexValue->num);
-                        }
-                        else
-                        {
-                            i64 i = 0;
-                            BASE_LIST_FOREACH_INDEX(BssValue, v, val->array, i)
+                            if (i == indexValue->num)
                             {
-                                if (i == indexValue->num)
-                                {
-                                    newValue = v;
-                                    break;
-                                }
+                                newValue = v;
+                                break;
                             }
                         }
                     }
                 }
-                
-                baseTempEnd(temp);
 
                 return newValue;
             }
@@ -825,47 +828,40 @@ bool bssInterpreterInterpStmt(BssInterp *interp, Arena *scopeArena, BssAstStmt *
         case BSS_AST_STMT_FOR:
         {
             ArenaTemp temp = baseTempBegin(&interp->currScope->scopeArena, 1);
+            metagen_defer { baseTempEnd(temp); }
+            
+            BssValue *containerValue = bssInterpreterInterpExpr(interp, temp.arena, stmt->forStmt.container);
+
+            if (containerValue != BSS_VALUE_ZERO &&
+                containerValue->kind == BSS_VALUE_ARRAY)
             {
-                BssValue *containerValue = bssInterpreterInterpExpr(interp, temp.arena, stmt->forStmt.container);
-
-                if (containerValue != BSS_VALUE_ZERO &&
-                    containerValue->kind == BSS_VALUE_ARRAY)
+                BASE_LIST_FOREACH(BssValue, v, containerValue->array)
                 {
-                    BASE_LIST_FOREACH(BssValue, v, containerValue->array)
+                    BssScope *blockScope = bssAllocScope(arenaAllocDefault(), interp->currScope, interp->currScope->isScopeInFunction);
+                    metagen_defer {arenaFree(blockScope->scopeArena);}
+
+                    BssScope *prev = interp->currScope;
+                    interp->currScope = blockScope;
+                    metagen_defer {interp->currScope = prev;}
+                    
+                    BssSymTableSlotEntry *idenEntry = BSS_SYMTABLE_SLOT_ENTRY_ZERO;
+                    bssScopePushEntry(blockScope, stmt->forStmt.iden.lexeme, &idenEntry);
+                    idenEntry->value = v;
+
+                    if(bssInterpreterInterpBlock(interp, stmt->forStmt.block, false) == BSS_VALUE_ZERO)
                     {
-                        BssScope *blockScope = bssAllocScope(arenaAllocDefault(), interp->currScope, interp->currScope->isScopeInFunction);
-                        BssScope *prev = interp->currScope;
-                        interp->currScope = blockScope;
-                        
-                        BssSymTableSlotEntry *idenEntry = BSS_SYMTABLE_SLOT_ENTRY_ZERO;
-                        bssScopePushEntry(blockScope, stmt->forStmt.iden.lexeme, &idenEntry);
-                        idenEntry->value = v;
-
-                        if(bssInterpreterInterpBlock(interp, stmt->forStmt.block, false) == BSS_VALUE_ZERO)
-                        {
-                            arenaFree(blockScope->scopeArena);
-                            baseTempEnd(temp);
-                            return false;
-                        }
-
-                        interp->currScope = prev;
-                        arenaFree(blockScope->scopeArena);
-
+                        return false;
                     }
                 }
-                else
-                {
-                    bssInterpreterError(interp,
-                                        stmt->forStmt.container->startTok.pos,
-                                        stmt->forStmt.container->endTok.pos,
-                                        "Expected container expression of array type");
-                    baseTempEnd(temp);
-                    
-                    return false;
-                }
             }
-
-            baseTempEnd(temp);
+            else
+            {
+                bssInterpreterError(interp,
+                                    stmt->forStmt.container->startTok.pos,
+                                    stmt->forStmt.container->endTok.pos,
+                                    "Expected container expression of array type");
+                return false;
+            }
             return true;
         }break;
 
@@ -949,6 +945,7 @@ bool bssInterpreterInterpParsed(BssInterp *interp)
     bssBuiltinFunctionPushEntry(interp, STR8_LIT("join"), 1, bssBuiltinJoin);
     bssBuiltinFunctionPushEntry(interp, STR8_LIT("qoute"), 1, bssBuiltinQoute);
     bssBuiltinFunctionPushEntry(interp, STR8_LIT("getenv"), 1, bssBuiltinGetenv);
+    bssBuiltinFunctionPushEntry(interp, STR8_LIT("hasflag"), 1, bssBuiltinHasflag);
 
     bool result = true;
     BASE_LIST_FOREACH(BssAstTopLevel, toplevel, interp->parser->file->toplevels)
