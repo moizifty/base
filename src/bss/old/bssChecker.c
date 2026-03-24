@@ -620,11 +620,13 @@ void bssCheckerCheckExpr(struct BSSInterpretorState *iState, ASTExpr *expr, BssS
                         BASE_LIST_FOREACH(ASTNamedExpr, ne, expr->funcCall.args)
                         {
                             bssCheckerCheckExpr(iState, ne->exprLhs, scope);
-
+                            metagen_defer print(Sd);
                             if(!bssAreBssTypesEqual(currParam->type, ne->exprLhs->checkType))
                             {
                                 bssCheckerError(iState, ne->startTok, "Parameter is wrong type for function call.\n");
                                 bssLexerPrintTokenRange(ne->startTok, ne->endTok);
+
+                                return;
                             }
 
                             currParam = currParam->next;

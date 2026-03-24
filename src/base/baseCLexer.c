@@ -226,11 +226,22 @@ LEX_START:
             while(lexerState->currLocInBuffer < (lexerState->buffer.data + lexerState->buffer.len) && 
                  (isspace(lexerState->ch)))
             {
+                if(lexerState->ch == '\n')
+                {
+                    lexerState->line++;
+                    lexerState->col = 0;
+                }
+
+                if((lexerState->ch != '\n') && (lexerState->ch != '\f') && (lexerState->ch != '\r'))
+                    lexerState->col++;
+
                 tok.lexeme.len++;
                 lexerState->currLocInBuffer++;
                 lexerState->ch = *lexerState->currLocInBuffer;
             }
 
+            tok.pos.col = lexerState->col;
+            tok.pos.line = lexerState->line;
             tok.kind = CTOK_WHITESPACE;
             return tok;
         }
@@ -268,7 +279,7 @@ LEX_START:
                 charLitStr.data = lexerState->currLocInBuffer;
                 charLitStr.len = 2;
 
-                if(baseCLexerGetEscapeCharValue(charLitStr) == '\'')
+                if(baseCLexerGetEscapeCharValue(charLitStr) != -1)
                 {
                     tokLen++;
                     baseCLexerAdvanceChar(lexerState);
@@ -306,7 +317,7 @@ LEX_START:
                 charLitStr.data = lexerState->currLocInBuffer;
                 charLitStr.len = 2;
 
-                if(baseCLexerGetEscapeCharValue(charLitStr) == '\"')
+                if(baseCLexerGetEscapeCharValue(charLitStr) != -1)
                 {
                     tokLen++;
                     baseCLexerAdvanceChar(lexerState);
