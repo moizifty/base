@@ -19,25 +19,26 @@ typedef struct MetagenHasBlock
     str8 name;
     CTokKind nextExpected;
     CTokKind skipUntil;
-    bool allowBreakContinue;
+    MetagenScopeOwnerKind kind;
 }MetagenHasBlock;
 
 BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(MetagenHasBlockArray, MetagenHasBlock);
 MetagenHasBlock gMetagenHasBlockTableData[] = 
 {
-    {.name = STR8_LIT_COMP_CONST("for"), .nextExpected = '(', .skipUntil = ')', .allowBreakContinue = true},
-    {.name = STR8_LIT_COMP_CONST("while"), .nextExpected = '(', .skipUntil = ')', .allowBreakContinue = true},
-    {.name = STR8_LIT_COMP_CONST("if"), .nextExpected = '(', .skipUntil = ')', .allowBreakContinue = false},
-    {.name = STR8_LIT_COMP_CONST("else"), .nextExpected = 0, .skipUntil = 0, .allowBreakContinue = false},
-    {.name = STR8_LIT_COMP_CONST("BASE_LIST_FOREACH"), .nextExpected = '(', .skipUntil = ')', .allowBreakContinue = true},
-    {.name = STR8_LIT_COMP_CONST("BASE_LIST_FOREACH_EX"), .nextExpected = '(', .skipUntil = ')', .allowBreakContinue = true},
-    {.name = STR8_LIT_COMP_CONST("BASE_LIST_FOREACH_INDEX"), .nextExpected = '(', .skipUntil = ')', .allowBreakContinue = true},
-    {.name = STR8_LIT_COMP_CONST("BASE_LIST_FOREACH_INDEX_EX"), .nextExpected = '(', .skipUntil = ')', .allowBreakContinue = true},
-    {.name = STR8_LIT_COMP_CONST("BASE_LIST_REVFOREACH"), .nextExpected = '(', .skipUntil = ')', .allowBreakContinue = true},
-    {.name = STR8_LIT_COMP_CONST("BASE_LIST_REVFOREACH_EX"), .nextExpected = '(', .skipUntil = ')', .allowBreakContinue = true},
-    {.name = STR8_LIT_COMP_CONST("BASE_PTR_LIST_FOREACH"), .nextExpected = '(', .skipUntil = ')', .allowBreakContinue = true},
-    {.name = STR8_LIT_COMP_CONST("BASE_PTR_LIST_FOREACH"), .nextExpected = '(', .skipUntil = ')', .allowBreakContinue = true},
-    {.name = STR8_LIT_COMP_CONST("BASE_PTR_LIST_FOREACH_EX"), .nextExpected = '(', .skipUntil = ')', .allowBreakContinue = true},
+    {.name = STR8_LIT_COMP_CONST("for"), .nextExpected = '(', .skipUntil = ')', .kind = METAGEN_SCOPE_OWNER_LOOP},
+    {.name = STR8_LIT_COMP_CONST("while"), .nextExpected = '(', .skipUntil = ')', .kind = METAGEN_SCOPE_OWNER_LOOP},
+    {.name = STR8_LIT_COMP_CONST("if"), .nextExpected = '(', .skipUntil = ')',  .kind = METAGEN_SCOPE_OWNER_OTHER},
+    {.name = STR8_LIT_COMP_CONST("else"), .nextExpected = 0, .skipUntil = 0,  .kind = METAGEN_SCOPE_OWNER_OTHER},
+    {.name = STR8_LIT_COMP_CONST("switch"), .nextExpected = '(', .skipUntil = ')',  .kind = METAGEN_SCOPE_OWNER_SWITCH},
+    {.name = STR8_LIT_COMP_CONST("BASE_LIST_FOREACH"), .nextExpected = '(', .skipUntil = ')', .kind = METAGEN_SCOPE_OWNER_LOOP},
+    {.name = STR8_LIT_COMP_CONST("BASE_LIST_FOREACH_EX"), .nextExpected = '(', .skipUntil = ')', .kind = METAGEN_SCOPE_OWNER_LOOP},
+    {.name = STR8_LIT_COMP_CONST("BASE_LIST_FOREACH_INDEX"), .nextExpected = '(', .skipUntil = ')', .kind = METAGEN_SCOPE_OWNER_LOOP},
+    {.name = STR8_LIT_COMP_CONST("BASE_LIST_FOREACH_INDEX_EX"), .nextExpected = '(', .skipUntil = ')', .kind = METAGEN_SCOPE_OWNER_LOOP},
+    {.name = STR8_LIT_COMP_CONST("BASE_LIST_REVFOREACH"), .nextExpected = '(', .skipUntil = ')', .kind = METAGEN_SCOPE_OWNER_LOOP},
+    {.name = STR8_LIT_COMP_CONST("BASE_LIST_REVFOREACH_EX"), .nextExpected = '(', .skipUntil = ')', .kind = METAGEN_SCOPE_OWNER_LOOP},
+    {.name = STR8_LIT_COMP_CONST("BASE_PTR_LIST_FOREACH"), .nextExpected = '(', .skipUntil = ')', .kind = METAGEN_SCOPE_OWNER_LOOP},
+    {.name = STR8_LIT_COMP_CONST("BASE_PTR_LIST_FOREACH"), .nextExpected = '(', .skipUntil = ')', .kind = METAGEN_SCOPE_OWNER_LOOP},
+    {.name = STR8_LIT_COMP_CONST("BASE_PTR_LIST_FOREACH_EX"), .nextExpected = '(', .skipUntil = ')', .kind = METAGEN_SCOPE_OWNER_LOOP},
 };
 
 MetagenHasBlockArray gMetagenHasBlockTable =
@@ -1195,89 +1196,8 @@ bool metagenDefersProcessScope(Arena *arena, Str8List *output, CLexerState *clex
 
                 continue;
             }
-            else if (Str8Equals(clex->tok.lexeme, STR8_LIT("if"), 0) ||
-                     Str8Equals(clex->tok.lexeme, STR8_LIT("else"), 0) ||
-                     Str8Equals(clex->tok.lexeme, STR8_LIT("while"), 0) ||
-                     Str8Equals(clex->tok.lexeme, STR8_LIT("for"), 0))
-            {
-                CTok tok = clex->tok;
-                bool isLoop = !Str8Equals(clex->tok.lexeme, STR8_LIT("if"), 0);
-                bool isElse = Str8Equals(clex->tok.lexeme, STR8_LIT("else"), 0);
-
-                Str8ListPushLastFmt(arena, output, "%S", clex->tok.lexeme);
-                metagenGetNextNonWhitespaceTok(arena, output, clex, true);
-
-                if (isElse)
-                {
-                    if (clex->tok.kind == '{')
-                    {
-                        newScopeOwner = METAGEN_SCOPE_OWNER_OTHER;
-                    }
-                }
-                else if (clex->tok.kind == '(')
-                {
-                    u64 bracketCount = 1;
-                    while (bracketCount != 0 && clex->tok.kind != CTOK_END_INPUT)
-                    {
-                        Str8ListPushLastFmt(arena, output, "%S", clex->tok.lexeme);
-                        metagenGetNextNonWhitespaceTok(arena, output, clex, true);
-                        if (clex->tok.kind == '(') bracketCount++;
-                        if (clex->tok.kind == ')') bracketCount--;
-                    }
-
-                    if (clex->tok.kind == ')')
-                    {
-                        Str8ListPushLastFmt(arena, output, "%S", clex->tok.lexeme);
-                        metagenGetNextNonWhitespaceTok(arena, output, clex, true);
-                    }
-
-                    metagenDefersEmitDefersForNonBlockScopes(arena, output, clex, &scope);
-
-                    if (isLoop && clex->tok.kind == '{')
-                    {
-                        newScopeOwner = METAGEN_SCOPE_OWNER_LOOP;
-                    }
-                }
-                else
-                {
-                    baseEPrintf("%S isElse %S\n", clex->tok.lexeme, tok.lexeme);
-                    baseEPrintf("for/if/while keywords require a bracket '(' after, '%S' (%llu, %llu)\n", clex->tok.pos.ownerLexer->filePath, clex->tok.pos.line, clex->tok.pos.col);
-                }
-
-                continue;
-            }
             else if (Str8Equals(clex->tok.lexeme, STR8_LIT("do"), 0))
             {
-            }
-            else if (Str8Equals(clex->tok.lexeme, STR8_LIT("switch"), 0))
-            {
-                Str8ListPushLastFmt(arena, output, "%S", clex->tok.lexeme);
-                metagenGetNextNonWhitespaceTok(arena, output, clex, true);
-
-                if (clex->tok.kind == '(')
-                {
-                    u64 bracketCount = 1;
-                    while (bracketCount != 0 && clex->tok.kind != CTOK_END_INPUT)
-                    {
-                        Str8ListPushLastFmt(arena, output, "%S", clex->tok.lexeme);
-                        metagenGetNextNonWhitespaceTok(arena, output, clex, true);
-                        if (clex->tok.kind == '(') bracketCount++;
-                        if (clex->tok.kind == ')') bracketCount--;
-                    }
-
-                    if (clex->tok.kind == ')')
-                    {
-                        Str8ListPushLastFmt(arena, output, "%S", clex->tok.lexeme);
-                        metagenGetNextNonWhitespaceTok(arena, output, clex, true);
-                    }
-
-                    if (clex->tok.kind == '{')
-                    {
-                        newScopeOwner = METAGEN_SCOPE_OWNER_SWITCH;
-                    }
-
-                    continue;
-                }
             }
             else if (Str8Equals(clex->tok.lexeme, STR8_LIT("case"), 0))
             {
@@ -1354,9 +1274,66 @@ bool metagenDefersProcessScope(Arena *arena, Str8List *output, CLexerState *clex
                     metagenDefersEmitTabs(arena, output, scope.nestLevel - 1);
                 }
             }
+            else
+            {
+                for(u64 i = 0; i < gMetagenHasBlockTable.len; i++)
+                {
+                    MetagenHasBlock item = gMetagenHasBlockTable.data[i];
+
+                    if (Str8Equals(clex->tok.lexeme, item.name, 0))
+                    {
+                        CTok tok = clex->tok;
+
+                        Str8ListPushLastFmt(arena, output, "%S", clex->tok.lexeme);
+                        metagenGetNextNonWhitespaceTok(arena, output, clex, true);
+                        
+                        if (item.nextExpected == 0)
+                        {
+                            if (clex->tok.kind == '{')
+                            {
+                                newScopeOwner = item.kind;
+                            }
+                        }
+                        else if (clex->tok.kind == item.nextExpected)
+                        {
+                            u64 pairCount = 1;
+                            while (pairCount != 0 && clex->tok.kind != CTOK_END_INPUT)
+                            {
+                                Str8ListPushLastFmt(arena, output, "%S", clex->tok.lexeme);
+                                metagenGetNextNonWhitespaceTok(arena, output, clex, true);
+                                if (clex->tok.kind == item.nextExpected) pairCount++;
+                                if (clex->tok.kind == item.skipUntil) pairCount--;
+                            }
+
+                            if (clex->tok.kind == item.skipUntil)
+                            {
+                                Str8ListPushLastFmt(arena, output, "%S", clex->tok.lexeme);
+                                metagenGetNextNonWhitespaceTok(arena, output, clex, true);
+                            }
+
+                            metagenDefersEmitDefersForNonBlockScopes(arena, output, clex, &scope);
+
+                            if (clex->tok.kind == '{')
+                            {
+                                newScopeOwner = item.kind;
+                            }
+                        }
+                        else
+                        {
+                            baseEPrintf("%S isElse %S\n", clex->tok.lexeme, tok.lexeme);
+                            baseEPrintf("for/if/while keywords require a bracket '(' after, '%S' (%llu, %llu)\n", clex->tok.pos.ownerLexer->filePath, clex->tok.pos.line, clex->tok.pos.col);
+                        }
+
+                        goto OUTER_LOOP_END;
+                    }
+                }
+            }
 
             Str8ListPushLastFmt(arena, output, "%S", clex->tok.lexeme);
             baseCLexerNext(clex);
+
+OUTER_LOOP_END:
+            null;
         }
     }
 
