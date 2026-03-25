@@ -262,8 +262,7 @@ bool OSPathExists(str8 path)
     }
     baseTempEnd(temp);
 
-    return (dwAttrib != INVALID_FILE_ATTRIBUTES && 
-          !(dwAttrib & FILE_ATTRIBUTE_DIRECTORY));
+    return (dwAttrib != INVALID_FILE_ATTRIBUTES);
 }
 bool OSPathIsDirectory(str8 path)
 {

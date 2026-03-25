@@ -27,9 +27,12 @@ void ProgramMain(CmdLineHashMap *opts)
     if (clean)
     {
         basePrintf("{g}Cleaning genned files\n");
-        if(!OSPathDelete(METAGEN_DEFER_TEMP_FOLDER_NAME, true))
+        if (OSPathExists(METAGEN_DEFER_TEMP_FOLDER_NAME))
         {
-            baseEPrintf("{r}Failed to delete metagen defer temp folder '%S'\n", METAGEN_DEFER_TEMP_FOLDER_NAME);
+            if(!OSPathDelete(METAGEN_DEFER_TEMP_FOLDER_NAME, true))
+            {
+                baseEPrintf("{r}Failed to delete metagen defer temp folder '%S'\n", METAGEN_DEFER_TEMP_FOLDER_NAME);
+            }
         }
 
         Str8List allGened = OSGetFilePaths(arena, inputPath, STR8_LIT("*.gen.*"), true);
