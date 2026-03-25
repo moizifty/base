@@ -100,6 +100,9 @@ CTok baseCLexerNextNonWhitespace(CLexerState *lexerState);
 CTok baseCLexerPeekEx(CLexerState *lexerState, u64 amount);
 CTok baseCLexerPeek(CLexerState *lexerState);
 
+CLexerState baseCLexerSaveState(CLexerState *lexerState);
+void baseCLexerRestoreState(CLexerState *lexerState);
+
 void baseCLexerPrint(CLexerState *lexerState, char *fmt, ...);
 void baseCLexerError(CLexerState *lexerState, char *fmt, ...);
 

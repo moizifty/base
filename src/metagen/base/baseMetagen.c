@@ -33,7 +33,7 @@ void basePrintStructMember(void *member, MetagenStructMemb memb)
             case METAGEN_TYPE_str8: basePrintf("%S", *((str8*)(member) + i)); break;
             case METAGEN_TYPE_bool: basePrintf("%d", *((bool*)(member) + i)); break;
 
-            METAGEN_PRINT_MEMB_CUSTOM
+            // METAGEN_PRINT_MEMB_CUSTOM
 
             default:
             {

@@ -51,6 +51,8 @@ BASE_CREATE_EFFICIENT_LL_DEFS(MetagenCStructMembList, MetagenCStructMemb)
 BASE_CREATE_EFFICIENT_LL_DEFS(MetagenTypeDictSlot, MetagenTypeDictSlotEntry)
 BASE_CREATE_EFFICIENT_LL_DEFS(MetagenCStructList, MetagenCStruct)
 BASE_CREATE_EFFICIENT_LL_DEFS(MetagenOutputList, MetagenOutput)
+BASE_CREATE_EFFICIENT_LL_DEFS(MetagenLabelList, MetagenLabel)
+BASE_CREATE_EFFICIENT_LL_DEFS(MetagenDeferList, MetagenDefer)
 
 void metagenInit(Arena *arena)
 {
@@ -1035,10 +1037,20 @@ CTok metagenGetNextNonWhitespaceTok(Arena *arena, Str8List *output, CLexerState 
     return tok;
 }
 
-str8 metagenDefersParseDefer(Arena *arena, Str8List *output, CLexerState *lex, MetagenScope *parent)
+CTok metagenPeekNextNonWhitespaceTok(CLexerState *lex)
+{
+    CTok tok = {0};
+    u64 i = 1;
+    while((tok = baseCLexerPeekEx(lex, i++)).kind == CTOK_WHITESPACE);
+
+    return tok;
+}
+
+MetagenDefer metagenDefersParseDefer(Arena *arena, Str8List *output, CLexerState *lex, MetagenScope *parent)
 {
     if (Str8Equals(lex->tok.lexeme, gMetagenCmdKindStr8Table[METAGEN_CMD_DEFER], 0))
     {
+        CTokPos startPos = lex->tok.pos;
         metagenGetNextNonWhitespaceTok(arena, output, lex, false);
 
         if (lex->tok.kind == '{')
@@ -1046,7 +1058,7 @@ str8 metagenDefersParseDefer(Arena *arena, Str8List *output, CLexerState *lex, M
             Str8List blockStr = {0};
             metagenDefersProcessScope(arena, &blockStr, lex, parent, METAGEN_SCOPE_OWNER_OTHER);
 
-            return Str8ListJoin(arena, &blockStr, null);
+            return (MetagenDefer){.content = Str8ListJoin(arena, &blockStr, null), .start = startPos};
         }
         else
         {
@@ -1062,11 +1074,11 @@ str8 metagenDefersParseDefer(Arena *arena, Str8List *output, CLexerState *lex, M
 
             metagenGetNextNonWhitespaceTok(arena, output, lex, true);
 
-            return baseStr8(start.lexeme.data, (end.lexeme.data +  end.lexeme.len) - start.lexeme.data);
+            return (MetagenDefer){.content = baseStr8(start.lexeme.data, (end.lexeme.data +  end.lexeme.len) - start.lexeme.data), .start = startPos};
         }
     }
 
-    return STR8_EMPTY;
+    return (MetagenDefer){0};
 }
 
 void metagenDefersEmitTabs(Arena *arena, Str8List *output, u64 amount)
@@ -1084,11 +1096,11 @@ void metagenDefersEmitReturnDefers(Arena *arena, Str8List *output, MetagenScope 
     MetagenScope *curr = scope;
     while (curr != null)
     {
-        BASE_LIST_REVFOREACH(Str8ListNode, node, curr->defers)
+        BASE_LIST_REVFOREACH(MetagenDefer, defer, curr->defers)
         {
             metagenDefersEmitTabs(arena, output, scope->nestLevel);
 
-            Str8ListPushLastFmt(arena, output, "%S\n", node->val);
+            Str8ListPushLastFmt(arena, output, "%S\n", defer->content);
 
             metagenDefersEmitTabs(arena, output, scope->nestLevel);
         }
@@ -1101,11 +1113,11 @@ void metagenDefersEmitBreakContinueDefers(Arena *arena, Str8List *output, Metage
     MetagenScope *curr = scope;
     while (curr != null)
     {
-        BASE_LIST_REVFOREACH(Str8ListNode, node, curr->defers)
+        BASE_LIST_REVFOREACH(MetagenDefer, defer, curr->defers)
         {
             metagenDefersEmitTabs(arena, output, scope->nestLevel);
 
-            Str8ListPushLastFmt(arena, output, "%S\n", node->val);
+            Str8ListPushLastFmt(arena, output, "%S\n", defer->content);
 
             metagenDefersEmitTabs(arena, output, scope->nestLevel);
         }
@@ -1118,14 +1130,61 @@ void metagenDefersEmitBreakContinueDefers(Arena *arena, Str8List *output, Metage
         curr = curr->parent;
     }
 }
+bool metagenDefersEmitGotoDefers(Arena *arena, Str8List *output, CLexerState *clex, MetagenScope *scope)
+{
+    str8 label = metagenPeekNextNonWhitespaceTok(clex).lexeme;
+
+    MetagenScope *currOuter = scope;
+    while (currOuter != null)
+    {
+        MetagenLabel *found = null;
+        BASE_LIST_FOREACH(MetagenLabel, labelNode, currOuter->labels)
+        {
+            if (Str8Equals(labelNode->name, label, 0))
+            {
+                found = labelNode;
+            }
+        }
+
+        if (found != null)
+        {
+            MetagenScope *currInner = scope;
+            while (currInner != null)
+            {
+                BASE_LIST_REVFOREACH(MetagenDefer, defer, currInner->defers)
+                {
+                    // if the defer happens after the label or if the label is outside the current scope
+                    if (defer->start.tokRange.data > found->pos.tokRange.data || currInner != currOuter)
+                    {
+                        metagenDefersEmitTabs(arena, output, scope->nestLevel);
+
+                        Str8ListPushLastFmt(arena, output, "%S\n", defer->content);
+
+                        metagenDefersEmitTabs(arena, output, scope->nestLevel);
+                    }
+                }
+
+                currInner = currInner->parent;
+            }
+            
+            return true;
+        }
+
+        currOuter = currOuter->parent;
+    }
+
+    return false;
+}
 
 void metagenDefersEmitDefersForNonBlockScopes(Arena *arena, Str8List *output, CLexerState *clex, MetagenScope *scope)
 {
     if (Str8Equals(clex->tok.lexeme, STR8_LIT("return"), 0) ||
         Str8Equals(clex->tok.lexeme, STR8_LIT("break"), 0) ||
-        Str8Equals(clex->tok.lexeme, STR8_LIT("continue"), 0))
+        Str8Equals(clex->tok.lexeme, STR8_LIT("continue"), 0) ||
+        Str8Equals(clex->tok.lexeme, STR8_LIT("goto"), 0))
     {
         bool isReturn = Str8Equals(clex->tok.lexeme, STR8_LIT("return"), 0);
+        bool isGoto = Str8Equals(clex->tok.lexeme, STR8_LIT("goto"), 0);
 
         metagenDefersEmitTabs(arena, output, scope->nestLevel);
         Str8ListPushLastFmt(arena, output, "{\n");
@@ -1133,6 +1192,10 @@ void metagenDefersEmitDefersForNonBlockScopes(Arena *arena, Str8List *output, CL
         if (isReturn)
         {
             metagenDefersEmitReturnDefers(arena, output, scope);
+        }
+        else if (isGoto)
+        {
+            metagenDefersEmitGotoDefers(arena, output, clex, scope);
         }
         else
         {
@@ -1152,6 +1215,42 @@ void metagenDefersEmitDefersForNonBlockScopes(Arena *arena, Str8List *output, CL
         Str8ListPushLastFmt(arena, output, "}\n");
     }
 }
+
+MetagenLabelList metagenScopeGetAllPossibleLabels(Arena *arena, CLexerState *clex)
+{
+    CLexerState savedState = *clex;
+
+    u64 bracketsSeen = 0;
+
+    MetagenLabelList ret = {0};
+
+    if (clex->tok.kind == '{')
+    {
+        bracketsSeen = 1;
+
+        while (bracketsSeen != 0 && clex->tok.kind != CTOK_END_INPUT)
+        {
+            baseCLexerNext(clex);
+
+            if (clex->tok.kind == '{') bracketsSeen++;
+            else if (clex->tok.kind == '}') bracketsSeen--;
+            
+            // bracketseen == 1 if its on the same sublevel
+            if (baseCLexerPeek(clex).kind == ':' && clex->tok.kind == CTOK_IDEN && bracketsSeen == 1)
+            {
+                MetagenLabel *label = arenaPushType(arena, MetagenLabel);
+                label->name = clex->tok.lexeme;
+                label->pos = clex->tok.pos;
+
+                MetagenLabelListPushNodeLast(&ret, label);
+            }
+        }
+    }
+
+    *clex = savedState;
+
+    return ret;
+}
 bool metagenDefersProcessScope(Arena *arena, Str8List *output, CLexerState *clex, MetagenScope *parent, MetagenScopeOwnerKind ownerKind)
 {
     MetagenScope scope = {.nestLevel = parent ? parent->nestLevel + 1 : 0, .parent = parent, .owner = ownerKind};
@@ -1160,6 +1259,8 @@ bool metagenDefersProcessScope(Arena *arena, Str8List *output, CLexerState *clex
     bool foundDefers = false;
     if (clex->tok.kind == '{')
     {
+        scope.labels = metagenScopeGetAllPossibleLabels(arena, clex);
+
         Str8ListPushLastFmt(arena, output, "%S", clex->tok.lexeme);
         bracketsSeen += 1;
         
@@ -1187,11 +1288,13 @@ bool metagenDefersProcessScope(Arena *arena, Str8List *output, CLexerState *clex
             }
             else if (Str8Equals(clex->tok.lexeme, gMetagenCmdKindStr8Table[METAGEN_CMD_DEFER], 0))
             {
-                str8 block = metagenDefersParseDefer(arena, output, clex, &scope);
-                if (BASE_ANY(block))
+                MetagenDefer defer = metagenDefersParseDefer(arena, output, clex, &scope);
+                if (BASE_ANY(defer.content))
                 {
                     foundDefers = true;
-                    Str8ListPushLast(arena, &scope.defers, block);
+                    MetagenDefer *ptrDefer = arenaPushType(arena, MetagenDefer);
+                    *ptrDefer = defer;
+                    MetagenDeferListPushNodeLast(&scope.defers, ptrDefer);
                 }
 
                 continue;
@@ -1213,37 +1316,7 @@ bool metagenDefersProcessScope(Arena *arena, Str8List *output, CLexerState *clex
                 Str8ListPushLastFmt(arena, output, "%S", clex->tok.lexeme);
                 metagenGetNextNonWhitespaceTok(arena, output, clex, true);
 
-                if (Str8Equals(clex->tok.lexeme, STR8_LIT("return"), 0) ||
-                    Str8Equals(clex->tok.lexeme, STR8_LIT("break"), 0) ||
-                    Str8Equals(clex->tok.lexeme, STR8_LIT("continue"), 0))
-                {
-                    bool isReturn = Str8Equals(clex->tok.lexeme, STR8_LIT("return"), 0);
-
-                    metagenDefersEmitTabs(arena, output, scope.nestLevel);
-                    Str8ListPushLastFmt(arena, output, "{\n");
-
-                    if (isReturn)
-                    {
-                        metagenDefersEmitReturnDefers(arena, output, &scope);
-                    }
-                    else
-                    {
-                        metagenDefersEmitBreakContinueDefers(arena, output, &scope);
-                    }
-
-                    while (clex->tok.kind != ';')
-                    {
-                        Str8ListPushLastFmt(arena, output, "%S", clex->tok.lexeme);
-                        metagenGetNextNonWhitespaceTok(arena, output, clex, true);
-                    }
-
-                    Str8ListPushLastFmt(arena, output, "%S", clex->tok.lexeme);
-                    metagenGetNextNonWhitespaceTok(arena, output, clex, true);
-
-                    metagenDefersEmitTabs(arena, output, scope.nestLevel);
-                    Str8ListPushLastFmt(arena, output, "}\n");
-                }
-
+                metagenDefersEmitDefersForNonBlockScopes(arena, output, clex, &scope);
 
                 if (clex->tok.kind == '{')
                 {
@@ -1263,16 +1336,9 @@ bool metagenDefersProcessScope(Arena *arena, Str8List *output, CLexerState *clex
                 metagenDefersEmitBreakContinueDefers(arena, output, &scope);
                 dontEmitAtEndOfScope = true;
             }
-            else if (bracketsSeen == 0 && dontEmitAtEndOfScope == false)
+            else if (Str8Equals(clex->tok.lexeme, STR8_LIT("goto"), 0))
             {
-                BASE_LIST_REVFOREACH(Str8ListNode, node, scope.defers)
-                {
-                    metagenDefersEmitTabs(arena, output, scope.nestLevel);
-
-                    Str8ListPushLastFmt(arena, output, "%S\n", node->val);
-
-                    metagenDefersEmitTabs(arena, output, scope.nestLevel - 1);
-                }
+                dontEmitAtEndOfScope = metagenDefersEmitGotoDefers(arena, output, clex, &scope);
             }
             else
             {
@@ -1326,6 +1392,18 @@ bool metagenDefersProcessScope(Arena *arena, Str8List *output, CLexerState *clex
 
                         goto OUTER_LOOP_END;
                     }
+                }
+            }
+
+            if (bracketsSeen == 0 && dontEmitAtEndOfScope == false)
+            {
+                BASE_LIST_REVFOREACH(MetagenDefer, defer, scope.defers)
+                {
+                    metagenDefersEmitTabs(arena, output, scope.nestLevel);
+
+                    Str8ListPushLastFmt(arena, output, "%S\n", defer->content);
+
+                    metagenDefersEmitTabs(arena, output, scope.nestLevel - 1);
                 }
             }
 

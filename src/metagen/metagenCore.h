@@ -135,10 +135,33 @@ typedef enum MetagenScopeOwnerKind
     METAGEN_SCOPE_OWNER_SWITCH,
 }MetagenScopeOwnerKind;
 
+typedef struct MetagenLabel
+{
+    str8 name;
+    CTokPos pos;
+
+    struct MetagenLabel *next;
+    struct MetagenLabel *prev;
+}MetagenLabel;
+
+BASE_CREATE_EFFICIENT_LL_DECLS(MetagenLabelList, MetagenLabel)
+
+typedef struct MetagenDefer
+{
+    str8 content;
+    CTokPos start;
+
+    struct MetagenDefer *next;
+    struct MetagenDefer *prev;
+}MetagenDefer;
+
+BASE_CREATE_EFFICIENT_LL_DECLS(MetagenDeferList, MetagenDefer)
+
 typedef struct MetagenScope
 {
     u64 nestLevel;
-    Str8List defers;
+    MetagenLabelList labels;
+    MetagenDeferList defers;
 
     MetagenScopeOwnerKind owner;
     struct MetagenScope *parent;
@@ -163,7 +186,7 @@ Str8List metagenFindFilesToProcess(Arena *arena, str8 path);
 
 // pass on introspect, embed tags
 CTok metagenGetNextNonWhitespaceTok(Arena *arena, Str8List *output, CLexerState *lex, bool outputWhitespace);
-str8 metagenDefersParseDefer(Arena *arena, Str8List *output, CLexerState *clex, MetagenScope *parent);
+MetagenDefer metagenDefersParseDefer(Arena *arena, Str8List *output, CLexerState *clex, MetagenScope *parent);
 bool metagenDefersProcessScope(Arena *arena, Str8List *output, CLexerState *clex, MetagenScope *parent, MetagenScopeOwnerKind ownerKind);
 void metagenMetadataPass(Arena *arena, str8 baseFolder, Str8List *inputPaths);
 void metagenDefersPass(Arena *arena, Str8List inputPaths);

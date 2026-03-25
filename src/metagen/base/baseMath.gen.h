@@ -1,10 +1,12 @@
 /**********************************************************************/
 // GENERATED FILE
-// Input: .\src\base\baseMath.h
-// Date-Time: 19/3/2026 - 12:58
+// Input: src\metagen\base\baseMath.h
+// Date-Time: 25/3/2026 - 21:49
 /**********************************************************************/
 
 #include "base/baseMetagen.h"
+
+#include "base/baseMetagenCommon.gen.h"
 
 extern MetagenStructMembArray gvec2fMembDefsTable;
 extern MetagenStructMembArray gvec3fMembDefsTable;

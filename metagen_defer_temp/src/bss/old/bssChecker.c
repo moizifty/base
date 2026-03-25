@@ -1,7 +1,7 @@
 /**********************************************************************/
 // GENERATED FILE
 // Input: .\src\bss\old\bssChecker.c
-// Date-Time: 24/3/2026 - 20:41
+// Date-Time: 25/3/2026 - 23:32
 /**********************************************************************/
 
 #include "base/baseThreads.h"
@@ -637,7 +637,8 @@ void bssCheckerCheckExpr(struct BSSInterpretorState *iState, ASTExpr *expr, BssS
                             }
 
                             currParam = currParam->next;
-                        }
+                                                    print(Sd);
+                        }
 
                         expr->checkType = funcType->func.ret;
                     }
