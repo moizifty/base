@@ -44,4 +44,5 @@ bool *cmdlineBool(str8 name, bool def, str8 help, CmdlineArgPresenceKind presenc
 str8 *cmdlineStr8(str8 name, str8 def, str8 help, CmdlineArgPresenceKind presence);
 Str8List *cmdlineTrailing(void);
 bool cmdlineParse(Str8List cmdline);
+void cmdlineUsage(void);
 #endif

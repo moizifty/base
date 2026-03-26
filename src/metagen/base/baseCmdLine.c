@@ -1,4 +1,9 @@
 #include "baseCmdLine.h"
+#include "baseThreads.h"
+#include "baseMemory.h"
+#include "baseStrings.h"
+#include "os/core/osCore.h"
+
 CmdlineArgDefArray gBaseCmdlineArgDefs = 
 {
     .data = (CmdlineArgDef[BASE_CMDLINE_MAX_ARG_DEF_COUNT]){0},
@@ -162,4 +167,46 @@ bool cmdlineParse(Str8List cmdline)
 Str8List *cmdlineTrailing(void)
 {
     return &gBaseCmdlineTrailingArgs;
+}
+
+void cmdlineUsage(void)
+{
+    ArenaTemp temp = baseTempBegin(null, 0);
+    {
+        str8 programName = Str8ChopBefore(OSGetProgramPath(temp.arena), STR8_LIT("/"), STR_MATCHFLAGS_SLASH_INSENSITIVE | STR_MATCHFLAGS_FIND_LAST);
+        
+        basePrintf("Usage: %S", programName);
+
+        for(u64 i = 0; i < gBaseCmdlineArgDefs.len; i++)
+        {
+            CmdlineArgDef def = gBaseCmdlineArgDefs.data[i];
+            basePrintf("\n    --%S", def.name);
+            if (def.presence == CMDLINE_ARG_PRESENCE_OPTIONAL)
+            {
+                basePrintf(" (optional)");
+            }
+            else
+            {
+                basePrintf(" (mandatory)");
+            }
+            basePrintf("\n");
+            switch (def.kind)
+            {
+                case CMDLINE_ARG_I64:
+                {
+                    basePrintf("        default: %lld\n        info: %S", def.asI64, def.help);
+                }break;
+                case CMDLINE_ARG_STR8:
+                {
+                    basePrintf("        default: %S\n        info: %S", def.asStr8, def.help);
+                }break;
+                case CMDLINE_ARG_BOOL:
+                {
+                    basePrintf("        default: %s\n        info: %S", def.asBool ? "true" : "false", def.help);
+                }break;
+            }
+        }
+        basePrintf("\n", programName);
+    }
+    baseTempEnd(temp);
 }

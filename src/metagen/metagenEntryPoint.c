@@ -18,6 +18,7 @@ void ProgramMain(Str8List args)
 
     if (!cmdlineParse(args))
     {
+        cmdlineUsage();
         return;
     }
 
