@@ -9,24 +9,30 @@
 
 #include "metagen\os\core\osEntryPoint.c"
 
-void ProgramMain(CmdLineHashMap *opts)
+void ProgramMain(Str8List args)
 {
-    if (opts->originalInputs.len == 0)
+    bool *defersArg = cmdlineBool(STR8_LIT("defers"), false, STR8_LIT("Process defers in all inputs."), CMDLINE_ARG_PRESENCE_OPTIONAL);
+    bool *metadataArg = cmdlineBool(STR8_LIT("metadata"), false, STR8_LIT("Process metada in all inputs."), CMDLINE_ARG_PRESENCE_OPTIONAL);
+    bool *cleanDeferArg = cmdlineBool(STR8_LIT("clean-defer"), false, STR8_LIT("Clean all generated defer code."), CMDLINE_ARG_PRESENCE_OPTIONAL);
+    bool *cleanMetadataArg = cmdlineBool(STR8_LIT("clean-metadata"), false, STR8_LIT("Clean all generated metadata code"), CMDLINE_ARG_PRESENCE_OPTIONAL);
+
+    if (!cmdlineParse(args))
     {
-        baseEPrintf("{r}Expected only one input, either a file or a directory to recusively collect files.\n");
         return;
     }
 
-    bool processDefers = cmdlineGetFlag(opts, STR8_LIT("defers"));
-    bool processMetadata = cmdlineGetFlag(opts, STR8_LIT("metadata"));
-    bool clean = cmdlineGetFlag(opts, STR8_LIT("clean"));
-    str8 inputPath = opts->originalInputs.first->val;
+    Str8List *inputArgs = cmdlineTrailing();
+    if (inputArgs->len == 0)
+    {
+        basePrintf("{r}Expected atleast one input.");
+        return;
+    }
 
     Arena *arena = arenaAllocDefault();
     
-    if (clean)
+    if (*cleanDeferArg)
     {
-        basePrintf("{g}Cleaning genned files\n");
+        basePrintf("{g}Cleaning defer genned files\n");
         if (OSPathExists(METAGEN_DEFER_TEMP_FOLDER_NAME))
         {
             if(!OSPathDelete(METAGEN_DEFER_TEMP_FOLDER_NAME, true))
@@ -35,30 +41,36 @@ void ProgramMain(CmdLineHashMap *opts)
             }
         }
 
-        Str8List allGened = OSGetFilePaths(arena, inputPath, STR8_LIT("*.gen.*"), true);
+        basePrintf("{g}Finished cleaning genned defer files\n");
+    }
+    if (*cleanMetadataArg)
+    {
+        basePrintf("{g}Cleaning metadata genned files\n");
+
+        Str8List allGened = OSGetFilePaths(arena, inputArgs->first->val, STR8_LIT("*.gen.*"), true);
         BASE_LIST_FOREACH(Str8ListNode, node, allGened)
         {
             OSPathDelete(node->val, true);
         }
 
-        basePrintf("{g}Finished cleaning genned files\n");
+        basePrintf("{g}Finished cleaning genned metadata files\n");
     }
 
     metagenInit(arena);
 
-    Str8List paths = metagenFindFilesToProcess(arena, inputPath);
+    Str8List paths = metagenFindFilesToProcess(arena, inputArgs->first->val);
 
     str8 baseFolder = OSGetProgramDirectory(arena);
     baseFolder = Str8ChopPastLastSlash(Str8ChopPastLastSlash(baseFolder));
     baseFolder = Str8PushFmt(arena, "%S\\base\\", baseFolder);
 
 
-    if (processMetadata)
+    if (*metadataArg)
     {
         metagenMetadataPass(arena, baseFolder, &paths);
     }
 
-    if (processDefers)
+    if (*defersArg)
     {
         metagenDefersPass(arena, paths);
     }

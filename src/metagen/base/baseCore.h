@@ -333,8 +333,7 @@ BASE_CREATE_LL_DECLS(U8ArrayList, U8Array)
 
 
 // program entry related
-typedef struct CmdLineHashMap CmdLineHashMap;
-typedef void(*ProgramMainFunc)(CmdLineHashMap *);
+typedef void(*ProgramMainFunc)(Str8List);
 
 void BaseMainThreadEntry(ProgramMainFunc programMain, i64 argc, char **argv);
 

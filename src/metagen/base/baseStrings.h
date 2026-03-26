@@ -128,4 +128,5 @@ str16 Str16FromFromStr8(Arena *arena, str8 str);
 
 u64 U64FromStr8(str8 str);
 i64 I64FromStr8(str8 str);
+bool I64TryFromStr8(str8 str, i64 *num);
 #endif

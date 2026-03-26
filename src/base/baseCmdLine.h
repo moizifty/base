@@ -4,35 +4,44 @@
 #include "baseCore.h"
 #include "baseMemory.h"
 #include "baseStrings.h"
-#include "baseHash.h"
 
-typedef struct CmdLineOptNode CmdLineOptNode;
-struct CmdLineOptNode
+typedef enum CmdlineArgPresenceKind
 {
-    CmdLineOptNode *next;
-    CmdLineOptNode *prev;
-    str8 option;
-    Str8List values;
-};
+    CMDLINE_ARG_PRESENCE_OPTIONAL,
+    CMDLINE_ARG_PRESENCE_REQUIRED,
+}CmdlineArgPresenceKind;
 
-typedef struct CmdLineOptSlot
+typedef enum CmdlineArgKind
 {
-    CmdLineOptNode *first;
-    CmdLineOptNode *last;
-}CmdLineOptSlot;
+    CMDLINE_ARG_NULL,
+    CMDLINE_ARG_I64,
+    CMDLINE_ARG_BOOL,
+    CMDLINE_ARG_STR8,
+}CmdlineArgKind;
 
-BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(CmdLineOptSlotArray, CmdLineOptSlot)
-
-typedef struct CmdLineHashMap
+typedef struct CmdlineArgDef
 {
-    CmdLineOptSlotArray slots;
-    Str8List originalInputs;
-}CmdLineHashMap;
+    CmdlineArgKind kind;
+    union
+    {
+        i64 asI64;
+        bool asBool;
+        str8 asStr8;
+    };
 
-u64 cmdlineGetHashOfOption(str8 option);
-CmdLineHashMap cmdlineParseCmdLineFromStringList(Arena *arena, Str8List list);
-str8 cmdlineGetStr8(CmdLineHashMap *map, str8 option);
-bool cmdlineGetFlag(CmdLineHashMap *map, str8 option);
-i64 cmdlineGetI64(CmdLineHashMap *map, str8 option);
+    str8 name;
+    str8 help;
+    CmdlineArgPresenceKind presence;
+    bool passed;
+}CmdlineArgDef;
 
+BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(CmdlineArgDefArray, CmdlineArgDef)
+
+#define BASE_CMDLINE_MAX_ARG_DEF_COUNT 255
+
+i64 *cmdlineI64(str8 name, i64 def, str8 help, CmdlineArgPresenceKind presence);
+bool *cmdlineBool(str8 name, bool def, str8 help, CmdlineArgPresenceKind presence);
+str8 *cmdlineStr8(str8 name, str8 def, str8 help, CmdlineArgPresenceKind presence);
+Str8List *cmdlineTrailing(void);
+bool cmdlineParse(Str8List cmdline);
 #endif

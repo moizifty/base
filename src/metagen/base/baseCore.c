@@ -74,18 +74,15 @@ void BaseMainThreadEntry(ProgramMainFunc programMain, i64 argc, char **argv)
     OSSetThreadDebuggerName(OSGetCurrentThread(), STR8_LIT("Main Thread"));
 
     Str8List argsList = {0};
-    CmdLineHashMap cmdLineMap = {0};
 
     for(int i = 1; i < argc; i++)
     {
         Str8ListPushLastFmt(ctx.scratchArenas[0], &argsList, "%s", argv[i]);
     }
 
-    cmdLineMap = cmdlineParseCmdLineFromStringList(ctx.scratchArenas[0], argsList);
-
     OSInit(ctx.scratchArenas[0]);
 
-    programMain(&cmdLineMap);
+    programMain(argsList);
 
     logThreadOutputToFile();
 }

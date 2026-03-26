@@ -1,8 +1,7 @@
 #include "osCoreWin32.h"
 #include "base/baseLog.h"
 
-typedef struct CmdLineHashMap CmdLineHashMap;
-void ProgramMain(CmdLineHashMap *);
+void ProgramMain(Str8List);
 
 #ifdef BASE_USE_EXCEPTION_HANDLER
 #pragma comment(lib, "dbghelp.lib")

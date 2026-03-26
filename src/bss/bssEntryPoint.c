@@ -8,23 +8,18 @@
 
 #include "os/core/osEntryPoint.c"
 
-void ProgramMain(CmdLineHashMap *line)
+void ProgramMain(Str8List args)
 {
-    if (line->originalInputs.len < 1)
-    {
-        baseEPrintf("{r}Expected atleast 1 arg for bss interp");
-    }
-
     Arena *arena = arenaAllocDefault();
 
     BssInterp interp = {.arena = arena};
 
-    for(Str8ListNode *flag = line->originalInputs.first->next; flag != null; flag = flag->next)
+    for(Str8ListNode *flag = args.first->next; flag != null; flag = flag->next)
     {
         Str8ListPushLast(arena, &interp.flags, flag->val);
     }
 
-    if(!bssInterpreterInterpFile(&interp, line->originalInputs.first->val))
+    if(!bssInterpreterInterpFile(&interp, args.first->val))
     {
         baseEPrintf("{r}Failed to interp file.\n");
         return;

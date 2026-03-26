@@ -748,3 +748,36 @@ i64 I64FromStr8(str8 str)
 
     return num * sign;
 }
+
+bool I64TryFromStr8(str8 str, i64 *num)
+{
+    *num = 0;
+
+    bool hex = false;
+    if (Str8StartsWith(str, STR8_LIT("-"), 0))
+    {
+        str = Str8Skip(str, 2);
+    }
+
+    if (Str8StartsWith(str, STR8_LIT("0x"), STR_MATCHFLAGS_CASE_INSENSITIVE))
+    {
+        hex = true;
+        str = Str8Skip(str, 2);
+    } 
+    else if (Str8StartsWith(str, STR8_LIT("0b"), STR_MATCHFLAGS_CASE_INSENSITIVE))
+    {
+        str = Str8Skip(str, 2);
+    }
+
+    for(u64 i = 0; i < str.len; i++)
+    {
+        if ((hex && !BASE_ISHEXDIGIT(str.data[i])) || 
+            !BASE_ISDIGIT(str.data[i]))
+        {
+            return false;
+        }
+    }
+
+    *num = I64FromStr8(str);
+    return true;
+}
