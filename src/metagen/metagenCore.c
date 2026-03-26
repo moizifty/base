@@ -29,6 +29,7 @@ MetagenHasBlock gMetagenHasBlockTableData[] =
     {.name = STR8_LIT_COMP_CONST("while"), .nextExpected = '(', .skipUntil = ')', .kind = METAGEN_SCOPE_OWNER_LOOP},
     {.name = STR8_LIT_COMP_CONST("if"), .nextExpected = '(', .skipUntil = ')',  .kind = METAGEN_SCOPE_OWNER_OTHER},
     {.name = STR8_LIT_COMP_CONST("else"), .nextExpected = 0, .skipUntil = 0,  .kind = METAGEN_SCOPE_OWNER_OTHER},
+    {.name = STR8_LIT_COMP_CONST("do"), .nextExpected = 0, .skipUntil = 0,  .kind = METAGEN_SCOPE_OWNER_LOOP},
     {.name = STR8_LIT_COMP_CONST("switch"), .nextExpected = '(', .skipUntil = ')',  .kind = METAGEN_SCOPE_OWNER_SWITCH},
     {.name = STR8_LIT_COMP_CONST("BASE_LIST_FOREACH"), .nextExpected = '(', .skipUntil = ')', .kind = METAGEN_SCOPE_OWNER_LOOP},
     {.name = STR8_LIT_COMP_CONST("BASE_LIST_FOREACH_EX"), .nextExpected = '(', .skipUntil = ')', .kind = METAGEN_SCOPE_OWNER_LOOP},
@@ -1176,12 +1177,17 @@ bool metagenDefersEmitGotoDefers(Arena *arena, Str8List *output, CLexerState *cl
     return false;
 }
 
-void metagenDefersEmitDefersForNonBlockScopes(Arena *arena, Str8List *output, CLexerState *clex, MetagenScope *scope)
+bool metagenDefersCanEmitBefore(CLexerState *clex)
 {
-    if (Str8Equals(clex->tok.lexeme, STR8_LIT("return"), 0) ||
+    return Str8Equals(clex->tok.lexeme, STR8_LIT("return"), 0) ||
         Str8Equals(clex->tok.lexeme, STR8_LIT("break"), 0) ||
         Str8Equals(clex->tok.lexeme, STR8_LIT("continue"), 0) ||
-        Str8Equals(clex->tok.lexeme, STR8_LIT("goto"), 0))
+        Str8Equals(clex->tok.lexeme, STR8_LIT("goto"), 0);
+        
+}
+void metagenDefersEmitDefersForNonBlockScopes(Arena *arena, Str8List *output, CLexerState *clex, MetagenScope *scope)
+{
+    if (metagenDefersCanEmitBefore(clex))
     {
         bool isReturn = Str8Equals(clex->tok.lexeme, STR8_LIT("return"), 0);
         bool isGoto = Str8Equals(clex->tok.lexeme, STR8_LIT("goto"), 0);
@@ -1299,9 +1305,6 @@ bool metagenDefersProcessScope(Arena *arena, Str8List *output, CLexerState *clex
 
                 continue;
             }
-            else if (Str8Equals(clex->tok.lexeme, STR8_LIT("do"), 0))
-            {
-            }
             else if (Str8Equals(clex->tok.lexeme, STR8_LIT("case"), 0))
             {
                 // case
@@ -1358,6 +1361,10 @@ bool metagenDefersProcessScope(Arena *arena, Str8List *output, CLexerState *clex
                             if (clex->tok.kind == '{')
                             {
                                 newScopeOwner = item.kind;
+                            }
+                            else if(metagenDefersCanEmitBefore(clex))
+                            {
+                                metagenDefersEmitDefersForNonBlockScopes(arena, output, clex, &scope);
                             }
                         }
                         else if (clex->tok.kind == item.nextExpected)
@@ -1417,13 +1424,13 @@ OUTER_LOOP_END:
 
     return foundDefers;
 }
-void metagenDefersPass(Arena *arena, Str8List inputPaths)
+void metagenDefersPass(Arena *arena, Str8List sourcePaths)
 {
     basePrintf("{g}Starting defers pass\n");
 
     DateTime currentTime = OSGetLocalTime();
 
-    BASE_LIST_FOREACH(Str8ListNode, inputPath, inputPaths)
+    BASE_LIST_FOREACH(Str8ListNode, inputPath, sourcePaths)
     {
         CLexerState clex = baseCLexerInitFromFile(arena, inputPath->val);
 

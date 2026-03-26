@@ -23,9 +23,10 @@ void ProgramMain(Str8List args)
     }
 
     Str8List *inputArgs = cmdlineTrailing();
-    if (inputArgs->len == 0)
+    if (inputArgs->len != 1)
     {
-        basePrintf("{r}Expected atleast one input.");
+        basePrintf("{r}Expected one input.\n");
+        cmdlineUsage();
         return;
     }
 
@@ -64,7 +65,6 @@ void ProgramMain(Str8List args)
     str8 baseFolder = OSGetProgramDirectory(arena);
     baseFolder = Str8ChopPastLastSlash(Str8ChopPastLastSlash(baseFolder));
     baseFolder = Str8PushFmt(arena, "%S\\base\\", baseFolder);
-
 
     if (*metadataArg)
     {

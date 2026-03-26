@@ -59,9 +59,13 @@ bool cmdlineParse(Str8List cmdline)
     bool result = true;
     BASE_LIST_FOREACH(Str8ListNode, node, cmdline)
     {
+        bool found = false;
+
+        str8 arg = node->val;
+        bool expectedArg = false;
         if (Str8StartsWith(node->val, STR8_LIT("-"), 0))
         {
-            str8 arg = node->val;
+            expectedArg = true;
             if (Str8StartsWith(arg, STR8_LIT("--"), 0))
             {
                 arg = Str8Skip(arg, 2);
@@ -70,83 +74,85 @@ bool cmdlineParse(Str8List cmdline)
             {
                 arg = Str8Skip(arg, 1);
             }
-
-            bool found = false;
-            for (u64 i = 0; i < gBaseCmdlineArgDefs.len; i++)
+        }
+        
+        for (u64 i = 0; i < gBaseCmdlineArgDefs.len; i++)
+        {
+            CmdlineArgDef *def = gBaseCmdlineArgDefs.data + i;
+            if (Str8Equals(def->name, arg, 0))
             {
-                CmdlineArgDef *def = gBaseCmdlineArgDefs.data + i;
-                if (Str8Equals(def->name, arg, 0))
+                switch (def->kind)
                 {
-                    switch (def->kind)
+                    case CMDLINE_ARG_I64:
                     {
-                        case CMDLINE_ARG_I64:
+                        if (node->next != null)
                         {
-                            if (node->next != null)
+                            if (!I64TryFromStr8(node->next->val, &def->asI64))
                             {
-                                if (!I64TryFromStr8(node->next->val, &def->asI64))
-                                {
-                                    baseEPrintf("{r}Expected integer argument after commandline arg '%S' instead got '%S'.\n", node->val, node->next->val);
-                                    result = result && false;
-                                }
-                            }
-                            else
-                            {
-                                baseEPrintf("{r}Expected integer argument after commandline arg '%S'.\n", node->val);
+                                baseEPrintf("{r}Expected integer argument after commandline arg '%S' instead got '%S'.\n", node->val, node->next->val);
                                 result = result && false;
                             }
-
-                            node = node->next;
-                            break;
-                        }break;
-
-                        case CMDLINE_ARG_STR8:
+                        }
+                        else
                         {
-                            if (node->next != null)
-                            {
-                                def->asStr8 = node->next->val;
-                            }
-                            else
-                            {
-                                baseEPrintf("{r}Expected string argument after commandline arg '%S'.\n", node->val);
-                                result = result && false;
-                            }
+                            baseEPrintf("{r}Expected integer argument after commandline arg '%S'.\n", node->val);
+                            result = result && false;
+                        }
 
-                            node = node->next;
-                            break;
-                        }break;
+                        node = node->next;
+                        break;
+                    }break;
 
-                        case CMDLINE_ARG_BOOL:
+                    case CMDLINE_ARG_STR8:
+                    {
+                        if (node->next != null)
                         {
-                            def->asBool = true;
-                        }break;
-
-                        default:
+                            def->asStr8 = node->next->val;
+                        }
+                        else
                         {
-                            baseEPrintf("{r}Unhandled commandline arg kind '%S'.\n", node->val);
-                        }break;
-                    }
+                            baseEPrintf("{r}Expected string argument after commandline arg '%S'.\n", node->val);
+                            result = result && false;
+                        }
 
-                    def->passed = true;
-                    found = true;
-                    break;
+                        node = node->next;
+                        break;
+                    }break;
+
+                    case CMDLINE_ARG_BOOL:
+                    {
+                        def->asBool = true;
+                    }break;
+
+                    default:
+                    {
+                        baseEPrintf("{r}Unhandled commandline arg kind '%S'.\n", node->val);
+                    }break;
                 }
-            }
 
-            if(!found)
+                def->passed = true;
+                found = true;
+                break;
+            }
+        }
+
+        if (!found)
+        {
+            if (expectedArg)
             {
                 baseEPrintf("{r}Commandline arg '%S' was passed but it's not a valid arg.\n", node->val);
                 result = result && false;
             }
-        }
-        else
-        {
-            Str8ListNode *temp = node;
+            else
+            {
+                Str8ListNode temp = *node;
 
-            node->next = null;
-            node->prev = null;
-            Str8ListPushNodeLast(&gBaseCmdlineTrailingArgs, node);
+                node->next = null;
+                node->prev = null;
+                Str8ListPushNodeLast(&gBaseCmdlineTrailingArgs, node);
 
-            node = temp;
+                *node = temp;
+            }
         }
     }
 
@@ -180,7 +186,7 @@ void cmdlineUsage(void)
         for(u64 i = 0; i < gBaseCmdlineArgDefs.len; i++)
         {
             CmdlineArgDef def = gBaseCmdlineArgDefs.data[i];
-            basePrintf("\n    --%S", def.name);
+            basePrintf("\n    --%S/-%S/%S", def.name, def.name, def.name);
             if (def.presence == CMDLINE_ARG_PRESENCE_OPTIONAL)
             {
                 basePrintf(" (optional)");
@@ -194,15 +200,15 @@ void cmdlineUsage(void)
             {
                 case CMDLINE_ARG_I64:
                 {
-                    basePrintf("        default: %lld\n        info: %S", def.asI64, def.help);
+                    basePrintf("        default (integer): %lld\n        info: %S", def.asI64, def.help);
                 }break;
                 case CMDLINE_ARG_STR8:
                 {
-                    basePrintf("        default: %S\n        info: %S", def.asStr8, def.help);
+                    basePrintf("        default (string): %S\n        info: %S", def.asStr8, def.help);
                 }break;
                 case CMDLINE_ARG_BOOL:
                 {
-                    basePrintf("        default: %s\n        info: %S", def.asBool ? "true" : "false", def.help);
+                    basePrintf("        default (boolean): %s\n        info: %S", def.asBool ? "true" : "false", def.help);
                 }break;
             }
         }
