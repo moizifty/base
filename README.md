@@ -48,3 +48,7 @@ BSS only has 5 types:
 - objects: are a little different but, objects are essentially just scopes which you can access, eg:
 `{a = 90, b = {1, 2, 3}, c = {ca = 9, cb = 121}}`, objectes must define the inner variables and they cant be unnamed like with arrays.
 
+# Cmdline
+Base also provides a mechanism for parsing commandline arguments. `src/baseCmdline.h`. The functionality is inspired by golangs `flag` module which i find really cool. It defines commandline arguments inline as function calls, returning a ptr to the argument and when the args are parsed, the ptr will of course have its value updated.
+
+Base builds on top of this a bit more and also combines the type introspection ability with the commandline args, see `cmdlineStruct`, each member in a struct can have a `metagen_introspectnote` attached to it, which gets added to the generated introspection data. `cmdlineStruct` parses this note to automatically create the args and assign them to the members of the struct. This allows you to create a gigantic struct which contains all the commandline args, and you have to do is pass it into `cmdlineStruct` and then call `cmdlineParse`.
