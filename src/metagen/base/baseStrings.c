@@ -439,8 +439,8 @@ str8 Str8ChopBefore(str8 str, str8 before, StrMatchFlags flags)
                                     flags);
     if (lastIndex < str.len)
     {
-        str.data += lastIndex + 1;
-        str.len = str.len - (lastIndex + 1);
+        str.data += lastIndex + before.len;
+        str.len = str.len - (lastIndex + before.len);
     }
 
     return str;
@@ -754,25 +754,26 @@ bool I64TryFromStr8(str8 str, i64 *num)
     *num = 0;
 
     bool hex = false;
+    u64 i = 0;
     if (Str8StartsWith(str, STR8_LIT("-"), 0))
     {
-        str = Str8Skip(str, 2);
+        i += 1;
     }
 
     if (Str8StartsWith(str, STR8_LIT("0x"), STR_MATCHFLAGS_CASE_INSENSITIVE))
     {
         hex = true;
-        str = Str8Skip(str, 2);
+        i += 2;
     } 
     else if (Str8StartsWith(str, STR8_LIT("0b"), STR_MATCHFLAGS_CASE_INSENSITIVE))
     {
-        str = Str8Skip(str, 2);
+        i += 2;
     }
 
-    for(u64 i = 0; i < str.len; i++)
+    for(; i < str.len; i++)
     {
         if ((hex && !BASE_ISHEXDIGIT(str.data[i])) || 
-            !BASE_ISDIGIT(str.data[i]))
+            (!hex && !BASE_ISDIGIT(str.data[i])))
         {
             return false;
         }

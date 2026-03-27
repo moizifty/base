@@ -15,6 +15,7 @@ void ProgramMain(Str8List args)
     bool *metadataArg = cmdlineBool(STR8_LIT("metadata"), false, STR8_LIT("Process metada in all inputs."), CMDLINE_ARG_PRESENCE_OPTIONAL);
     bool *cleanDeferArg = cmdlineBool(STR8_LIT("clean-defer"), false, STR8_LIT("Clean all generated defer code."), CMDLINE_ARG_PRESENCE_OPTIONAL);
     bool *cleanMetadataArg = cmdlineBool(STR8_LIT("clean-metadata"), false, STR8_LIT("Clean all generated metadata code"), CMDLINE_ARG_PRESENCE_OPTIONAL);
+    Str8List *inputArgs = cmdlineTrailing(STR8_LIT("input"));
 
     if (!cmdlineParse(args))
     {
@@ -22,7 +23,6 @@ void ProgramMain(Str8List args)
         return;
     }
 
-    Str8List *inputArgs = cmdlineTrailing();
     if (inputArgs->len != 1)
     {
         basePrintf("{r}Expected one input.\n");

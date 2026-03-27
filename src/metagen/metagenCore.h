@@ -17,6 +17,7 @@ typedef enum MetagenCmdKind
     METAGEN_CMD_GEN_PRINT_STRUCT_MEMB,
     METAGEN_CMD_INTROSPECT,
     METAGEN_CMD_INTROSPECT_EXCLUDE,
+    METAGEN_CMD_INTROSPECT_NOTE,
     METAGEN_CMD_EMBED_FILE,
     METAGEN_CMD_DEFER,
     METAGEN_CMD_COUNT,
@@ -73,6 +74,8 @@ struct MetagenCStructMemb
     
     MetagenCTypeInfo typeInfo;
     u64 offset;
+
+    str8 note;
 
     MetagenCStructMembList aggrMembs;     
     struct MetagenCStructMemb* next;

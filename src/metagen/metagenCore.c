@@ -10,6 +10,7 @@ str8 gMetagenCmdKindStr8Table[METAGEN_CMD_COUNT] =
     [METAGEN_CMD_GEN_PRINT_STRUCT_MEMB] = STR8_LIT_COMP_CONST("metagen_genprintstructmemb"),
     [METAGEN_CMD_INTROSPECT] = STR8_LIT_COMP_CONST("metagen_introspect"),
     [METAGEN_CMD_INTROSPECT_EXCLUDE] = STR8_LIT_COMP_CONST("metagen_introspectexclude"),
+    [METAGEN_CMD_INTROSPECT_NOTE] = STR8_LIT_COMP_CONST("metagen_introspectnote"),
     [METAGEN_CMD_EMBED_FILE] = STR8_LIT_COMP_CONST("metagen_embedfile"),
     [METAGEN_CMD_DEFER] = STR8_LIT_COMP_CONST("metagen_defer"),
 };
@@ -261,11 +262,21 @@ MetagenCStruct metagenParseCStruct(Arena *arena, Str8List onlyList, CTokArray ne
             {
                 if (METAGEN_TOK_MATCH_KIND(*nextToks.data, CTOK_IDEN))
                 {
+                    str8 note = STR8_EMPTY;
+                    // fix order, rightnow you have to have note after exclude, change to a while loop
                     if (METAGEN_TOK_MATCH_LEXEME(*nextToks.data, gMetagenCmdKindStr8Table[METAGEN_CMD_INTROSPECT_EXCLUDE]))
                     {
                         skipMember = true;
 
                         nextToks = CTokArraySkip(nextToks, 3);
+                    }
+
+                    if (METAGEN_TOK_MATCH_LEXEME(*nextToks.data, gMetagenCmdKindStr8Table[METAGEN_CMD_INTROSPECT_NOTE]))
+                    {
+                        nextToks = CTokArraySkip(nextToks, 2); // metagen_introspectnote(
+                        note = nextToks.data->lexeme;
+
+                        nextToks = CTokArraySkip(nextToks, 2); // "note")
                     }
 
                     if (METAGEN_TOK_MATCH_LEXEME(*nextToks.data, STR8_LIT("struct")) ||
@@ -274,7 +285,7 @@ MetagenCStruct metagenParseCStruct(Arena *arena, Str8List onlyList, CTokArray ne
                         bool isUnion = METAGEN_TOK_MATCH_LEXEME(*nextToks.data, STR8_LIT("union"));
                         bool isStruct = !isUnion;
 
-                        if (METAGEN_TOK_MATCH_KIND(nextToks.data[2], '*')) // handle member: struct somestruct *somemember;
+                        if (METAGEN_TOK_MATCH_KIND(nextToks.data[2], '*') || METAGEN_TOK_MATCH_KIND(nextToks.data[4], ';')) // handle member: struct somestruct *somemember;
                         {
                             nextToks = CTokArraySkip(nextToks, 1);
                             goto PARSE_NORMAL_MEMBER;
@@ -351,6 +362,7 @@ MetagenCStruct metagenParseCStruct(Arena *arena, Str8List onlyList, CTokArray ne
 
                         MetagenCStructMemb memb = {0};
                         memb.type = nextToks.data->lexeme;
+                        memb.note = note;
                         nextToks = CTokArraySkip(nextToks, 1);
 
                         // i only support one pointer level :( - right now
@@ -896,8 +908,9 @@ void metagenMetadataPass(Arena *arena, str8 baseFolder, Str8List *inputPaths)
                 Str8ListPushLastFmt(
                     arena, 
                     &type->ownerOutput->impl.tables, 
-                    "\t\t{.name = STR8_LIT_COMP_CONST(\"%S\"), .type = METAGEN_TYPE_%S, .size=%llu, .offset=%llu,", 
+                    "\t\t{.name = STR8_LIT_COMP_CONST(\"%S\"), .note = STR8_LIT_COMP_CONST(%S), .type = METAGEN_TYPE_%S, .size=%llu, .offset=%llu,", 
                     type->flattenedMembs.data[i].name,
+                    type->flattenedMembs.data[i].note,
                     type->flattenedMembs.data[i].type,
                     type->flattenedMembs.data[i].typeInfo.size,
                     type->flattenedMembs.data[i].offset

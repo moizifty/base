@@ -7,6 +7,7 @@
 #define metagen_gentable(...)
 #define metagen_introspect(...)
 #define metagen_introspectexclude(...)
+#define metagen_introspectnote(...)
 #define metagen_genprintstructmemb(...)
 #define metagen_embedfile(name, path, mode)
 #define metagen_defer
@@ -44,6 +45,7 @@ typedef struct MetagenStructMemb
     u64 isArray : 1;
 
     u64 arrayLen;
+    str8 note;
 }MetagenStructMemb;
 
 BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(MetagenStructMembArray, MetagenStructMemb)
