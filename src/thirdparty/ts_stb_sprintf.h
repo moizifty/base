@@ -587,26 +587,49 @@ cl = lg;                                 \
    // copy the string in
    goto scopy;
    
-   //~ rjf: TELESCOPE ADDITION
-   
+   case 'Q': // String8
+   {
+      Any any = va_arg(va, Any);
+      str8 str = STR8("");
+
+      ArenaTemp temp = baseTempBegin(null, 0);
+      str = StructToStr8(temp.arena, any);
+      //- rjf: pull out string
+      
+      //- rjf: get string length
+      s = (char *)str.data;
+      sn = (const char *)(str.data + str.len);
+      l = (unsigned int) str.len;
+      
+      //- rjf: clamp to precision
+      lead[0] = 0;
+      tail[0] = 0;
+      pr = 0;
+      dp = 0;
+      cs = 0;
+      
+      baseTempEnd(temp);
+      goto scopy;
+   }break;
+
    case 'S': // String8
    {
-    //- rjf: pull out string
-    str8 str = va_arg(va, str8);
-    
-    //- rjf: get string length
-    s = (char *)str.data;
-    sn = (const char *)(str.data + str.len);
-    l = (unsigned int) str.len;
-    
-    //- rjf: clamp to precision
-    lead[0] = 0;
-    tail[0] = 0;
-    pr = 0;
-    dp = 0;
-    cs = 0;
-    
-    goto scopy;
+      //- rjf: pull out string
+      str8 str = va_arg(va, str8);
+      
+      //- rjf: get string length
+      s = (char *)str.data;
+      sn = (const char *)(str.data + str.len);
+      l = (unsigned int) str.len;
+      
+      //- rjf: clamp to precision
+      lead[0] = 0;
+      tail[0] = 0;
+      pr = 0;
+      dp = 0;
+      cs = 0;
+      
+      goto scopy;
    }break;
    
    //~ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

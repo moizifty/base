@@ -285,7 +285,8 @@ MetagenCStruct metagenParseCStruct(Arena *arena, Str8List onlyList, CTokArray ne
                         bool isUnion = METAGEN_TOK_MATCH_LEXEME(*nextToks.data, STR8_LIT("union"));
                         bool isStruct = !isUnion;
 
-                        if (METAGEN_TOK_MATCH_KIND(nextToks.data[2], '*') || METAGEN_TOK_MATCH_KIND(nextToks.data[4], ';')) // handle member: struct somestruct *somemember;
+                        if (METAGEN_TOK_MATCH_KIND(nextToks.data[2], '*') || 
+                           (METAGEN_TOK_MATCH_KIND(nextToks.data[2], CTOK_IDEN) && METAGEN_TOK_MATCH_KIND(nextToks.data[3], ';'))) // handle member: struct somestruct *somemember;
                         {
                             nextToks = CTokArraySkip(nextToks, 1);
                             goto PARSE_NORMAL_MEMBER;
@@ -895,6 +896,7 @@ void metagenMetadataPass(Arena *arena, str8 baseFolder, Str8List *inputPaths)
         if(metagenCheckType(arena, type, &gMetagenTypeDict))
         {
             Str8ListPushLastFmt(arena, &type->ownerOutput->header.defines, "extern MetagenStructMembArray g%SMembDefsTable;\n", type->name);
+            Str8ListPushLastFmt(arena, &type->ownerOutput->header.defines, "extern MetagenStruct g%SStructInfo;\n", type->name);
 
             Str8ListPushLastFmt(arena, &type->ownerOutput->impl.tables, "extern MetagenStructMembArray g%SMembDefsTable=\n", type->name);
             Str8ListPushLastFmt(arena, &type->ownerOutput->impl.tables, "{\n");
@@ -910,7 +912,7 @@ void metagenMetadataPass(Arena *arena, str8 baseFolder, Str8List *inputPaths)
                     &type->ownerOutput->impl.tables, 
                     "\t\t{.name = STR8_LIT_COMP_CONST(\"%S\"), .note = STR8_LIT_COMP_CONST(%S), .type = METAGEN_TYPE_%S, .size=%llu, .offset=%llu,", 
                     type->flattenedMembs.data[i].name,
-                    type->flattenedMembs.data[i].note,
+                    BASE_NULL_OR_EMPTY(type->flattenedMembs.data[i].note) ? STR8("\"\"") : type->flattenedMembs.data[i].note,
                     type->flattenedMembs.data[i].type,
                     type->flattenedMembs.data[i].typeInfo.size,
                     type->flattenedMembs.data[i].offset
@@ -931,6 +933,15 @@ void metagenMetadataPass(Arena *arena, str8 baseFolder, Str8List *inputPaths)
 
             Str8ListPushLastFmt(arena, &type->ownerOutput->impl.tables, "\t},\n");
             Str8ListPushLastFmt(arena, &type->ownerOutput->impl.tables, "\t.len=%llu,\n", type->flattenedMembs.len);
+            Str8ListPushLastFmt(arena, &type->ownerOutput->impl.tables, "};\n");
+
+            Str8ListPushLastFmt(arena, &type->ownerOutput->impl.tables, "MetagenStruct g%SStructInfo=\n", type->name);
+            Str8ListPushLastFmt(arena, &type->ownerOutput->impl.tables, "{\n");
+            Str8ListPushLastFmt(arena, &type->ownerOutput->impl.tables, "   .name=STR8_LIT_COMP_CONST(\"%S\"),\n", type->name);
+            Str8ListPushLastFmt(arena, &type->ownerOutput->impl.tables, "   .typeid=METAGEN_TYPE_%S,\n", type->name);
+            Str8ListPushLastFmt(arena, &type->ownerOutput->impl.tables, "   .size=%llu,\n", type->typeInfo.size);
+            Str8ListPushLastFmt(arena, &type->ownerOutput->impl.tables, "   .align=%llu,\n", type->typeInfo.alignment);
+            Str8ListPushLastFmt(arena, &type->ownerOutput->impl.tables, "   .membs=&g%SMembDefsTable,\n", type->name);
             Str8ListPushLastFmt(arena, &type->ownerOutput->impl.tables, "};\n");
         }
         else
@@ -1031,7 +1042,7 @@ void metagenMetadataPass(Arena *arena, str8 baseFolder, Str8List *inputPaths)
         OSFileWriteFmt(outputFile, "#define METAGEN_PRINT_MEMB_CUSTOM \\\n");
         BASE_LIST_FOREACH(MetagenTypeDictSlotEntry, entryNode, gMetagenTypeDict)
         {
-            OSFileWriteFmt(outputFile, "         case METAGEN_TYPE_%S: basePrintStructEx(((u8*)(member) + (size*i)), g%SMembDefsTable); break;\\\n", entryNode->type->name, entryNode->type->name, entryNode->type->name);
+            OSFileWriteFmt(outputFile, "         case METAGEN_TYPE_%S: Str8ListPushLast(arena, list, StructToStr8(arena, (Any){.data = ((u8*)(member) + (size*i)), .info = g%SStructInfo})); break;\\\n", entryNode->type->name, entryNode->type->name, entryNode->type->name);
         }
 
         OSFileClose(outputFile);

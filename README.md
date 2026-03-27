@@ -37,7 +37,7 @@ And you then compiler `main.c` from `metagen_defers_temp` instead.
 `defers` will generate defer statements at `return`, `break`, `goto`, `continue` statements aswell at the end of blocks if they werent already emited for the previous ones. It is pretty reliable.
 
 # BSS
-BSS is a interpreted language useful for writing small scripts (`src/bss`), its kinda similar to python in its semantics, but used C syntax as that is what i prefer.
+BSS is a interpreted language useful for writing small scripts (`src/bss`), its kinda similar to python in its semantics, but uses C syntax as that is what i prefer.
 
 BSS only has 5 types:
 

@@ -3,37 +3,37 @@
 
 metagen_genprintstructmemb()
 
-void basePrintStructMember(void *member, MetagenStructMemb memb)
+void StructMemberToStr8(Arena *arena, Str8List *list, void *member, MetagenStructMemb memb)
 {
     u64 count = memb.isArray ? memb.arrayLen : 1;
     u64 size = memb.size / count;
 
-    basePrintf("%S: ", memb.name);
+    Str8ListPushLastFmt(arena, list, "%S: ", memb.name);
     if (memb.isArray)
     {
-        basePrintf("[");
+        Str8ListPushLastFmt(arena, list, "[");
     }
 
     for (u64 i = 0; i < count; i++)
     {
         switch (memb.type)
         {
-            case METAGEN_TYPE_u8: basePrintf("%u", *((u8*)(member) + i)); break;
-            case METAGEN_TYPE_u16: basePrintf("%u", *((u16*)(member) + i)); break;
-            case METAGEN_TYPE_u32: basePrintf("%u", *((u32*)(member) + i)); break;
-            case METAGEN_TYPE_u64: basePrintf("%llu", *((u64*)(member) + i)); break;
+            case METAGEN_TYPE_u8: Str8ListPushLastFmt(arena, list, "%u", *((u8*)(member) + i)); break;
+            case METAGEN_TYPE_u16: Str8ListPushLastFmt(arena, list, "%u", *((u16*)(member) + i)); break;
+            case METAGEN_TYPE_u32: Str8ListPushLastFmt(arena, list, "%u", *((u32*)(member) + i)); break;
+            case METAGEN_TYPE_u64: Str8ListPushLastFmt(arena, list, "%llu", *((u64*)(member) + i)); break;
 
-            case METAGEN_TYPE_i8: basePrintf("%d", *((i8*)(member) + i)); break;
-            case METAGEN_TYPE_i16: basePrintf("%d", *((i16*)(member) + i)); break;
-            case METAGEN_TYPE_i32: basePrintf("%d", *((i32*)(member) + i)); break;
-            case METAGEN_TYPE_i64: basePrintf("%lld", *((i64*)(member) + i)); break;
+            case METAGEN_TYPE_i8: Str8ListPushLastFmt(arena, list, "%d", *((i8*)(member) + i)); break;
+            case METAGEN_TYPE_i16: Str8ListPushLastFmt(arena, list, "%d", *((i16*)(member) + i)); break;
+            case METAGEN_TYPE_i32: Str8ListPushLastFmt(arena, list, "%d", *((i32*)(member) + i)); break;
+            case METAGEN_TYPE_i64: Str8ListPushLastFmt(arena, list, "%lld", *((i64*)(member) + i)); break;
 
-            case METAGEN_TYPE_f32: basePrintf("%f", *((f32*)(member) + i)); break;
-            case METAGEN_TYPE_f64: basePrintf("%f",*((f64*)(member) + i)); break;
-            case METAGEN_TYPE_str8: basePrintf("%S", *((str8*)(member) + i)); break;
-            case METAGEN_TYPE_bool: basePrintf("%d", *((bool*)(member) + i)); break;
+            case METAGEN_TYPE_f32: Str8ListPushLastFmt(arena, list, "%f", *((f32*)(member) + i)); break;
+            case METAGEN_TYPE_f64: Str8ListPushLastFmt(arena, list, "%f",*((f64*)(member) + i)); break;
+            case METAGEN_TYPE_str8: Str8ListPushLastFmt(arena, list, "%S", *((str8*)(member) + i)); break;
+            case METAGEN_TYPE_bool: Str8ListPushLastFmt(arena, list, "%d", *((bool*)(member) + i)); break;
 
-            // METAGEN_PRINT_MEMB_CUSTOM
+            METAGEN_PRINT_MEMB_CUSTOM
 
             default:
             {
@@ -43,29 +43,38 @@ void basePrintStructMember(void *member, MetagenStructMemb memb)
         
         if (i < count - 1)
         {
-            basePrintf(", ");
+            Str8ListPushLastFmt(arena, list, ", ");
         }
     }
     
     if (memb.isArray)
     {
-        basePrintf("]");
+        Str8ListPushLastFmt(arena, list, "]");
     }
 }
-void basePrintStructEx(void *data, MetagenStructMembArray membs)
+str8 StructToStr8(Arena *arena, Any any)
 {
-    basePrintf("{{");
-    u8 *dataBuffer = (u8*)data;
-    for (u64 i = 0; i < membs.len; i++)
-    {
-        MetagenStructMemb memb = membs.data[i];
-        
-        basePrintStructMember(dataBuffer + memb.offset, memb);
+    Str8List list = {0};
 
-        if (i < membs.len - 1)
+    ArenaTemp temp = baseTempBegin(&arena, 1);
+
+    Str8ListPushLastFmt(temp.arena, &list, "{");
+    u8 *dataBuffer = (u8*)any.data;
+    for (u64 i = 0; i < any.info.membs->len; i++)
+    {
+        MetagenStructMemb memb = any.info.membs->data[i];
+        
+        StructMemberToStr8(temp.arena, &list, dataBuffer + memb.offset, memb);
+
+        if (i < any.info.membs->len - 1)
         {
-            basePrintf(", ");
+            Str8ListPushLastFmt(temp.arena, &list, ", ");
         }
     }
-    basePrintf("}");
+    Str8ListPushLastFmt(temp.arena, &list, "}");
+
+    str8 str = Str8ListJoin(arena, &list, null);
+    baseTempEnd(temp);
+
+    return str;
 }

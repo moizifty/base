@@ -1,6 +1,6 @@
 /**********************************************************************/
 // GENERATED FILE
-// Date-Time: 26/3/2026 - 21:52
+// Date-Time: 27/3/2026 - 16:52
 /**********************************************************************/
 
 extern MetagenStructMembArray gDateTimeMembDefsTable;
@@ -12,7 +12,7 @@ extern MetagenStructMembArray grange3fMembDefsTable;
 #define METAGEN_TYPE_vec3f (METAGEN_TYPE_CUSTOM_BEGIN + 2)
 #define METAGEN_TYPE_range3f (METAGEN_TYPE_CUSTOM_BEGIN + 3)
 #define METAGEN_PRINT_MEMB_CUSTOM \
-         case METAGEN_TYPE_DateTime: basePrintStructEx(((u8*)(member) + (size*i)), gDateTimeMembDefsTable); break;\
-         case METAGEN_TYPE_vec2f: basePrintStructEx(((u8*)(member) + (size*i)), gvec2fMembDefsTable); break;\
-         case METAGEN_TYPE_vec3f: basePrintStructEx(((u8*)(member) + (size*i)), gvec3fMembDefsTable); break;\
-         case METAGEN_TYPE_range3f: basePrintStructEx(((u8*)(member) + (size*i)), grange3fMembDefsTable); break;\
+         case METAGEN_TYPE_DateTime: Str8ListPushLast(arena, list, StructToStr8(arena, (Any){.data = ((u8*)(member) + (size*i)), .info = gDateTimeStructInfo})); break;\
+         case METAGEN_TYPE_vec2f: Str8ListPushLast(arena, list, StructToStr8(arena, (Any){.data = ((u8*)(member) + (size*i)), .info = gvec2fStructInfo})); break;\
+         case METAGEN_TYPE_vec3f: Str8ListPushLast(arena, list, StructToStr8(arena, (Any){.data = ((u8*)(member) + (size*i)), .info = gvec3fStructInfo})); break;\
+         case METAGEN_TYPE_range3f: Str8ListPushLast(arena, list, StructToStr8(arena, (Any){.data = ((u8*)(member) + (size*i)), .info = grange3fStructInfo})); break;\

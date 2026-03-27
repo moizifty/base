@@ -8,6 +8,7 @@
 #include <math.h>
 #include "baseCore.h"
 #include "baseMetagen.h"
+#include "baseMath.gen.h"
 
 #define BASE_PI (3.14159265358979323846)
 

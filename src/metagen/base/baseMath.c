@@ -1,4 +1,5 @@
 #include "baseMath.h"
+#include "baseMath.gen.c"
 
 vec2f vec2fAdd(vec2f a, vec2f b)
 {

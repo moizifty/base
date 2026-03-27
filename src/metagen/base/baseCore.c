@@ -7,6 +7,7 @@
 #include "baseStrings.h"
 #include "baseCmdLine.h"
 #include "baseLog.h"
+#include "baseMetagen.h"
 #include "../os/core/osCore.h"
 
 #define STB_SPRINTF_IMPLEMENTATION

@@ -12,7 +12,8 @@
 #define metagen_embedfile(name, path, mode)
 #define metagen_defer
 
-#define basePrintStruct(T, S) basePrintStructEx(&(S), (g##T##MembDefsTable))
+#define basePrintStruct(T, S) basePrintStructEx(&(S), (g##T##StructInfo))
+#define ANY(T, S)  ((Any){.data = &(S), .info = g##T##StructInfo})
 
 typedef enum MetagenTypeKind
 {
@@ -33,7 +34,6 @@ typedef enum MetagenTypeKind
     METAGEN_TYPE_CUSTOM_BEGIN
 }MetagenTypeKind;
 
-
 typedef struct MetagenStructMemb
 {
     str8 name;
@@ -50,7 +50,24 @@ typedef struct MetagenStructMemb
 
 BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(MetagenStructMembArray, MetagenStructMemb)
 
-void basePrintStructEx(void *data, MetagenStructMembArray membs);
+typedef struct MetagenStruct
+{
+    str8 name;
+    MetagenTypeKind typeid;
+
+    u64 size;
+    u64 align;
+    MetagenStructMembArray *membs;
+}MetagenStruct;
+
+typedef struct Any
+{
+    void *data;
+    MetagenStruct info;
+}Any;
+
+typedef struct Str8List Str8List;
+str8 StructToStr8(Arena *arena, Any any);
 #include "base/baseMetagenCommon.gen.h"
 
 #endif

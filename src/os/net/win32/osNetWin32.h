@@ -5,6 +5,8 @@
 #include <WS2tcpip.h>
 #include <iphlpapi.h>
 
+typedef struct OSNetAddr OSNetAddr;
+
 enum OSNetAddrKind OSNetWin32AddrFamilyToAddrKind(int addrKind);
 int OSNetAddrKindToWin32AddrFamily(enum OSNetAddrKind addrKind);
 
@@ -14,8 +16,8 @@ IPPROTO OSNetProtocolKindToWin32IPPROTO(enum OSNetProtocolKind protocol);
 enum OSNetSocketKind OSNetWin32SockTypeToSocketKind(int sock);
 int OSNetSocketKindToWin32SockType(enum OSNetSocketKind sock);
 
-void OSNetWin32SOCKADDRToAddr(SOCKADDR_STORAGE *win32Addr, struct OSNetAddr *addr);
-int OSNetAddrToWin32SOCKADDR(struct OSNetAddr addr, SOCKADDR_STORAGE* win32Addr);
+void OSNetWin32SOCKADDRToAddr(SOCKADDR_STORAGE *win32Addr, OSNetAddr *addr);
+int OSNetAddrToWin32SOCKADDR(OSNetAddr addr, SOCKADDR_STORAGE* win32Addr);
 
 enum OSNetSocketOptionLevel OSNetWin32OptionLevelToSocketOptionLevel(int level);
 int OSNetSocketOptionLevelToWin32OptionLevel(enum OSNetSocketOptionLevel level);
