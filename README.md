@@ -36,6 +36,25 @@ metagen_defers_temp
 And you then compiler `main.c` from `metagen_defers_temp` instead.
 `defers` will generate defer statements at `return`, `break`, `goto`, `continue` statements aswell at the end of blocks if they werent already emited for the previous ones. It is pretty reliable.
 
+Metagen also supports generating lamdas, eg
+```
+metagen_lambda((int a, int b){
+     printf("%lld", a + b);
+});
+
+```
+metagen_lambda(void (int a, int b){
+     printf("%lld", a + b);
+});
+
+```
+metagen_lambda(int (int a, int b){
+     return printf("%lld", a + b);
+});
+```
+
+All these will replace the macro code with __metagen_lambda_##someid , and generate a function for the lamda
+
 # BSS
 BSS is a interpreted language useful for writing small scripts (`src/bss`), its kinda similar to python in its semantics, but uses C syntax as that is what i prefer.
 
