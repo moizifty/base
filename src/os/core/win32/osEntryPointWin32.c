@@ -1,7 +1,7 @@
 #include "osCoreWin32.h"
 #include "base/baseLog.h"
 
-void ProgramMain(Str8List);
+void ProgramMain(Str8List *);
 
 #ifdef BASE_USE_EXCEPTION_HANDLER
 #pragma comment(lib, "dbghelp.lib")

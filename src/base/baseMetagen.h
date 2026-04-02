@@ -10,6 +10,7 @@
 #define metagen_introspectnote(...)
 #define metagen_genprintstructmemb(...)
 #define metagen_embedfile(name, path, mode)
+#define metagen_lambda(...)
 #define metagen_defer
 
 #define basePrintStruct(T, S) basePrintStructEx(&(S), (g##T##StructInfo))

@@ -65,6 +65,26 @@ fn compilemetagen()
     compile(src, includes, flags, "src/metagen/builds/mg.exe");
 }
 
+fn compilebss()
+{
+    baselib = "{onedrivefolder}\Documents\Programming\C\base\src";
+
+    src = {
+        "src/bss/bssEntryPoint.c",
+    };
+
+    includes = {
+        "{baselib}",
+        "src/bss",
+    };
+
+    flags = {
+        "/Zi",
+    };
+
+    compile(src, includes, flags, "src/bss/builds/bss.exe");
+}
+
 
 print("~nBuilding~n~n");
 
@@ -76,6 +96,11 @@ if hasflag("build")
 if (hasflag("metagen"))
 {
     compilemetagen();
+}
+
+if (hasflag("bss"))
+{
+    compilebss();
 }
 
 print("~nFinished Building~n");

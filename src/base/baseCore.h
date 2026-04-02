@@ -333,7 +333,8 @@ BASE_CREATE_LL_DECLS(U8ArrayList, U8Array)
 
 
 // program entry related
-typedef void(*ProgramMainFunc)(Str8List);
+typedef struct Str8List Str8List;
+typedef void(*ProgramMainFunc)(Str8List *);
 
 void BaseMainThreadEntry(ProgramMainFunc programMain, i64 argc, char **argv);
 

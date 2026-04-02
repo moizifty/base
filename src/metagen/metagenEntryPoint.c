@@ -73,7 +73,7 @@ void ProgramMain(Str8List args)
 
     if (*defersArg)
     {
-        metagenDefersPass(arena, paths);
+        metagenSourceEditPass(arena, paths, inputArgs->first->val);
     }
 
     basePrintf("{g}Metagen Finished!");

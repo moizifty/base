@@ -10,8 +10,8 @@
 
 BASE_CREATE_EFFICIENT_LL_DEFS(OSHandleList, OSHandle)
 
-global u64 gOSPerformanceFreq = 0;
-global OSState *gOSState = null;
+u64 gOSPerformanceFreq = 0;
+OSState *gOSState = null;
 
 OSState *OSGetState(void)
 {

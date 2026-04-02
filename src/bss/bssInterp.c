@@ -954,6 +954,7 @@ bool bssInterpreterInterpParsed(BssInterp *interp)
     bssBuiltinFunctionPushEntry(interp, STR8_LIT("qoute"), 1, bssBuiltinQoute);
     bssBuiltinFunctionPushEntry(interp, STR8_LIT("getenv"), 1, bssBuiltinGetenv);
     bssBuiltinFunctionPushEntry(interp, STR8_LIT("hasflag"), 1, bssBuiltinHasflag);
+    bssBuiltinFunctionPushEntry(interp, STR8_LIT("pathexists"), 1, bssBuiltinPathexists);
 
     bool result = true;
     BASE_LIST_FOREACH(BssAstTopLevel, toplevel, interp->parser->file->toplevels)

@@ -7,7 +7,7 @@
 #include "..\..\..\base\baseThreads.h"
 #include "base/baseLog.h"
 
-global OSKey gOSWin32VKToOSKeyTable[256] = 
+OSKey gOSWin32VKToOSKeyTable[256] = 
 {
     ['A'] = OS_KEY_A,
     ['B'] = OS_KEY_B,
@@ -291,7 +291,7 @@ u64 OSGetFileSizeFromHandle(OSHandle handle)
 str8 OSGetFullPath(struct Arena *arena, str8 path)
 {
     i8 buf[1];
-    i64 needed = GetFullPathNameA((LPCSTR) path.data, 1, buf, null);
+    i64 needed = GetFullPathNameA((LPCSTR) path.data, 1, (LPSTR)buf, null);
 
     str8 ret = {0};
     ret.data = arenaPush(arena, needed);
@@ -345,11 +345,11 @@ bool OSDirectoryDelete(str8 path, bool recursive)
                         t->path = Str8PushFmt(temp.arena, "%S\\%S", task->path, fileInfo.name);
 
                         BaseDllNodePushLast(firstTask, lastTask, t);
-                        Str8ListPushLast(temp.arena, &allPaths, Str8PushFmt(temp.arena, "%S\\%S", task->path, fileInfo.name));
+                        Str8ListPushFirst(temp.arena, &allPaths, Str8PushFmt(temp.arena, "%S\\%S", task->path, fileInfo.name));
                     }
                     else
                     {
-                        Str8ListPushFirst(temp.arena, &allPaths, Str8PushFmt(temp.arena, "%S\\%S", task->path, fileInfo.name));
+                        OSPathDelete(Str8PushFmt(temp.arena, "%S\\%S", task->path, fileInfo.name), false);
                     }
                 }
 
@@ -365,6 +365,7 @@ bool OSDirectoryDelete(str8 path, bool recursive)
 
     str16 widePath = Str16FromFromStr8(temp.arena, path);
     result = result && RemoveDirectory((LPCWSTR)widePath.data);
+
     baseTempEnd(temp);
 
     return result;
@@ -443,7 +444,7 @@ OSFileFindIter *OSFindFileBegin(struct Arena *arena, str8 path, OSFileFindOption
 
     if (path.len > 0)
     {
-        findFileData->handle = FindFirstFileA((i8 *) path.data, &findFileData->findData);
+        findFileData->handle = FindFirstFileA((LPCSTR) path.data, &findFileData->findData);
     }
     return findIter;
 }
@@ -519,7 +520,7 @@ Str8List OSGetFilePaths(Arena *arena, str8 dir, str8 pattern, bool recursive)
         {
             if (recursive)
             {
-                if (PathMatchSpecA((i8*) fileInfo.name.data, (i8*) pattern.data))
+                if (PathMatchSpecA((LPCSTR) fileInfo.name.data, (LPSTR) pattern.data))
                 {
                     Str8ListPushLastFmt(arena, &ret, "%S\\%S", dir, fileInfo.name);
                 }
@@ -544,7 +545,7 @@ str8 OSGetProgramPath(Arena *arena)
     {
         u64 bufSize = BASE_KILOBYTES(4);
         u8 *buf = arenaPush(temp.arena, bufSize);
-        GetModuleFileNameA(NULL, (i8 *) buf, (DWORD) bufSize);
+        GetModuleFileNameA(NULL, (LPSTR) buf, (DWORD) bufSize);
 
         ret = Str8PushFmt(arena, "%s", buf);
     }
@@ -727,7 +728,7 @@ void *OSGetExportAddressFromDynamicLibrary(OSHandle dynLib, str8 name)
     {
         // needs '\0' at end
         str8 nameCopied = Str8PushCopy(temp.arena, name);
-        FARPROC fnptr = GetProcAddress((HMODULE) dynLib._u64, (i8*)nameCopied.data);
+        FARPROC fnptr = GetProcAddress((HMODULE) dynLib._u64, (LPCSTR)nameCopied.data);
 
         ptr = (void*)fnptr;
     }
@@ -788,11 +789,11 @@ str8 OSGetEnvironmentVar(Arena *arena, str8 var)
     ArenaTemp temp = baseTempBegin(&arena, 1);
     var = Str8PushFmt(arena, "%S", var);
     
-    i64 size = GetEnvironmentVariableA((i8*)var.data, null, 0);
+    i64 size = GetEnvironmentVariableA((LPCSTR)var.data, null, 0);
     if(size > 0)
     {
         val.data = arenaPushArray(arena, u8, size);
-        GetEnvironmentVariableA((i8*)var.data, (i8*)val.data, (DWORD)size);
+        GetEnvironmentVariableA((LPCSTR)var.data, (LPSTR)val.data, (DWORD)size);
 
         val.len = size - 1;
     }

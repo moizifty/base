@@ -286,3 +286,29 @@ BSS_BUILTIN_FUNCTION_DEF(Hasflag)
 
     return value;
 }
+
+BSS_BUILTIN_FUNCTION_DEF(Pathexists)
+{
+    BssValue *value = BSS_VALUE_VOID_VALUE;
+    
+    if (expr->call.args.len == 1)
+    {
+        BssAstExpr *arg = expr->call.args.first;
+        BssValue *argValue = bssInterpreterInterpExpr(interp, scopeArena, arg);
+        if (argValue != BSS_VALUE_ZERO && 
+            argValue->kind == BSS_VALUE_STRING)
+        {
+            value = bssAllocValueBool(scopeArena, OSPathExists(argValue->str));
+        }
+        else
+        {
+            bssInterpreterError(interp, expr->startTok.pos, expr->endTok.pos, "Builtin function 'hasflag' requires arguement of type string");
+        }
+    }
+    else
+    {
+        bssInterpreterError(interp, expr->startTok.pos, expr->endTok.pos, "Builtin function 'hasflag' requires one arguement");
+    }
+
+    return value;
+}

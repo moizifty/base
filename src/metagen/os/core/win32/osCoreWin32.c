@@ -345,11 +345,11 @@ bool OSDirectoryDelete(str8 path, bool recursive)
                         t->path = Str8PushFmt(temp.arena, "%S\\%S", task->path, fileInfo.name);
 
                         BaseDllNodePushLast(firstTask, lastTask, t);
-                        Str8ListPushLast(temp.arena, &allPaths, Str8PushFmt(temp.arena, "%S\\%S", task->path, fileInfo.name));
+                        Str8ListPushFirst(temp.arena, &allPaths, Str8PushFmt(temp.arena, "%S\\%S", task->path, fileInfo.name));
                     }
                     else
                     {
-                        Str8ListPushFirst(temp.arena, &allPaths, Str8PushFmt(temp.arena, "%S\\%S", task->path, fileInfo.name));
+                        OSPathDelete(Str8PushFmt(temp.arena, "%S\\%S", task->path, fileInfo.name), false);
                     }
                 }
 
@@ -365,6 +365,7 @@ bool OSDirectoryDelete(str8 path, bool recursive)
 
     str16 widePath = Str16FromFromStr8(temp.arena, path);
     result = result && RemoveDirectory((LPCWSTR)widePath.data);
+
     baseTempEnd(temp);
 
     return result;

@@ -1,0 +1,13 @@
+// raddbg 0.9.25 project file
+
+recent_file: path: "metagenCore.c"
+breakpoint:
+{
+  source_location: "metagenCore.c:1421:1"
+  hit_count: 1
+}
+debug_info:
+{
+  path: "C:/Users/moizi/OneDrive/Documents/Programming/C/base/src/metagen/builds/mg.pdb"
+  timestamp: 66210800174849
+}

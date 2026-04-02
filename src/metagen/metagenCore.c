@@ -3,25 +3,20 @@
 #include "metagen\os\core\osCore.h"
 
 MetagenTypeDict gMetagenTypeDict = {0};
+u64 gMetagenLambdaCount = 0;
 
 str8 gMetagenCmdKindStr8Table[METAGEN_CMD_COUNT] = 
 {
     [METAGEN_CMD_GEN_TABLE] = STR8_LIT_COMP_CONST("metagen_gentable"),
     [METAGEN_CMD_GEN_PRINT_STRUCT_MEMB] = STR8_LIT_COMP_CONST("metagen_genprintstructmemb"),
     [METAGEN_CMD_INTROSPECT] = STR8_LIT_COMP_CONST("metagen_introspect"),
+    [METAGEN_CMD_INTROSPECT_ENUM] = STR8_LIT_COMP_CONST("metagen_introspectenum"),
     [METAGEN_CMD_INTROSPECT_EXCLUDE] = STR8_LIT_COMP_CONST("metagen_introspectexclude"),
     [METAGEN_CMD_INTROSPECT_NOTE] = STR8_LIT_COMP_CONST("metagen_introspectnote"),
     [METAGEN_CMD_EMBED_FILE] = STR8_LIT_COMP_CONST("metagen_embedfile"),
     [METAGEN_CMD_DEFER] = STR8_LIT_COMP_CONST("metagen_defer"),
+    [METAGEN_CMD_LAMBDA] = STR8_LIT_COMP_CONST("metagen_lambda"),
 };
-
-typedef struct MetagenHasBlock
-{
-    str8 name;
-    CTokKind nextExpected;
-    CTokKind skipUntil;
-    MetagenScopeOwnerKind kind;
-}MetagenHasBlock;
 
 BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(MetagenHasBlockArray, MetagenHasBlock);
 MetagenHasBlock gMetagenHasBlockTableData[] = 
@@ -55,6 +50,9 @@ BASE_CREATE_EFFICIENT_LL_DEFS(MetagenCStructList, MetagenCStruct)
 BASE_CREATE_EFFICIENT_LL_DEFS(MetagenOutputList, MetagenOutput)
 BASE_CREATE_EFFICIENT_LL_DEFS(MetagenLabelList, MetagenLabel)
 BASE_CREATE_EFFICIENT_LL_DEFS(MetagenDeferList, MetagenDefer)
+
+BASE_CREATE_EFFICIENT_LL_DEFS(MetagenCEnumMembList, MetagenCEnumMemb)
+BASE_CREATE_EFFICIENT_LL_DEFS(MetagenCEnumList, MetagenCEnum)
 
 void metagenInit(Arena *arena)
 {
@@ -434,8 +432,89 @@ MetagenCStruct metagenParseCStruct(Arena *arena, Str8List onlyList, CTokArray ne
     parsed.tokensAdvanced = temp.len - nextToks.len; 
     return parsed;
 }
+MetagenCEnum metagenParseCEnum(Arena *arena, CTokArray nextToks)
+{
+    CTokArray temp = nextToks;
+    MetagenCEnum parsed = {0};
 
-void metagenHandleIntrospect(Arena *arena, MetagenOutput *output, CTokArray nextToks, MetagenCStructList *out)
+    while (nextToks.len > 0 && 
+          (METAGEN_TOK_MATCH_LEXEME(*nextToks.data, STR8_LIT("typedef")) ||
+           METAGEN_TOK_MATCH_LEXEME(*nextToks.data, STR8_LIT("enum"))))
+    {
+        nextToks = CTokArraySkip(nextToks, 1);
+    }
+
+    if (METAGEN_TOK_MATCH_KIND(*nextToks.data, CTOK_IDEN))
+    {
+        parsed.name = nextToks.data->lexeme;
+
+        nextToks = CTokArraySkip(nextToks, 1);
+
+    }
+
+    if (METAGEN_TOK_MATCH_KIND(*nextToks.data, '{'))
+    {
+        // skip '{'
+        nextToks = CTokArraySkip(nextToks, 1);
+
+        u64 bracketCount = 1;
+
+        MetagenCEnumMembList membs = {0};
+
+        while (nextToks.len > 0 && (bracketCount != 0))
+        {
+            if (METAGEN_TOK_MATCH_KIND(*nextToks.data, '{'))
+            {
+                nextToks = CTokArraySkip(nextToks, 1);
+
+                bracketCount++;
+            }
+            else if (METAGEN_TOK_MATCH_KIND(*nextToks.data, '}'))
+            {
+                nextToks = CTokArraySkip(nextToks, 1);
+
+                bracketCount--;
+            }
+            else
+            {
+                if (METAGEN_TOK_MATCH_KIND(*nextToks.data, CTOK_IDEN))
+                {
+
+                    MetagenCEnum memb = {0};
+                    memb.name = nextToks.data->lexeme;
+
+                    while (!METAGEN_TOK_MATCH_KIND(*nextToks.data, ',') && 
+                           !METAGEN_TOK_MATCH_KIND(*nextToks.data, '}'))
+                    {
+                        nextToks = CTokArraySkip(nextToks, 1);
+                    }
+
+                    // for ';'
+                    if (METAGEN_TOK_MATCH_KIND(*nextToks.data, ','))
+                    {
+                        nextToks = CTokArraySkip(nextToks, 1);
+                    }
+                }
+            }
+        }
+
+        if (METAGEN_TOK_MATCH_KIND(*nextToks.data, CTOK_IDEN))
+        {
+            parsed.name = nextToks.data->lexeme;
+            nextToks = CTokArraySkip(nextToks, 1);
+        }
+
+        // for ';'
+        nextToks = CTokArraySkip(nextToks, 1);
+        
+        parsed.membs = membs;
+    }
+
+    parsed.tokensAdvanced = temp.len - nextToks.len; 
+    return parsed;
+}
+
+void metagenHandleIntrospect(Arena *arena, MetagenOutput *output, CTokArray nextToks, MetagenCStructList *out, bool isEnum)
 {
     if (nextToks.len >= 2) // ()
     {
@@ -471,13 +550,20 @@ void metagenHandleIntrospect(Arena *arena, MetagenOutput *output, CTokArray next
 
         if (BASE_ANY(nextToks))
         {
-            MetagenCStruct *parsedStruct = arenaPushType(arena, MetagenCStruct);
-            *parsedStruct = metagenParseCStruct(arena, onlyList, nextToks);
-            parsedStruct->ownerOutput = output;
+            if (isEnum)
+            {
+            }
+            else
+            {
+                MetagenCStruct *parsedStruct = arenaPushType(arena, MetagenCStruct);
+                *parsedStruct = metagenParseCStruct(arena, onlyList, nextToks);
+                parsedStruct->ownerOutput = output;
 
-            MetagenCStructListPushNodeLast(out, parsedStruct);
+                MetagenCStructListPushNodeLast(out, parsedStruct);
 
-            metagenTypeDictAddType(arena, &gMetagenTypeDict, parsedStruct);
+                metagenTypeDictAddType(arena, &gMetagenTypeDict, parsedStruct);
+            }
+           
             // Str8ListPushLastFmt(arena, &output->header.tables, "extern MetagenStructMembArray g%SMembDefsTable;\n", parsedStruct.name);
             // Str8ListPushLastFmt(arena, &output->impl.tables, "extern MetagenStructMembArray g%SMembDefsTable=\n", parsedStruct.name);
             // Str8ListPushLastFmt(arena, &output->impl.tables, "{\n");
@@ -877,10 +963,12 @@ void metagenMetadataPass(Arena *arena, str8 baseFolder, Str8List *inputPaths)
                 {
                     metagenHandleEmbedFile(arena, output, remaining);
                 }
-                else if (Str8Equals(tok.lexeme, gMetagenCmdKindStr8Table[METAGEN_CMD_INTROSPECT], 0) &&
+                else if ((Str8Equals(tok.lexeme, gMetagenCmdKindStr8Table[METAGEN_CMD_INTROSPECT], 0) || 
+                         (Str8Equals(tok.lexeme, gMetagenCmdKindStr8Table[METAGEN_CMD_INTROSPECT_ENUM], 0))) &&
                          !Str8Equals(prevTok.lexeme, STR8_LIT("define"), 0))
                 {
-                    metagenHandleIntrospect(arena, output, remaining, &allIntrospectedStructs);
+                    bool isEnum = Str8Equals(tok.lexeme, gMetagenCmdKindStr8Table[METAGEN_CMD_INTROSPECT_ENUM], 0);
+                    metagenHandleIntrospect(arena, output, remaining, &allIntrospectedStructs, isEnum);
                 }
             }
 
@@ -898,7 +986,7 @@ void metagenMetadataPass(Arena *arena, str8 baseFolder, Str8List *inputPaths)
             Str8ListPushLastFmt(arena, &type->ownerOutput->header.defines, "extern MetagenStructMembArray g%SMembDefsTable;\n", type->name);
             Str8ListPushLastFmt(arena, &type->ownerOutput->header.defines, "extern MetagenStruct g%SStructInfo;\n", type->name);
 
-            Str8ListPushLastFmt(arena, &type->ownerOutput->impl.tables, "extern MetagenStructMembArray g%SMembDefsTable=\n", type->name);
+            Str8ListPushLastFmt(arena, &type->ownerOutput->impl.tables, "MetagenStructMembArray g%SMembDefsTable=\n", type->name);
             Str8ListPushLastFmt(arena, &type->ownerOutput->impl.tables, "{\n");
 
             Str8ListPushLastFmt(arena, &type->ownerOutput->impl.tables, "\t.data=(MetagenStructMemb[%llu])\n", type->flattenedMembs.len);
@@ -1071,7 +1159,15 @@ CTok metagenPeekNextNonWhitespaceTok(CLexerState *lex)
     return tok;
 }
 
-MetagenDefer metagenDefersParseDefer(Arena *arena, Str8List *output, CLexerState *lex, MetagenScope *parent)
+void metagenMatchTokUntil(CLexerState *lex, CTokKind kind)
+{
+    while (lex->tok.kind != CTOK_END_INPUT &&
+           lex->tok.kind != kind)
+    {
+        baseCLexerNext(lex);
+    }
+}
+MetagenDefer metagenParseDefer(Arena *arena, MetagenOutput *file, Str8List *output, CLexerState *lex, MetagenScope *parent)
 {
     if (Str8Equals(lex->tok.lexeme, gMetagenCmdKindStr8Table[METAGEN_CMD_DEFER], 0))
     {
@@ -1081,7 +1177,7 @@ MetagenDefer metagenDefersParseDefer(Arena *arena, Str8List *output, CLexerState
         if (lex->tok.kind == '{')
         {
             Str8List blockStr = {0};
-            metagenDefersProcessScope(arena, &blockStr, lex, parent, METAGEN_SCOPE_OWNER_OTHER);
+            metagenParseScope(arena, file, &blockStr, lex, parent, METAGEN_SCOPE_OWNER_OTHER);
 
             return (MetagenDefer){.content = Str8ListJoin(arena, &blockStr, null), .start = startPos};
         }
@@ -1106,7 +1202,7 @@ MetagenDefer metagenDefersParseDefer(Arena *arena, Str8List *output, CLexerState
     return (MetagenDefer){0};
 }
 
-void metagenDefersEmitTabs(Arena *arena, Str8List *output, u64 amount)
+void metagenEmitTabs(Arena *arena, Str8List *output, u64 amount)
 {
     Str8ListPushLastFmt(arena, output, "\r");
 
@@ -1116,35 +1212,35 @@ void metagenDefersEmitTabs(Arena *arena, Str8List *output, u64 amount)
     }
 }
 
-void metagenDefersEmitReturnDefers(Arena *arena, Str8List *output, MetagenScope *scope)
+void metagenEmitReturnDefers(Arena *arena, Str8List *output, MetagenScope *scope)
 {
     MetagenScope *curr = scope;
     while (curr != null)
     {
         BASE_LIST_REVFOREACH(MetagenDefer, defer, curr->defers)
         {
-            metagenDefersEmitTabs(arena, output, scope->nestLevel);
+            metagenEmitTabs(arena, output, scope->nestLevel);
 
             Str8ListPushLastFmt(arena, output, "%S\n", defer->content);
 
-            metagenDefersEmitTabs(arena, output, scope->nestLevel);
+            metagenEmitTabs(arena, output, scope->nestLevel);
         }
 
         curr = curr->parent;
     }
 }
-void metagenDefersEmitBreakContinueDefers(Arena *arena, Str8List *output, MetagenScope *scope)
+void metagenEmitBreakContinueDefers(Arena *arena, Str8List *output, MetagenScope *scope)
 {
     MetagenScope *curr = scope;
     while (curr != null)
     {
         BASE_LIST_REVFOREACH(MetagenDefer, defer, curr->defers)
         {
-            metagenDefersEmitTabs(arena, output, scope->nestLevel);
+            metagenEmitTabs(arena, output, scope->nestLevel);
 
             Str8ListPushLastFmt(arena, output, "%S\n", defer->content);
 
-            metagenDefersEmitTabs(arena, output, scope->nestLevel);
+            metagenEmitTabs(arena, output, scope->nestLevel);
         }
 
         if (curr->owner == METAGEN_SCOPE_OWNER_LOOP || curr->owner == METAGEN_SCOPE_OWNER_SWITCH)
@@ -1155,7 +1251,7 @@ void metagenDefersEmitBreakContinueDefers(Arena *arena, Str8List *output, Metage
         curr = curr->parent;
     }
 }
-bool metagenDefersEmitGotoDefers(Arena *arena, Str8List *output, CLexerState *clex, MetagenScope *scope)
+bool metagenEmitGotoDefers(Arena *arena, Str8List *output, CLexerState *clex, MetagenScope *scope)
 {
     str8 label = metagenPeekNextNonWhitespaceTok(clex).lexeme;
 
@@ -1181,11 +1277,11 @@ bool metagenDefersEmitGotoDefers(Arena *arena, Str8List *output, CLexerState *cl
                     // if the defer happens after the label or if the label is outside the current scope
                     if (defer->start.tokRange.data > found->pos.tokRange.data || currInner != currOuter)
                     {
-                        metagenDefersEmitTabs(arena, output, scope->nestLevel);
+                        metagenEmitTabs(arena, output, scope->nestLevel);
 
                         Str8ListPushLastFmt(arena, output, "%S\n", defer->content);
 
-                        metagenDefersEmitTabs(arena, output, scope->nestLevel);
+                        metagenEmitTabs(arena, output, scope->nestLevel);
                     }
                 }
 
@@ -1201,7 +1297,7 @@ bool metagenDefersEmitGotoDefers(Arena *arena, Str8List *output, CLexerState *cl
     return false;
 }
 
-bool metagenDefersCanEmitBefore(CLexerState *clex)
+bool metagenCanEmitDefers(CLexerState *clex)
 {
     return Str8Equals(clex->tok.lexeme, STR8_LIT("return"), 0) ||
         Str8Equals(clex->tok.lexeme, STR8_LIT("break"), 0) ||
@@ -1209,27 +1305,27 @@ bool metagenDefersCanEmitBefore(CLexerState *clex)
         Str8Equals(clex->tok.lexeme, STR8_LIT("goto"), 0);
         
 }
-void metagenDefersEmitDefersForNonBlockScopes(Arena *arena, Str8List *output, CLexerState *clex, MetagenScope *scope)
+void metagenEmitDefersForNonBlockScopes(Arena *arena, Str8List *output, CLexerState *clex, MetagenScope *scope)
 {
-    if (metagenDefersCanEmitBefore(clex))
+    if (metagenCanEmitDefers(clex))
     {
         bool isReturn = Str8Equals(clex->tok.lexeme, STR8_LIT("return"), 0);
         bool isGoto = Str8Equals(clex->tok.lexeme, STR8_LIT("goto"), 0);
 
-        metagenDefersEmitTabs(arena, output, scope->nestLevel);
+        metagenEmitTabs(arena, output, scope->nestLevel);
         Str8ListPushLastFmt(arena, output, "{\n");
 
         if (isReturn)
         {
-            metagenDefersEmitReturnDefers(arena, output, scope);
+            metagenEmitReturnDefers(arena, output, scope);
         }
         else if (isGoto)
         {
-            metagenDefersEmitGotoDefers(arena, output, clex, scope);
+            metagenEmitGotoDefers(arena, output, clex, scope);
         }
         else
         {
-            metagenDefersEmitBreakContinueDefers(arena, output, scope);
+            metagenEmitBreakContinueDefers(arena, output, scope);
         }
 
         while (clex->tok.kind != ';')
@@ -1241,9 +1337,71 @@ void metagenDefersEmitDefersForNonBlockScopes(Arena *arena, Str8List *output, CL
         Str8ListPushLastFmt(arena, output, "%S", clex->tok.lexeme);
         metagenGetNextNonWhitespaceTok(arena, output, clex, true);
 
-        metagenDefersEmitTabs(arena, output, scope->nestLevel);
+        metagenEmitTabs(arena, output, scope->nestLevel);
         Str8ListPushLastFmt(arena, output, "}\n");
     }
+}
+
+MetagenLambda metagenParseLambda(Arena *arena, MetagenOutput *file, Str8List *output, CLexerState *lex)
+{
+    if (Str8Equals(lex->tok.lexeme, gMetagenCmdKindStr8Table[METAGEN_CMD_LAMBDA], 0))
+    {
+        metagenGetNextNonWhitespaceTok(arena, output, lex, false);
+
+        if (lex->tok.kind == '(')
+        {
+            metagenGetNextNonWhitespaceTok(arena, output, lex, false);
+
+            str8 ret = STR8("void");
+
+            if (lex->tok.kind != '(')
+            {
+                CTokPos retTypeStart = lex->tok.pos;
+                metagenMatchTokUntil(lex, '(');
+                CTokPos retTypeEnd = lex->lexedToks.data[lex->nextTokIndex - 2].pos;
+
+                ret = baseStr8(retTypeStart.tokRange.data, (retTypeEnd.tokRange.data + retTypeEnd.tokRange.len) - retTypeStart.tokRange.data);
+            }
+
+            CTokPos paramStartTok = lex->tok.pos;
+            CTokPos paramEndTok = lex->tok.pos;
+
+            while (lex->tok.kind != CTOK_END_INPUT)
+            {
+                if (lex->tok.kind == '{')
+                {
+                    break;
+                }
+
+                paramEndTok = lex->tok.pos;
+                metagenGetNextNonWhitespaceTok(arena, output, lex, false);
+            }
+
+            Str8List bodyOutput = {0};
+            metagenParseScope(arena, file, &bodyOutput, lex, null, METAGEN_SCOPE_OWNER_OTHER);
+
+            if (lex->tok.kind == ')')
+            {
+                metagenGetNextNonWhitespaceTok(arena, output, lex, false);
+
+                str8 params = baseStr8(paramStartTok.tokRange.data, (paramEndTok.tokRange.data + paramEndTok.tokRange.len) - paramStartTok.tokRange.data);
+
+                str8 funcBody = Str8ListJoin(arena, &bodyOutput, null);
+
+                str8 lambdaName = Str8PushFmt(arena, "__metagenLambda__%llu", gMetagenLambdaCount);
+                Str8ListPushLastFmt(arena, output, "%S", lambdaName);
+
+                Str8ListPushLastFmt(arena, &file->header.funcs, "%S %S %S;", ret, lambdaName, params);
+                Str8ListPushLastFmt(arena, &file->impl.funcs, "%S %S %S", ret, lambdaName, params);
+                Str8ListPushLastFmt(arena, &file->impl.funcs, "%S\n", funcBody);
+
+                gMetagenLambdaCount++;
+                return (MetagenLambda){.funcBody = funcBody, .params = params, .ret = ret};
+            }
+        }
+    }
+
+    return (MetagenLambda){0};
 }
 
 MetagenLabelList metagenScopeGetAllPossibleLabels(Arena *arena, CLexerState *clex)
@@ -1281,12 +1439,12 @@ MetagenLabelList metagenScopeGetAllPossibleLabels(Arena *arena, CLexerState *cle
 
     return ret;
 }
-bool metagenDefersProcessScope(Arena *arena, Str8List *output, CLexerState *clex, MetagenScope *parent, MetagenScopeOwnerKind ownerKind)
+bool metagenParseScope(Arena *arena, MetagenOutput *file, Str8List *output, CLexerState *clex, MetagenScope *parent, MetagenScopeOwnerKind ownerKind)
 {
     MetagenScope scope = {.nestLevel = parent ? parent->nestLevel + 1 : 0, .parent = parent, .owner = ownerKind};
     u64 bracketsSeen = 0;
 
-    bool foundDefers = false;
+    bool modified = false;
     if (clex->tok.kind == '{')
     {
         scope.labels = metagenScopeGetAllPossibleLabels(arena, clex);
@@ -1304,9 +1462,9 @@ bool metagenDefersProcessScope(Arena *arena, Str8List *output, CLexerState *clex
             // if (cond) return; <- eg
             if (clex->tok.kind == '{')
             {
-                if(metagenDefersProcessScope(arena, output, clex, &scope, newScopeOwner))
+                if(metagenParseScope(arena, file, output, clex, &scope, newScopeOwner))
                 {
-                    foundDefers = true;
+                    modified = true;
                 }
 
                 newScopeOwner = METAGEN_SCOPE_OWNER_OTHER;
@@ -1318,14 +1476,22 @@ bool metagenDefersProcessScope(Arena *arena, Str8List *output, CLexerState *clex
             }
             else if (Str8Equals(clex->tok.lexeme, gMetagenCmdKindStr8Table[METAGEN_CMD_DEFER], 0))
             {
-                MetagenDefer defer = metagenDefersParseDefer(arena, output, clex, &scope);
+                MetagenDefer defer = metagenParseDefer(arena, file, output, clex, &scope);
                 if (BASE_ANY(defer.content))
                 {
-                    foundDefers = true;
+                    modified = true;
                     MetagenDefer *ptrDefer = arenaPushType(arena, MetagenDefer);
                     *ptrDefer = defer;
                     MetagenDeferListPushNodeLast(&scope.defers, ptrDefer);
                 }
+
+                continue;
+            }
+            else if (Str8Equals(clex->tok.lexeme, gMetagenCmdKindStr8Table[METAGEN_CMD_LAMBDA], 0))
+            {
+                metagenParseLambda(arena, file, output, clex);
+
+                modified = true;
 
                 continue;
             }
@@ -1343,7 +1509,7 @@ bool metagenDefersProcessScope(Arena *arena, Str8List *output, CLexerState *clex
                 Str8ListPushLastFmt(arena, output, "%S", clex->tok.lexeme);
                 metagenGetNextNonWhitespaceTok(arena, output, clex, true);
 
-                metagenDefersEmitDefersForNonBlockScopes(arena, output, clex, &scope);
+                metagenEmitDefersForNonBlockScopes(arena, output, clex, &scope);
 
                 if (clex->tok.kind == '{')
                 {
@@ -1354,18 +1520,18 @@ bool metagenDefersProcessScope(Arena *arena, Str8List *output, CLexerState *clex
             }
             else if (Str8Equals(clex->tok.lexeme, STR8_LIT("return"), 0))
             {
-                metagenDefersEmitReturnDefers(arena, output, &scope);
+                metagenEmitReturnDefers(arena, output, &scope);
                 dontEmitAtEndOfScope = true;
             }
             else if (Str8Equals(clex->tok.lexeme, STR8_LIT("break"), 0) ||
                      Str8Equals(clex->tok.lexeme, STR8_LIT("continue"), 0))
             {
-                metagenDefersEmitBreakContinueDefers(arena, output, &scope);
+                metagenEmitBreakContinueDefers(arena, output, &scope);
                 dontEmitAtEndOfScope = true;
             }
             else if (Str8Equals(clex->tok.lexeme, STR8_LIT("goto"), 0))
             {
-                dontEmitAtEndOfScope = metagenDefersEmitGotoDefers(arena, output, clex, &scope);
+                dontEmitAtEndOfScope = metagenEmitGotoDefers(arena, output, clex, &scope);
             }
             else
             {
@@ -1386,9 +1552,9 @@ bool metagenDefersProcessScope(Arena *arena, Str8List *output, CLexerState *clex
                             {
                                 newScopeOwner = item.kind;
                             }
-                            else if(metagenDefersCanEmitBefore(clex))
+                            else if(metagenCanEmitDefers(clex))
                             {
-                                metagenDefersEmitDefersForNonBlockScopes(arena, output, clex, &scope);
+                                metagenEmitDefersForNonBlockScopes(arena, output, clex, &scope);
                             }
                         }
                         else if (clex->tok.kind == item.nextExpected)
@@ -1408,7 +1574,7 @@ bool metagenDefersProcessScope(Arena *arena, Str8List *output, CLexerState *clex
                                 metagenGetNextNonWhitespaceTok(arena, output, clex, true);
                             }
 
-                            metagenDefersEmitDefersForNonBlockScopes(arena, output, clex, &scope);
+                            metagenEmitDefersForNonBlockScopes(arena, output, clex, &scope);
 
                             if (clex->tok.kind == '{')
                             {
@@ -1430,11 +1596,11 @@ bool metagenDefersProcessScope(Arena *arena, Str8List *output, CLexerState *clex
             {
                 BASE_LIST_REVFOREACH(MetagenDefer, defer, scope.defers)
                 {
-                    metagenDefersEmitTabs(arena, output, scope.nestLevel);
+                    metagenEmitTabs(arena, output, scope.nestLevel);
 
                     Str8ListPushLastFmt(arena, output, "%S\n", defer->content);
 
-                    metagenDefersEmitTabs(arena, output, scope.nestLevel - 1);
+                    metagenEmitTabs(arena, output, scope.nestLevel - 1);
                 }
             }
 
@@ -1446,9 +1612,9 @@ OUTER_LOOP_END:
         }
     }
 
-    return foundDefers;
+    return modified;
 }
-void metagenDefersPass(Arena *arena, Str8List sourcePaths)
+void metagenSourceEditPass(Arena *arena, Str8List sourcePaths, str8 input)
 {
     basePrintf("{g}Starting defers pass\n");
 
@@ -1463,14 +1629,30 @@ void metagenDefersPass(Arena *arena, Str8List sourcePaths)
 
         MetagenOutput output = {0};
         output.inputPath = inputPath->val;
-        output.impl.path = Str8PushFmt(arena, "%S/%S", METAGEN_DEFER_TEMP_FOLDER_NAME, inputPath->val);
+        output.impl.path = Str8PushFmt(arena, "%S/%S", METAGEN_DEFER_TEMP_FOLDER_NAME, Str8ChopBefore(inputPath->val, input, STR_MATCHFLAGS_CASE_INSENSITIVE | STR_MATCHFLAGS_SLASH_INSENSITIVE));
 
         bool foundDefer = false;
         while (clex.tok.kind != CTOK_END_INPUT)
         {
-            if (clex.tok.kind == '{')
+            if (clex.tok.kind == '#' && Str8Equals(baseCLexerPeek(&clex).lexeme, STR8("include"), 0))
             {
-                if(metagenDefersProcessScope(arena, &output.impl.raw, &clex, &(MetagenScope){.nestLevel = 0}, METAGEN_SCOPE_OWNER_OTHER))
+                Str8ListPushLastFmt(arena, &output.impl.includes, "%S", clex.tok.lexeme);
+
+                metagenGetNextNonWhitespaceTok(arena, &output.impl.includes, &clex, true);
+                
+                Str8ListPushLastFmt(arena, &output.impl.includes, "%S", clex.tok.lexeme);
+
+                metagenGetNextNonWhitespaceTok(arena, &output.impl.includes, &clex, true);
+
+                Str8ListPushLastFmt(arena, &output.impl.includes, "%S", clex.tok.lexeme);
+
+                metagenGetNextNonWhitespaceTok(arena, &output.impl.includes, &clex, true);
+
+                continue;
+            }
+            else if (clex.tok.kind == '{')
+            {
+                if(metagenParseScope(arena, &output, &output.impl.raw, &clex, &(MetagenScope){.nestLevel = 0}, METAGEN_SCOPE_OWNER_OTHER))
                 {
                     foundDefer = true;
                 }
@@ -1491,7 +1673,12 @@ void metagenDefersPass(Arena *arena, Str8List sourcePaths)
                 OSFileWriteFmt(outputFile, "// Input: %S\n", output.inputPath);
                 OSFileWriteFmt(outputFile, "// Date-Time: %d/%d/%d - %02d:%02d\n", currentTime.day, currentTime.month, currentTime.year, currentTime.hour, currentTime.min);
                 OSFileWriteFmt(outputFile, "/**********************************************************************/\n\n");
-                
+
+                // you want to add the lamdas after the includes, so tht they use the correct types etc.
+                // so ge tht index of the last include
+
+                OSFileWriteStr8(outputFile, Str8ListJoin(arena, &output.impl.includes, null));
+                OSFileWriteStr8(outputFile, Str8ListJoin(arena, &output.impl.funcs, null));
                 OSFileWriteStr8(outputFile, Str8ListJoin(arena, &output.impl.raw, null));
 
                 OSFileClose(outputFile);

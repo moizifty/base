@@ -16,10 +16,12 @@ typedef enum MetagenCmdKind
     METAGEN_CMD_GEN_TABLE,
     METAGEN_CMD_GEN_PRINT_STRUCT_MEMB,
     METAGEN_CMD_INTROSPECT,
+    METAGEN_CMD_INTROSPECT_ENUM,
     METAGEN_CMD_INTROSPECT_EXCLUDE,
     METAGEN_CMD_INTROSPECT_NOTE,
     METAGEN_CMD_EMBED_FILE,
     METAGEN_CMD_DEFER,
+    METAGEN_CMD_LAMBDA,
     METAGEN_CMD_COUNT,
 }MetagenCmdKind;
 
@@ -31,13 +33,16 @@ typedef struct MetagenOutput
         Str8List tables;
         Str8List defines;
         Str8List embeds;
+        Str8List funcs;
         str8 path;
     }header;
 
     struct
     {
+        Str8List includes;
         Str8List tables;
         Str8List embeds;
+        Str8List funcs;
         Str8List raw;
         str8 path;
     }impl;
@@ -51,8 +56,8 @@ typedef struct MetagenOutput
 BASE_CREATE_EFFICIENT_LL_DECLS(MetagenOutputList, MetagenOutput);
 
 typedef struct MetagenCStructMemb MetagenCStructMemb;
-BASE_CREATE_EFFICIENT_LL_DECLS(MetagenCStructMembList, MetagenCStructMemb);
-BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(MetagenCStructMembArray, MetagenCStructMemb);
+BASE_CREATE_EFFICIENT_LL_DECLS(MetagenCStructMembList, MetagenCStructMemb)
+BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(MetagenCStructMembArray, MetagenCStructMemb)
 
 typedef struct MetagenCTypeInfo
 {
@@ -107,6 +112,28 @@ typedef struct MetagenCStruct
 
 BASE_CREATE_EFFICIENT_LL_DECLS(MetagenCStructList, MetagenCStruct);
 
+typedef struct MetagenCEnumMemb
+{
+    str8 name;
+
+    struct MetagenCEnumMemb *next;
+    struct MetagenCEnumMemb *prev;
+}MetagenCEnumMemb;
+
+BASE_CREATE_EFFICIENT_LL_DECLS(MetagenCEnumMembList, MetagenCEnumMemb)
+
+typedef struct MetagenCEnum
+{
+    str8 name;
+    MetagenCEnumMembList membs;
+    u64 tokensAdvanced;
+
+    struct MetagenCEnum *next;
+    struct MetagenCEnum *prev;
+}MetagenCEnum;
+
+BASE_CREATE_EFFICIENT_LL_DECLS(MetagenCEnumList, MetagenCEnum)
+
 typedef struct MetagenTypeDictSlotEntry
 {
     MetagenCStruct *type;
@@ -160,6 +187,16 @@ typedef struct MetagenDefer
 
 BASE_CREATE_EFFICIENT_LL_DECLS(MetagenDeferList, MetagenDefer)
 
+typedef struct MetagenLambda
+{
+    str8 ret;
+    str8 params;
+    str8 funcBody;
+
+    struct MetagenLambda *next;
+    struct MetagenLambda *prev;
+}MetagenLambda;
+
 typedef struct MetagenScope
 {
     u64 nestLevel;
@@ -170,13 +207,21 @@ typedef struct MetagenScope
     struct MetagenScope *parent;
 }MetagenScope;
 
+typedef struct MetagenHasBlock
+{
+    str8 name;
+    CTokKind nextExpected;
+    CTokKind skipUntil;
+    MetagenScopeOwnerKind kind;
+}MetagenHasBlock;
+
 extern str8 gMetagenCmdKindStr8Table[METAGEN_CMD_COUNT];
 extern MetagenTypeDict gMetagenTypeDict;
 
 bool metagenTypeDictAddType(Arena *arena, MetagenTypeDict *dict, MetagenCStruct *type);
 MetagenCStruct *metagenTypeDictFindTypeByName(MetagenTypeDict *dict, str8 name);
 bool metagenHandleEmbedFile(Arena *arena, MetagenOutput *output, CTokArray nextToks);
-void metagenHandleIntrospect(Arena *arena, MetagenOutput *output, CTokArray nextToks, MetagenCStructList *out);
+void metagenHandleIntrospect(Arena *arena, MetagenOutput *output, CTokArray nextToks, MetagenCStructList *out, bool isEnum);
 
 bool metagenTryGetAggregateTypeInfoForMemb(Arena *arena, MetagenCStructMemb memb, MetagenTypeDict *dict, MetagenCTypeInfo *info);
 bool metagenTryGetNonAggregateTypeInfoForMemb(MetagenCStructMemb memb, MetagenCTypeInfo *info);
@@ -189,8 +234,8 @@ Str8List metagenFindFilesToProcess(Arena *arena, str8 path);
 
 // pass on introspect, embed tags
 CTok metagenGetNextNonWhitespaceTok(Arena *arena, Str8List *output, CLexerState *lex, bool outputWhitespace);
-MetagenDefer metagenDefersParseDefer(Arena *arena, Str8List *output, CLexerState *clex, MetagenScope *parent);
-bool metagenDefersProcessScope(Arena *arena, Str8List *output, CLexerState *clex, MetagenScope *parent, MetagenScopeOwnerKind ownerKind);
+MetagenDefer metagenParseDefer(Arena *arena, MetagenOutput *file, Str8List *output, CLexerState *clex, MetagenScope *parent);
+bool metagenParseScope(Arena *arena, MetagenOutput *file, Str8List *output, CLexerState *clex, MetagenScope *parent, MetagenScopeOwnerKind ownerKind);
 void metagenMetadataPass(Arena *arena, str8 baseFolder, Str8List *inputPaths);
-void metagenDefersPass(Arena *arena, Str8List inputPaths);
+void metagenSourceEditPass(Arena *arena, Str8List inputPaths, str8 input);
 #endif
