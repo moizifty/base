@@ -83,7 +83,7 @@ void BaseMainThreadEntry(ProgramMainFunc programMain, i64 argc, char **argv)
 
     OSInit(ctx.scratchArenas[0]);
 
-    programMain(argsList);
+    programMain(&argsList);
 
     logThreadOutputToFile();
 }

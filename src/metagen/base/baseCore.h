@@ -148,6 +148,12 @@ typedef struct NAME \
 	u64 len; \
 	u64 totalSize; \
 }NAME; \
+typedef bool (*NAME##FirstFunc)(NODENAME *node); \
+typedef bool (*NAME##FirstCaptureFunc)(NODENAME *node, void *capture); \
+inline NODENAME *NAME##First(NAME *l, NAME##FirstFunc func); \
+inline NODENAME *NAME##FirstCapture(NAME *l, void *capture, NAME##FirstCaptureFunc func); \
+typedef bool (*NAME##WhereFunc)(NODENAME *node); \
+inline NAME NAME##WhereList(Arena *arena, NAME *l, NAME##WhereFunc func); \
 void NAME##PushNodeLast(NAME *l, NODENAME *node); \
 void NAME##PushNodeFirst(NAME *l, NODENAME *node); \
 void NAME##InsertNode(NAME *l, NODENAME *prev, NODENAME *node); \
@@ -171,6 +177,40 @@ BASE_CREATE_LL_JUST_LIST_DECLS_EX(NAME, NODENAME, ELEM) \
 BASE_CREATE_LL_JUST_NODE_DECLS_EX(NAME, NODENAME, ELEM)  \
 
 #define BASE_CREATE_LL_JUST_LIST_DEFS_EX(NAME, NODENAME, ELEM) \
+inline NODENAME *NAME##First(NAME *l, NAME##FirstFunc func) \
+{\
+	BASE_PTR_LIST_FOREACH(NODENAME, node, l) \
+	{ \
+		if (func(node)) \
+		{ \
+			return node;\
+		} \
+	} \
+	return null; \
+}\
+inline NODENAME *NAME##FirstCapture(NAME *l, void *capture, NAME##FirstCaptureFunc func) \
+{\
+	BASE_PTR_LIST_FOREACH(NODENAME, node, l) \
+	{ \
+		if (func(node, capture)) \
+		{ \
+			return node;\
+		} \
+	} \
+	return null; \
+}\
+inline NAME NAME##WhereList(Arena *arena, NAME *l, NAME##WhereFunc func) \
+{ \
+	NAME ret = {0};\
+    BASE_PTR_LIST_FOREACH(NODENAME, node, l)\
+    {\
+        if (func(node))\
+        {\
+            NAME##PushLast(arena, &ret, node->val);\
+        }\
+    }\
+    return ret;\
+} \
 inline void NAME##PushNodeLast(NAME *l, NODENAME *node) \
 { \
 	BaseDllNodePushLast(l->first, l->last, node); \
@@ -246,12 +286,63 @@ typedef struct NAME \
     struct NODENAME *last; \
 	u64 len; \
 }NAME; \
+typedef bool (*NAME##FirstFunc)(NODENAME *node); \
+typedef bool (*NAME##FirstCaptureFunc)(NODENAME *node, void *capture); \
+inline NODENAME *NAME##First(NAME *l, NAME##FirstFunc func); \
+inline NODENAME *NAME##FirstCapture(NAME *l, void *capture, NAME##FirstCaptureFunc func); \
+typedef bool (*NAME##WhereFunc)(NODENAME *node); \
+inline ArrayView NAME##WhereArray(Arena *arena, NAME *l, NAME##WhereFunc func); \
 inline void NAME##PushNodeLast(NAME *l, NODENAME *node); \
 inline void NAME##PushNodeFirst(NAME *l, NODENAME *node); \
 inline void NAME##InsertNode(NAME *l, NODENAME *prev, NODENAME *node); \
 inline struct NODENAME *NAME##PopNodeLast(NAME *l);
 
 #define BASE_CREATE_EFFICIENT_LL_DEFS(NAME, NODENAME) \
+inline NODENAME *NAME##First(NAME *l, NAME##FirstFunc func) \
+{ \
+	BASE_PTR_LIST_FOREACH(NODENAME, node, l) \
+	{ \
+		if (func(node)) \
+		{ \
+			return node;\
+		} \
+	} \
+	return null; \
+} \
+inline NODENAME *NAME##FirstCapture(NAME *l, void *capture, NAME##FirstCaptureFunc func) \
+{ \
+	BASE_PTR_LIST_FOREACH(NODENAME, node, l) \
+	{ \
+		if (func(node, capture)) \
+		{ \
+			return node;\
+		} \
+	} \
+	return null; \
+} \
+inline ArrayView NAME##WhereArray(Arena *arena, NAME *l, NAME##WhereFunc func)\
+{ \
+    ArrayView view = {0};\
+    ArrayView viewTemp = {0};\
+    ArenaTemp temp = baseTempBegin(&arena, 1); \
+    viewTemp.data = arenaPushArray(temp.arena, NODENAME*, l->len);\
+    BASE_PTR_LIST_FOREACH(NODENAME, node, l)\
+    {\
+        if (func(node))\
+        {\
+            ((NODENAME**) (viewTemp.data))[viewTemp.len++] = node;\
+        }\
+    }\
+    if (BASE_ANY(viewTemp))\
+    {\
+        view.data = arenaPushArray(arena, NODENAME*, viewTemp.len);\
+        BASE_MEMCPY(view.data, viewTemp.data, viewTemp.len * sizeof(NODENAME*));\
+        view.len = viewTemp.len;\
+        view.elemSize = sizeof(NODENAME*);\
+    }\
+    baseTempEnd(temp);\
+    return view;\
+}\
 inline void NAME##PushNodeLast(NAME *l, struct NODENAME *node) \
 { \
 	BasePtrListNodePushLast(l, node); \
@@ -333,7 +424,8 @@ BASE_CREATE_LL_DECLS(U8ArrayList, U8Array)
 
 
 // program entry related
-typedef void(*ProgramMainFunc)(Str8List);
+typedef struct Str8List Str8List;
+typedef void(*ProgramMainFunc)(Str8List *);
 
 void BaseMainThreadEntry(ProgramMainFunc programMain, i64 argc, char **argv);
 

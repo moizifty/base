@@ -7,7 +7,7 @@
 #include "..\..\..\base\baseThreads.h"
 #include "base/baseLog.h"
 
-global OSKey gOSWin32VKToOSKeyTable[256] = 
+OSKey gOSWin32VKToOSKeyTable[256] = 
 {
     ['A'] = OS_KEY_A,
     ['B'] = OS_KEY_B,
@@ -252,13 +252,39 @@ void OSFileClose(OSHandle handle)
     CloseHandle((HANDLE)handle._u64);
 }
 
+OSFileAttributeFlags OSFileGetAttributesFromPath(str8 path)
+{
+    DWORD dwAttrib = 0;
+    OSFileAttributeFlags flags = OS_FILEATTR_INVALID;
+    ArenaTemp temp = baseTempBegin(null, 0);
+    {
+        str16 widePath = Str16FromFromStr8(temp.arena, path);
+        dwAttrib = GetFileAttributesW(widePath.data);
+        flags = OSFileAttributesFromWin32(dwAttrib);
+    }
+    baseTempEnd(temp);
+
+    return flags;
+}
+void OSFileSetAttributesFromPath(str8 path, OSFileAttributeFlags flags)
+{
+    ArenaTemp temp = baseTempBegin(null, 0);
+    {
+        str16 widePath = Str16FromFromStr8(temp.arena, path);
+
+        DWORD win32Flags = Win32FileAttributesFromOSFileAttributes(flags);
+        SetFileAttributesW(widePath.data, win32Flags);
+    }
+    baseTempEnd(temp);
+}
+
 bool OSPathExists(str8 path)
 {
     DWORD dwAttrib = 0;
     ArenaTemp temp = baseTempBegin(null, 0);
     {
         str16 widePath = Str16FromFromStr8(temp.arena, path);
-        dwAttrib = GetFileAttributes(widePath.data);
+        dwAttrib = GetFileAttributesW(widePath.data);
     }
     baseTempEnd(temp);
 
@@ -291,7 +317,7 @@ u64 OSGetFileSizeFromHandle(OSHandle handle)
 str8 OSGetFullPath(struct Arena *arena, str8 path)
 {
     i8 buf[1];
-    i64 needed = GetFullPathNameA((LPCSTR) path.data, 1, buf, null);
+    i64 needed = GetFullPathNameA((LPCSTR) path.data, 1, (LPSTR)buf, null);
 
     str8 ret = {0};
     ret.data = arenaPush(arena, needed);
@@ -364,7 +390,7 @@ bool OSDirectoryDelete(str8 path, bool recursive)
     }
 
     str16 widePath = Str16FromFromStr8(temp.arena, path);
-    result = result && RemoveDirectory((LPCWSTR)widePath.data);
+    result = result && RemoveDirectoryW((LPCWSTR)widePath.data);
 
     baseTempEnd(temp);
 
@@ -429,9 +455,39 @@ bool OSCreateDirectory(str8 path, bool createIntermediateDirs)
 OSFileAttributeFlags OSFileAttributesFromWin32(DWORD fileAttr)
 {
     OSFileAttributeFlags flags = 0;
+    if (fileAttr == INVALID_FILE_ATTRIBUTES)
+    {
+        return OS_FILEATTR_INVALID;
+    }
+
     if (fileAttr & FILE_ATTRIBUTE_DIRECTORY)
     {
         flags |= OS_FILEATTR_DIR;
+    }
+
+    if (fileAttr & FILE_ATTRIBUTE_READONLY)
+    {
+        flags |= OS_FILEATTR_READONLY;
+    }
+
+    return flags;
+}
+DWORD Win32FileAttributesFromOSFileAttributes(OSFileAttributeFlags fileAttr)
+{
+    DWORD flags = 0;
+    if (fileAttr == OS_FILEATTR_INVALID)
+    {
+        return INVALID_FILE_ATTRIBUTES;
+    }
+
+    if (fileAttr & OS_FILEATTR_DIR)
+    {
+        flags |= FILE_ATTRIBUTE_DIRECTORY;
+    }
+
+    if (fileAttr & OS_FILEATTR_READONLY)
+    {
+        flags |= FILE_ATTRIBUTE_READONLY;
     }
 
     return flags;
@@ -444,7 +500,7 @@ OSFileFindIter *OSFindFileBegin(struct Arena *arena, str8 path, OSFileFindOption
 
     if (path.len > 0)
     {
-        findFileData->handle = FindFirstFileA((i8 *) path.data, &findFileData->findData);
+        findFileData->handle = FindFirstFileA((LPCSTR) path.data, &findFileData->findData);
     }
     return findIter;
 }
@@ -520,7 +576,7 @@ Str8List OSGetFilePaths(Arena *arena, str8 dir, str8 pattern, bool recursive)
         {
             if (recursive)
             {
-                if (PathMatchSpecA((i8*) fileInfo.name.data, (i8*) pattern.data))
+                if (PathMatchSpecA((LPCSTR) fileInfo.name.data, (LPSTR) pattern.data))
                 {
                     Str8ListPushLastFmt(arena, &ret, "%S\\%S", dir, fileInfo.name);
                 }
@@ -545,7 +601,7 @@ str8 OSGetProgramPath(Arena *arena)
     {
         u64 bufSize = BASE_KILOBYTES(4);
         u8 *buf = arenaPush(temp.arena, bufSize);
-        GetModuleFileNameA(NULL, (i8 *) buf, (DWORD) bufSize);
+        GetModuleFileNameA(NULL, (LPSTR) buf, (DWORD) bufSize);
 
         ret = Str8PushFmt(arena, "%s", buf);
     }
@@ -728,7 +784,7 @@ void *OSGetExportAddressFromDynamicLibrary(OSHandle dynLib, str8 name)
     {
         // needs '\0' at end
         str8 nameCopied = Str8PushCopy(temp.arena, name);
-        FARPROC fnptr = GetProcAddress((HMODULE) dynLib._u64, (i8*)nameCopied.data);
+        FARPROC fnptr = GetProcAddress((HMODULE) dynLib._u64, (LPCSTR)nameCopied.data);
 
         ptr = (void*)fnptr;
     }
@@ -789,11 +845,11 @@ str8 OSGetEnvironmentVar(Arena *arena, str8 var)
     ArenaTemp temp = baseTempBegin(&arena, 1);
     var = Str8PushFmt(arena, "%S", var);
     
-    i64 size = GetEnvironmentVariableA((i8*)var.data, null, 0);
+    i64 size = GetEnvironmentVariableA((LPCSTR)var.data, null, 0);
     if(size > 0)
     {
         val.data = arenaPushArray(arena, u8, size);
-        GetEnvironmentVariableA((i8*)var.data, (i8*)val.data, (DWORD)size);
+        GetEnvironmentVariableA((LPCSTR)var.data, (LPSTR)val.data, (DWORD)size);
 
         val.len = size - 1;
     }

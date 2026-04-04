@@ -121,7 +121,7 @@ void cmdlineStr8ListVar(Str8List *arg, str8 name, Str8List def, str8 help, Cmdli
 }
 bool cmdlineParse(Str8List cmdline)
 {
-    if (!BASE_ANY(gBaseCmdlineArgDefs) && BASE_ANY(cmdline))
+    if (!BASE_ANY(gBaseCmdlineArgDefs) && BASE_ANY(cmdline) && BASE_NULL_OR_EMPTY(gBaseCmdlineTrailingHelp))
     {
         baseEPrintf("{r}No arguments are required by the program but some are passed.\n");
         return false;
@@ -312,6 +312,10 @@ void cmdlineUsage(void)
                 case CMDLINE_ARG_BOOL:
                 {
                     basePrintf("        default (boolean): %s\n        info: %S", def.defValue._union.asBool ? "true" : "false", def.help);
+                }break;
+                default:
+                {
+                    basePrintf("{r}unhandled commandline arg type", def.help);
                 }break;
             }
         }

@@ -44,4 +44,6 @@ global IMAGE_DOS_HEADER __ImageBase;
 #define HINST_THIS ((HINSTANCE)&__ImageBase)
 #define OS_CORE_WIN32_HINST HINST_THIS
 
+OSFileAttributeFlags OSFileAttributesFromWin32(DWORD fileAttr);
+DWORD Win32FileAttributesFromOSFileAttributes(OSFileAttributeFlags fileAttr);
 #endif

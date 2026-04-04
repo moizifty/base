@@ -1,12 +1,12 @@
 /**********************************************************************/
 // GENERATED FILE
 // Input: .\src\base\baseMath.h
-// Date-Time: 27/3/2026 - 16:52
+// Date-Time: 28/3/2026 - 14:51
 /**********************************************************************/
 
 #include "baseMath.gen.h"
 
-extern MetagenStructMembArray gvec2fMembDefsTable=
+MetagenStructMembArray gvec2fMembDefsTable=
 {
 	.data=(MetagenStructMemb[2])
 	{
@@ -23,7 +23,7 @@ MetagenStruct gvec2fStructInfo=
    .align=4,
    .membs=&gvec2fMembDefsTable,
 };
-extern MetagenStructMembArray gvec3fMembDefsTable=
+MetagenStructMembArray gvec3fMembDefsTable=
 {
 	.data=(MetagenStructMemb[3])
 	{
@@ -41,7 +41,7 @@ MetagenStruct gvec3fStructInfo=
    .align=4,
    .membs=&gvec3fMembDefsTable,
 };
-extern MetagenStructMembArray grange3fMembDefsTable=
+MetagenStructMembArray grange3fMembDefsTable=
 {
 	.data=(MetagenStructMemb[10])
 	{

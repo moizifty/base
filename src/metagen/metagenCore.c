@@ -1681,15 +1681,17 @@ void metagenSourceEditPass(Arena *arena, Str8List sourcePaths, str8 input)
                 OSFileWriteStr8(outputFile, Str8ListJoin(arena, &output.impl.funcs, null));
                 OSFileWriteStr8(outputFile, Str8ListJoin(arena, &output.impl.raw, null));
 
-                OSFileClose(outputFile);
-
                 basePrintf("{b}Found defer, saving file '%S'\n", output.impl.path);
+
+                OSFileClose(outputFile);
             }
         }
         else
         {
             OSFileWriteAll(output.impl.path, OSFileReadAll(arena, output.inputPath), true, true);
         }
+
+        OSFileSetAttributesFromPath(output.impl.path, OS_FILEATTR_READONLY);
     }
 
     basePrintf("{g}Ending defers pass\n");

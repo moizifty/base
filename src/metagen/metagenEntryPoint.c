@@ -9,7 +9,7 @@
 
 #include "metagen\os\core\osEntryPoint.c"
 
-void ProgramMain(Str8List args)
+void ProgramMain(Str8List *args)
 {
     bool *defersArg = cmdlineBool(STR8_LIT("defers"), false, STR8_LIT("Process defers in all inputs."), CMDLINE_ARG_PRESENCE_OPTIONAL);
     bool *metadataArg = cmdlineBool(STR8_LIT("metadata"), false, STR8_LIT("Process metada in all inputs."), CMDLINE_ARG_PRESENCE_OPTIONAL);
@@ -17,7 +17,7 @@ void ProgramMain(Str8List args)
     bool *cleanMetadataArg = cmdlineBool(STR8_LIT("clean-metadata"), false, STR8_LIT("Clean all generated metadata code"), CMDLINE_ARG_PRESENCE_OPTIONAL);
     Str8List *inputArgs = cmdlineTrailing(STR8_LIT("input"));
 
-    if (!cmdlineParse(args))
+    if (!cmdlineParse(*args))
     {
         cmdlineUsage();
         return;

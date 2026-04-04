@@ -55,6 +55,11 @@ enum
     STR_SPLITFLAGS_NO_COPY = (1 << 1), // THE str8 in the str8list will not be copies and instead be slices of original str
 };
 
+typedef bool (*Str8ListFirstFunc)(Str8ListNode *node);
+typedef bool (*Str8ListWhereFunc)(Str8ListNode *node);
+Str8ListNode *Str8ListFirst(Str8List *l, Str8ListFirstFunc func);
+Str8List Str8ListWhereList(Arena *arena, Str8List *l, Str8ListWhereFunc func);
+
 void Str8ListPushNodeLast(Str8List *l, Str8ListNode *node);
 void Str8ListPushNodeFirst(Str8List *l, Str8ListNode *node);
 void Str8ListInsertNode(Str8List *l, Str8ListNode *prev, Str8ListNode *node);
@@ -128,5 +133,6 @@ str16 Str16FromFromStr8(Arena *arena, str8 str);
 
 u64 U64FromStr8(str8 str);
 i64 I64FromStr8(str8 str);
+bool U64TryFromStr8(str8 str, u64 *num);
 bool I64TryFromStr8(str8 str, i64 *num);
 #endif

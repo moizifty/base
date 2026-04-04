@@ -252,13 +252,39 @@ void OSFileClose(OSHandle handle)
     CloseHandle((HANDLE)handle._u64);
 }
 
+OSFileAttributeFlags OSFileGetAttributesFromPath(str8 path)
+{
+    DWORD dwAttrib = 0;
+    OSFileAttributeFlags flags = OS_FILEATTR_INVALID;
+    ArenaTemp temp = baseTempBegin(null, 0);
+    {
+        str16 widePath = Str16FromFromStr8(temp.arena, path);
+        dwAttrib = GetFileAttributesW(widePath.data);
+        flags = OSFileAttributesFromWin32(dwAttrib);
+    }
+    baseTempEnd(temp);
+
+    return flags;
+}
+void OSFileSetAttributesFromPath(str8 path, OSFileAttributeFlags flags)
+{
+    ArenaTemp temp = baseTempBegin(null, 0);
+    {
+        str16 widePath = Str16FromFromStr8(temp.arena, path);
+
+        DWORD win32Flags = Win32FileAttributesFromOSFileAttributes(flags);
+        SetFileAttributesW(widePath.data, win32Flags);
+    }
+    baseTempEnd(temp);
+}
+
 bool OSPathExists(str8 path)
 {
     DWORD dwAttrib = 0;
     ArenaTemp temp = baseTempBegin(null, 0);
     {
         str16 widePath = Str16FromFromStr8(temp.arena, path);
-        dwAttrib = GetFileAttributes(widePath.data);
+        dwAttrib = GetFileAttributesW(widePath.data);
     }
     baseTempEnd(temp);
 
@@ -364,7 +390,7 @@ bool OSDirectoryDelete(str8 path, bool recursive)
     }
 
     str16 widePath = Str16FromFromStr8(temp.arena, path);
-    result = result && RemoveDirectory((LPCWSTR)widePath.data);
+    result = result && RemoveDirectoryW((LPCWSTR)widePath.data);
 
     baseTempEnd(temp);
 
@@ -429,9 +455,39 @@ bool OSCreateDirectory(str8 path, bool createIntermediateDirs)
 OSFileAttributeFlags OSFileAttributesFromWin32(DWORD fileAttr)
 {
     OSFileAttributeFlags flags = 0;
+    if (fileAttr == INVALID_FILE_ATTRIBUTES)
+    {
+        return OS_FILEATTR_INVALID;
+    }
+
     if (fileAttr & FILE_ATTRIBUTE_DIRECTORY)
     {
         flags |= OS_FILEATTR_DIR;
+    }
+
+    if (fileAttr & FILE_ATTRIBUTE_READONLY)
+    {
+        flags |= OS_FILEATTR_READONLY;
+    }
+
+    return flags;
+}
+DWORD Win32FileAttributesFromOSFileAttributes(OSFileAttributeFlags fileAttr)
+{
+    DWORD flags = 0;
+    if (fileAttr == OS_FILEATTR_INVALID)
+    {
+        return INVALID_FILE_ATTRIBUTES;
+    }
+
+    if (fileAttr & OS_FILEATTR_DIR)
+    {
+        flags |= FILE_ATTRIBUTE_DIRECTORY;
+    }
+
+    if (fileAttr & OS_FILEATTR_READONLY)
+    {
+        flags |= FILE_ATTRIBUTE_READONLY;
     }
 
     return flags;

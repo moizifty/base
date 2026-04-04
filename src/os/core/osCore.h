@@ -69,7 +69,9 @@ typedef enum OSFileFindType
 typedef u64 OSFileAttributeFlags;
 enum
 {
-    OS_FILEATTR_DIR = (1<<0),
+    OS_FILEATTR_INVALID = (1<<0),
+    OS_FILEATTR_DIR = (1<<1),
+    OS_FILEATTR_READONLY = (1<<2),
 };
 
 typedef enum OSKey
@@ -160,6 +162,8 @@ void OSFileWriteStr8(OSHandle fileHandle, str8 str);
 void OSFileWriteU32(OSHandle fileHandle, u32 n);
 void OSFileWriteU64(OSHandle fileHandle, u64 n);
 void OSFileWriteFmt(OSHandle fileHandle, char *fmt, ...);
+OSFileAttributeFlags OSFileGetAttributesFromPath(str8 path);
+void OSFileSetAttributesFromPath(str8 path, OSFileAttributeFlags flags);
 
 U8Array OSFileReadAll(struct Arena *arena, str8 path);
 bool OSFileWriteAll(str8 path, U8Array bytes, bool createLeadingDir, bool overwrite);

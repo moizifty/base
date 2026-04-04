@@ -7,6 +7,29 @@
 BASE_CREATE_LL_DEFS(U16List, u16)
 BASE_CREATE_LL_DEFS(U8List, u8)
 
+Str8ListNode *Str8ListFirst(Str8List *l, Str8ListFirstFunc func)
+{
+	BASE_PTR_LIST_FOREACH(Str8ListNode, node, l)
+	{
+		if (func(node))
+		{
+			return node;
+		}
+	}
+	return null;
+}
+Str8List Str8ListWhereList(Arena *arena, Str8List *l, Str8ListWhereFunc func)
+{
+	Str8List ret = {0};
+    BASE_PTR_LIST_FOREACH(Str8ListNode, node, l)
+    {
+        if (func(node))
+        {
+            Str8ListPushLast(arena, &ret, node->val);
+        }
+    }
+    return ret;
+}
 void Str8ListPushNodeLast(Str8List *l, Str8ListNode *node)
 {
 	BasePtrListNodePushLast(l, node);
@@ -749,6 +772,39 @@ i64 I64FromStr8(str8 str)
     return num * sign;
 }
 
+bool U64TryFromStr8(str8 str, u64 *num)
+{
+    *num = 0;
+
+    bool hex = false;
+    u64 i = 0;
+    if (Str8StartsWith(str, STR8_LIT("-"), 0))
+    {
+        return false;
+    }
+
+    if (Str8StartsWith(str, STR8_LIT("0x"), STR_MATCHFLAGS_CASE_INSENSITIVE))
+    {
+        hex = true;
+        i += 2;
+    } 
+    else if (Str8StartsWith(str, STR8_LIT("0b"), STR_MATCHFLAGS_CASE_INSENSITIVE))
+    {
+        i += 2;
+    }
+
+    for(; i < str.len; i++)
+    {
+        if ((hex && !BASE_ISHEXDIGIT(str.data[i])) || 
+            (!hex && !BASE_ISDIGIT(str.data[i])))
+        {
+            return false;
+        }
+    }
+
+    *num = U64FromStr8(str);
+    return true;
+}
 bool I64TryFromStr8(str8 str, i64 *num)
 {
     *num = 0;
