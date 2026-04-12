@@ -386,6 +386,7 @@ BASE_CREATE_ARRAY_VIEW_DEFS(NAME, ELEM)
 
 #define ARRAY_VIEW_LIT_FROM_SIZED(T, ARRAY)		((T){ARRAY, .len = BASE_ARRAY_SIZE(ARRAY)})
 #define ARRAY_VIEW_LIT(T, ARRAY, SIZE)			((T){ARRAY, .len = SIZE})
+#define ARRAY_VIEW(T, M, ...)			((T){.data = (M[]){__VA_ARGS__}, .len = sizeof((M[]){__VA_ARGS__}) / sizeof(M)})
 
 BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(U8Array, u8)
 
@@ -418,6 +419,7 @@ typedef struct U8ChunkList
 typedef struct Arena Arena;
 void U8ChunkListPushLast(struct Arena *arena, U8ChunkList *l, u8 n);
 void U8ChunkListPushStr8Last(struct Arena *arena, U8ChunkList *l, str8 str);
+void U8ChunkListPushU64Last(struct Arena *arena, U8ChunkList *l, u64 n);
 U8Array U8ChunkListFlattenToArray(struct Arena *arena, U8ChunkList *l);
 BASE_CREATE_LL_DECLS(U8ArrayList, U8Array)
 // #pragma warning( pop ) 

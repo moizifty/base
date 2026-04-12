@@ -34,6 +34,7 @@ void arenaFree(Arena *arena);
 void *arenaPushNoZero(Arena *arena, u64 size);
 void *arenaPush(Arena *arena, u64 size);
 void arenaPopTo(Arena *arena, u64 popTo);
+void arenaPop(Arena *arena, u64 amount);
 
 ArenaTemp arenaTempBegin(Arena *arena);
 void arenaTempEnd(ArenaTemp temp);

@@ -72,7 +72,16 @@ enum
     OS_FILEATTR_INVALID = (1<<0),
     OS_FILEATTR_DIR = (1<<1),
     OS_FILEATTR_READONLY = (1<<2),
+    OS_FILEATTR_NORMAL = (1<<3),
 };
+
+typedef enum OSMemoryAccessKind
+{
+    OS_MEMORYACCESS_READ,
+    OS_MEMORYACCESS_WRITE,
+    OS_MEMORYACCESS_EXECUTE,
+    OS_MEMORYACCESS_READ_WRITE_EXECUTE,
+}OSMemoryAccessKind;
 
 typedef enum OSKey
 {
@@ -151,6 +160,7 @@ void* OSReserveMemory(u64 size);
 void OSCommitMemory(void *ptr, u64 size);
 void OSDecommitMemory(void *ptr, u64 size);
 void OSFreeMemory(void *ptr, u64 size);
+void OSSetAccessMemory(void *ptr, u64 size, OSMemoryAccessKind flags);
 
 void OSEnableVirtualTerminalSequenceProcessing(void);
 bool OSStdoutIsRedirected(void);
@@ -199,8 +209,9 @@ void OSProcessClose(OSHandle procHandle);
 void OSProcessWait(OSHandle procHandle); //wait on it to finish
 bool OSProcessReadStdoutStderr(struct Arena *arena, OSHandle procHandle, str8 *stdoutStr, str8 *stderrStr);
 
-OSHandle OSLoadDynamicLibrary(str8 name);
-void *OSGetExportAddressFromDynamicLibrary(OSHandle dynLib, str8 name);
+OSHandle OSDynamicLibraryOpen(str8 name);
+void *OSDynamicLibraryGetExportAddress(OSHandle dynLib, str8 name);
+void OSDynamicLibraryClose(OSHandle);
 
 // Date and time
 DateTime OSGetSytemTime(void);

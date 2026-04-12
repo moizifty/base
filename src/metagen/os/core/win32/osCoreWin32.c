@@ -178,7 +178,7 @@ OSHandle OSFileOpen(str8 path, bool createLeadingDir, OSFileAccessFlags accessFl
 
     HANDLE fileHandle = CreateFileA((char *)path.data, 
                                     access, 
-                                    share, 
+                                    share | FILE_SHARE_DELETE, 
                                     NULL, 
                                     creation, 
                                     FILE_ATTRIBUTE_NORMAL,
@@ -332,6 +332,7 @@ bool OSFileDelete(str8 path)
     ArenaTemp temp = baseTempBegin(null, 0);
 
     str16 wide = Str16FromFromStr8(temp.arena, path);
+    SetFileAttributesW((LPCWSTR)wide.data, FILE_ATTRIBUTE_NORMAL);
     bool result = DeleteFileW((LPCWSTR)wide.data);
 
     baseTempEnd(temp);
@@ -470,6 +471,11 @@ OSFileAttributeFlags OSFileAttributesFromWin32(DWORD fileAttr)
         flags |= OS_FILEATTR_READONLY;
     }
 
+    if (fileAttr & FILE_ATTRIBUTE_NORMAL)
+    {
+        flags |= OS_FILEATTR_NORMAL;
+    }
+
     return flags;
 }
 DWORD Win32FileAttributesFromOSFileAttributes(OSFileAttributeFlags fileAttr)
@@ -490,6 +496,10 @@ DWORD Win32FileAttributesFromOSFileAttributes(OSFileAttributeFlags fileAttr)
         flags |= FILE_ATTRIBUTE_READONLY;
     }
 
+    if (fileAttr & OS_FILEATTR_NORMAL)
+    {
+        flags |= FILE_ATTRIBUTE_NORMAL;
+    }
     return flags;
 }
 OSFileFindIter *OSFindFileBegin(struct Arena *arena, str8 path, OSFileFindOptionalParams *opt)
@@ -502,6 +512,7 @@ OSFileFindIter *OSFindFileBegin(struct Arena *arena, str8 path, OSFileFindOption
     {
         findFileData->handle = FindFirstFileA((LPCSTR) path.data, &findFileData->findData);
     }
+
     return findIter;
 }
 

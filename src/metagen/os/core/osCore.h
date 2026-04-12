@@ -72,6 +72,7 @@ enum
     OS_FILEATTR_INVALID = (1<<0),
     OS_FILEATTR_DIR = (1<<1),
     OS_FILEATTR_READONLY = (1<<2),
+    OS_FILEATTR_NORMAL = (1<<3),
 };
 
 typedef enum OSKey

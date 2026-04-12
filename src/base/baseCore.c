@@ -38,6 +38,17 @@ void U8ChunkListPushStr8Last(struct Arena *arena, U8ChunkList *l, str8 str)
         U8ChunkListPushLast(arena, l, str.data[i]);
     }
 }
+void U8ChunkListPushU64Last(struct Arena *arena, U8ChunkList *l, u64 n)
+{
+    U8ChunkListPushLast(arena, l, (n & 0xff));
+    U8ChunkListPushLast(arena, l, (n & 0xff00) >> 8);
+    U8ChunkListPushLast(arena, l, (n & 0xff0000) >> 16);
+    U8ChunkListPushLast(arena, l, (n & 0xff000000) >> 24);
+    U8ChunkListPushLast(arena, l, (n & 0xff00000000) >> 32);
+    U8ChunkListPushLast(arena, l, (n & 0xff0000000000) >> 40);
+    U8ChunkListPushLast(arena, l, (n & 0xff000000000000) >> 48);
+    U8ChunkListPushLast(arena, l,  (n & 0xff00000000000000) >> 56);
+}
 
 U8Array U8ChunkListFlattenToArray(struct Arena *arena, U8ChunkList *l)
 {

@@ -113,6 +113,36 @@ void OSFreeMemory(void *ptr, u64 size)
     VirtualFree(ptr, 0, MEM_RELEASE);
 }
 
+void OSSetAccessMemory(void *ptr, u64 size, OSMemoryAccessKind access)
+{
+    DWORD oldProtect = 0;
+    DWORD protect = 0;
+    switch (access)
+    {
+        case OS_MEMORYACCESS_READ_WRITE_EXECUTE:
+        {
+            protect = PAGE_EXECUTE_READWRITE;
+        }break;
+
+        case OS_MEMORYACCESS_EXECUTE:
+        {
+            protect = PAGE_EXECUTE;
+        }break;
+
+        case OS_MEMORYACCESS_READ:
+        {
+            protect = PAGE_READONLY;
+        }break;
+
+        case OS_MEMORYACCESS_WRITE:
+        {
+            protect = PAGE_READWRITE;
+        }break;
+    }
+    
+    VirtualProtect(ptr, size, protect, &oldProtect);
+}
+
 void OSEnableVirtualTerminalSequenceProcessing(void)
 {
     {
@@ -178,7 +208,7 @@ OSHandle OSFileOpen(str8 path, bool createLeadingDir, OSFileAccessFlags accessFl
 
     HANDLE fileHandle = CreateFileA((char *)path.data, 
                                     access, 
-                                    share, 
+                                    share | FILE_SHARE_DELETE, 
                                     NULL, 
                                     creation, 
                                     FILE_ATTRIBUTE_NORMAL,
@@ -332,6 +362,7 @@ bool OSFileDelete(str8 path)
     ArenaTemp temp = baseTempBegin(null, 0);
 
     str16 wide = Str16FromFromStr8(temp.arena, path);
+    SetFileAttributesW((LPCWSTR)wide.data, FILE_ATTRIBUTE_NORMAL);
     bool result = DeleteFileW((LPCWSTR)wide.data);
 
     baseTempEnd(temp);
@@ -470,6 +501,11 @@ OSFileAttributeFlags OSFileAttributesFromWin32(DWORD fileAttr)
         flags |= OS_FILEATTR_READONLY;
     }
 
+    if (fileAttr & FILE_ATTRIBUTE_NORMAL)
+    {
+        flags |= OS_FILEATTR_NORMAL;
+    }
+
     return flags;
 }
 DWORD Win32FileAttributesFromOSFileAttributes(OSFileAttributeFlags fileAttr)
@@ -490,6 +526,10 @@ DWORD Win32FileAttributesFromOSFileAttributes(OSFileAttributeFlags fileAttr)
         flags |= FILE_ATTRIBUTE_READONLY;
     }
 
+    if (fileAttr & OS_FILEATTR_NORMAL)
+    {
+        flags |= FILE_ATTRIBUTE_NORMAL;
+    }
     return flags;
 }
 OSFileFindIter *OSFindFileBegin(struct Arena *arena, str8 path, OSFileFindOptionalParams *opt)
@@ -762,7 +802,7 @@ bool OSProcessReadStdoutStderr(struct Arena *arena, OSHandle procHandle, str8 *s
     return false;
 }
 
-OSHandle OSLoadDynamicLibrary(str8 name)
+OSHandle OSDynamicLibraryOpen(str8 name)
 {
     OSHandle handle = {._u64 = 0};
 
@@ -776,7 +816,7 @@ OSHandle OSLoadDynamicLibrary(str8 name)
     return handle;
 }
 
-void *OSGetExportAddressFromDynamicLibrary(OSHandle dynLib, str8 name)
+void *OSDynamicLibraryGetExportAddress(OSHandle dynLib, str8 name)
 {
     void *ptr = null;
 
@@ -791,6 +831,10 @@ void *OSGetExportAddressFromDynamicLibrary(OSHandle dynLib, str8 name)
     baseTempEnd(temp);
 
     return ptr;
+}
+void OSDynamicLibraryClose(OSHandle handle)
+{
+    FreeLibrary((HMODULE)handle._u64);
 }
 
 // Date and time

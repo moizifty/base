@@ -95,7 +95,10 @@ void arenaPopTo(Arena *arena, u64 popTo)
         arena->commitPos -= sizeToDecommit;
     }
 }
-
+void arenaPop(Arena *arena, u64 amount)
+{
+    arenaPopTo(arena, arena->pos - amount);
+}
 ArenaTemp arenaTempBegin(Arena *arena)
 {
     ArenaTemp t = {0};
