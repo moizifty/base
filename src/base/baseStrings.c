@@ -766,7 +766,7 @@ i64 I64FromStr8(str8 str)
     {
         if (str.data[0] == '-') sign = -1;
 
-        num = (i64)U64FromStr8(str);
+        num = (i64)U64FromStr8(Str8Skip(str, sign == -1 ? 1 : 0));
     }
 
     return num * sign;
@@ -836,5 +836,62 @@ bool I64TryFromStr8(str8 str, i64 *num)
     }
 
     *num = I64FromStr8(str);
+    return true;
+}
+
+f64 F64FromStr8(str8 str)
+{
+    i64 sign = Str8StartsWith(str, STR8("-"), 0) ? -1 : 1;
+
+    str = Str8Skip(str, (sign == -1) ? 1 : 0);
+    f64 num = 0;
+    f64 tenDecimalPower = 10;
+    bool seenDot = false;
+    for (u64 i = 0; i < str.len; i++)
+    {
+        if (BASE_ISDIGIT(str.data[i]))
+        {
+            if (!seenDot)
+            {
+                num = (num * 10) + (u8)baseCharDigitToU8(str.data[i]);
+            }
+            else
+            {
+                num += (f64)baseCharDigitToU8(str.data[i]) / tenDecimalPower;
+                tenDecimalPower *= 10;
+            }
+        }
+        else if (str.data[i] == '.')
+        {
+            seenDot = true;
+        }
+    }
+
+    return num * (f64)sign;
+}
+bool F64TryFromStr8(str8 str, f64 *num)
+{
+    *num = 0;
+
+    u64 i = 0;
+    if (Str8StartsWith(str, STR8_LIT("-"), 0))
+    {
+        i += 1;
+    }
+
+    if (Str8CountOccurance(str, STR8("."), 0) > 1)
+    {
+        return false;
+    }
+
+    for(; i < str.len; i++)
+    {
+        if (!BASE_ISDIGIT(str.data[i]) && str.data[i] != '.')
+        {
+            return false;
+        }
+    }
+
+    *num = F64FromStr8(str);
     return true;
 }
