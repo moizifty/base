@@ -74,6 +74,128 @@ U8Array U8ChunkListFlattenToArray(struct Arena *arena, U8ChunkList *l)
     return flattened;
 }
 
+U8Array U8ArraySkip(U8Array array, u64 amount)
+{
+    amount = (amount >= array.len) ? array.len : amount;
+    array.data += amount;
+    array.len -= amount;
+    return array;
+}
+u64 U8ArrayReadLittleEndianU64(U8Array array)
+{
+    if (array.len < sizeof(u64))
+    {
+        return 0;
+    }
+
+    return ((u64)array.data[7] << 56ull) |
+           ((u64)array.data[6] << 48ull) |
+           ((u64)array.data[5] << 40ull) |
+           ((u64)array.data[4] << 32ull) |
+           ((u64)array.data[3] << 24ull) |
+           ((u64)array.data[2] << 16ull) |
+           ((u64)array.data[1] << 8ull) | 
+           ((u64)array.data[0] << 0ull);
+}
+u64 U8ArrayReadBigEndianU64(U8Array array)
+{
+    if (array.len < sizeof(u64))
+    {
+        return 0;
+    }
+
+    return ((u64)array.data[0] << 56ull) |
+           ((u64)array.data[1] << 48ull) | 
+           ((u64)array.data[2] << 40ull) | 
+           ((u64)array.data[3] << 32ull) | 
+           ((u64)array.data[4] << 24ull) | 
+           ((u64)array.data[5] << 16ull) | 
+           ((u64)array.data[6] << 8ull) | 
+           ((u64)array.data[7] << 0ull);
+}
+u64 U8ArrayReadU64(U8Array array)
+{
+    return U8ArrayReadLittleEndianU64(array);
+}
+
+u32 U8ArrayReadLittleEndianU32(U8Array array)
+{
+    if (array.len < sizeof(u32))
+    {
+        return 0;
+    }
+
+    return ((u32)array.data[3] << 24u) |
+           ((u32)array.data[2] << 16u) | 
+           ((u32)array.data[1] << 8u) | 
+           ((u32)array.data[0] << 0u);
+}
+u32 U8ArrayReadBigEndianU32(U8Array array)
+{
+    if (array.len < sizeof(u32))
+    {
+        return 0;
+    }
+
+    return ((u32)array.data[0] << 24u) |
+           ((u32)array.data[1] << 16u) | 
+           ((u32)array.data[2] << 8u) | 
+           ((u32)array.data[3] << 0u);
+}
+u32 U8ArrayReadU32(U8Array array)
+{
+    return U8ArrayReadLittleEndianU32(array);
+}
+
+u16 U8ArrayReadLittleEndianU16(U8Array array)
+{
+    if (array.len < sizeof(u16))
+    {
+        return 0;
+    }
+
+    return ((u16)array.data[1] << (u16)8) |
+           ((u16)array.data[0] << (u16)0);
+}
+u16 U8ArrayReadBigEndianU16(U8Array array)
+{
+    if (array.len < sizeof(u16))
+    {
+        return 0;
+    }
+
+    return ((u16)array.data[0] << (u16)8) | 
+           ((u16)array.data[1] << (u16)0);
+}
+u16 U8ArrayReadU16(U8Array array)
+{
+    return U8ArrayReadLittleEndianU16(array);
+}
+i16 U8ArrayReadLittleEndianI16(U8Array array)
+{
+    if (array.len < sizeof(i16))
+    {
+        return 0;
+    }
+
+    return (i16)((i16)array.data[1] << (i16)8) |
+           (i16)((i16)array.data[0] << (i16)0);
+}
+i16 U8ArrayReadBigEndianI16(U8Array array)
+{
+    if (array.len < sizeof(i16))
+    {
+        return 0;
+    }
+
+    return (i16)((i16)array.data[0] << (i16)8) |
+           (i16)((i16)array.data[1] << (i16)0);
+}
+i16 U8ArrayReadI16(U8Array array)
+{
+    return U8ArrayReadLittleEndianI16(array);
+}
+
 void BaseMainThreadEntry(ProgramMainFunc programMain, i64 argc, char **argv)
 {
     setlocale(LC_ALL, ".utf8");

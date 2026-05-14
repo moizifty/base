@@ -389,7 +389,22 @@ BASE_CREATE_ARRAY_VIEW_DEFS(NAME, ELEM)
 #define ARRAY_VIEW(T, M, ...)			((T){.data = (M[]){__VA_ARGS__}, .len = sizeof((M[]){__VA_ARGS__}) / sizeof(M)})
 
 BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(U8Array, u8)
+U8Array U8ArraySkip(U8Array array, u64 amount);
+u64 U8ArrayReadLittleEndianU64(U8Array array);
+u64 U8ArrayReadBigEndianU64(U8Array array);
+u64 U8ArrayReadU64(U8Array array);
 
+u32 U8ArrayReadLittleEndianU32(U8Array array);
+u32 U8ArrayReadBigEndianU32(U8Array array);
+u32 U8ArrayReadU32(U8Array array);
+
+u16 U8ArrayReadLittleEndianU16(U8Array array);
+u16 U8ArrayReadBigEndianU16(U8Array array);
+u16 U8ArrayReadU16(U8Array array);
+
+i16 U8ArrayReadLittleEndianI16(U8Array array);
+i16 U8ArrayReadBigEndianI16(U8Array array);
+i16 U8ArrayReadI16(U8Array array);
 
 #define BASE_U8CHUNKLIST_DEFAULT_CAP	128
 typedef struct U8ChunkListNode
@@ -421,6 +436,7 @@ void U8ChunkListPushLast(struct Arena *arena, U8ChunkList *l, u8 n);
 void U8ChunkListPushStr8Last(struct Arena *arena, U8ChunkList *l, str8 str);
 void U8ChunkListPushU64Last(struct Arena *arena, U8ChunkList *l, u64 n);
 U8Array U8ChunkListFlattenToArray(struct Arena *arena, U8ChunkList *l);
+
 BASE_CREATE_LL_DECLS(U8ArrayList, U8Array)
 // #pragma warning( pop ) 
 
