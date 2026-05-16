@@ -1,0 +1,94 @@
+fn prefix(array, p)
+{
+    val = {};
+    for a in array
+    {
+        val = val + tostring(p + a); 
+    }
+    return val;
+}
+
+fn compile(paths, includes, flags, output)
+{
+    paths = join(qoute(paths), " ");
+    includes = join(prefix(qoute(includes), "/I"), " ");
+    output = "/Fe" + qoute(output);
+    objFolder = "/Fo" + qoute("./builds/");
+    flags = join(flags, " ");
+
+    command = "clang-cl.exe {paths} {includes} {output} {flags} {objFolder}";
+    commandOutput = run(command);
+
+    print(commandOutput.out);
+    print(commandOutput.err);
+}
+
+fn runmg()
+{
+    print("~nRunning Metagen~n");
+    output = run("mg . clean-defer clean-metadata defers metadata");
+
+    print(output.out);
+    print(output.err);
+    print("~nFinished Metagen~n");
+}
+
+fn getsrcdir()
+{
+    src = "src";
+    if (pathexists("metagen_defer_temp"))
+    {
+        src = "metagen_defer_temp/{src}";
+    }
+
+    return src;
+}
+
+onedrivefolder = getenv("onedrive");
+baselib = "{onedrivefolder}\Documents\Programming\C\base\src";
+
+src = {
+    "{getsrcdir()}/main.c",
+};
+
+includes = {
+    "{baselib}",
+};
+
+flags = {
+    "/Zi",
+    "/std:c11",
+    "-Wno-switch",
+    "-Wextra",
+    "-Wunreachable-code",
+    "-Warray-bounds",
+    "-Wnull-dereference",
+    "-Wundefined-bool-conversion", 
+    "-Wstrict-overflow", 
+    "-Wint-to-pointer-cast", 
+    "-Wpointer-arith", 
+    "-Wtype-limits", 
+    "-Wshadow", 
+    "-Wformat=2", 
+    "-Wswitch-enum", 
+    "-Wmissing-noreturn", 
+    "-Wreturn-type", 
+    "-Wuninitialized", 
+    "-Wformat-extra-args", 
+    "-Wconversion", 
+    "-Wno-sign-compare", 
+    "-Wno-implicit-int-conversion", 
+    "-Wno-sign-conversion", 
+    "-ferror-limit=10000", 
+    "-Wno-missing-field-initializers", 
+    "-Wno-extern-initializer", 
+    "-Wno-gnu-zero-variadic-macro-arguments", 
+    "-Wno-switch-enum ",
+    "-Wno-c23-extensions",
+};
+
+if (hasflag("mg"))
+{
+    runmg();
+}
+compile(src, includes, flags, "builds/main.exe");
