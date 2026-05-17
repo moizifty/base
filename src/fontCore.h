@@ -98,9 +98,29 @@ typedef struct FontTTFParsedCmapFormat4
     u16 *glphIds;
 }FontTTFParsedCmapFormat4;
 
+typedef struct FontTTFParsedCmapFormat12Group
+{
+    u32 startCharCode;
+    u32 endCharCode;
+    u32 startGlyphId;
+}FontTTFParsedCmapFormat12Group;
+
+BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(FontTTFParsedCmapFormat12GroupArray, FontTTFParsedCmapFormat12Group)
+
+typedef struct FontTTFParsedCmapFormat12
+{
+    u32 numGroups;
+    FontTTFParsedCmapFormat12GroupArray groups;
+}FontTTFParsedCmapFormat12;
+
 typedef struct FontTTFParsedCmap
 {
-    FontTTFParsedCmapFormat4 format4;
+    bool isFormat12;
+    union
+    {
+        FontTTFParsedCmapFormat4 format4;
+        FontTTFParsedCmapFormat12 format12;
+    };
 }FontTTFParsedCmap;
 
 typedef struct FontTTFParsedHead
@@ -148,6 +168,7 @@ typedef struct Font
 f32 F32FromFontF2Dot14(FontF2Dot14 val);
 
 bool fontTTFParseCmapSubtableFormat4(Arena *arena, FontTTFParsedFont *parsedFont, U8Array subtable);
+bool fontTTFParseCmapSubtableFormat12(Arena *arena, FontTTFParsedFont *parsedFont, U8Array subtable);
 bool fontTTFParseCmapTable(Arena *arena, FontTTFParsedFont *parsedFont);
 
 void fontTTFParseCompositeGlyphNumContoursAndPoints(FontTTFParsedFont *parsedFont, U8Array compositeData, u64 *numContours, u64 *numPoints);

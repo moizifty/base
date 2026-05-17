@@ -68,6 +68,41 @@ bool fontTTFParseCmapSubtableFormat4(Arena *arena, FontTTFParsedFont *parsedFont
 
     return true;
 }
+bool fontTTFParseCmapSubtableFormat12(Arena *arena, FontTTFParsedFont *parsedFont, U8Array subtable)
+{
+    U8Array originalSubtable = subtable;
+
+    // skip the format, it should always be 12
+    subtable = U8ArraySkip(subtable, sizeof(u16));
+
+    subtable = U8ArraySkip(subtable, sizeof(u16));
+
+    subtable = U8ArraySkip(subtable, sizeof(u32));
+    subtable = U8ArraySkip(subtable, sizeof(u32));
+
+    u16 numGroups = U8ArrayReadBigEndianU32(subtable);
+    subtable = U8ArraySkip(subtable, sizeof(u32));
+    parsedFont->parsedCMAP.isFormat12 = true;
+    parsedFont->parsedCMAP.format12.numGroups = numGroups;
+
+    parsedFont->parsedCMAP.format12.groups.data = arenaPushArray(arena, FontTTFParsedCmapFormat12Group, numGroups);
+    parsedFont->parsedCMAP.format12.groups.len = numGroups;
+
+    for (u16 i = 0; i < numGroups; i++)
+    {
+        parsedFont->parsedCMAP.format12.groups.data[i].startCharCode = U8ArrayReadBigEndianU32(subtable);
+        subtable = U8ArraySkip(subtable, sizeof(u32));
+
+        parsedFont->parsedCMAP.format12.groups.data[i].endCharCode = U8ArrayReadBigEndianU32(subtable);
+        subtable = U8ArraySkip(subtable, sizeof(u32));
+
+        parsedFont->parsedCMAP.format12.groups.data[i].startGlyphId = U8ArrayReadBigEndianU32(subtable);
+        subtable = U8ArraySkip(subtable, sizeof(u32));
+    }
+
+    return true;
+}
+
 bool fontTTFParseCmapTable(Arena *arena, FontTTFParsedFont *parsedFont)
 {
     U8Array cmapTable = U8ArraySkip(parsedFont->fontData, parsedFont->cmapOffset);
@@ -130,7 +165,14 @@ bool fontTTFParseCmapTable(Arena *arena, FontTTFParsedFont *parsedFont)
             
             case FONT_TTF_UNICODE_ENCODING_FULL:
             {
-
+                if (format == 12)
+                {
+                    fontTTFParseCmapSubtableFormat12(arena, parsedFont, subtable);
+                }
+                else
+                {
+                    parsedFont->error = FONT_ERROR_UNSUPPORTED_CMAP_SUBTABLE_FORMAT;
+                }
             }break;
 
             default:
@@ -901,27 +943,43 @@ Font fontTTFParseFromU8Array(Arena *arena, U8Array fontData)
 
 u64 fontGetGlyphIndexFromCodepoint(Font font, u32 codepoint)
 {
-    FontTTFParsedCmapFormat4 format4 = font.parsed.parsedCMAP.format4;
-    for (u64 i = 0; i < format4.segCount; i++)
+    if (font.parsed.parsedCMAP.isFormat12)
     {
-        if (format4.endCodes[i] < codepoint) continue;
-        if (format4.startCodes[i] > codepoint) return 0;
-
-        // found segment
-
-        u64 index = 0;
-        if (format4.idRangeOffsets[i] != 0)
+        FontTTFParsedCmapFormat12 format12 = font.parsed.parsedCMAP.format12;
+        for (u64 i = 0; i < format12.numGroups; i++)
         {
-            index = *(format4.idRangeOffsets[i]/2 + (codepoint - format4.startCodes[i]) + &format4.idRangeOffsets[i]);
-        }
-        else
-        {
-            index = (codepoint + format4.idDeltas[i]) % 65536;
-        }
+            FontTTFParsedCmapFormat12Group group = format12.groups.data[i];
+            if (group.endCharCode < codepoint) continue;
+            if (group.startCharCode > codepoint) return 0;
 
-        return index;
+            // found group
+            return (codepoint - group.startCharCode) + group.startGlyphId;
+        }
     }
+    else
+    {
+        FontTTFParsedCmapFormat4 format4 = font.parsed.parsedCMAP.format4;
+        for (u64 i = 0; i < format4.segCount; i++)
+        {
+            if (format4.endCodes[i] < codepoint) continue;
+            if (format4.startCodes[i] > codepoint) return 0;
 
+            // found segment
+
+            u64 index = 0;
+            if (format4.idRangeOffsets[i] != 0)
+            {
+                index = *(format4.idRangeOffsets[i]/2 + (codepoint - format4.startCodes[i]) + &format4.idRangeOffsets[i]);
+            }
+            else
+            {
+                index = (codepoint + format4.idDeltas[i]) % 65536;
+            }
+
+            return index;
+        }
+    }
+    
     // no glyph found, return first
     return 0;
 }
