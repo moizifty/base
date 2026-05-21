@@ -51,6 +51,8 @@ bool fontTTFParseCmapSubtableFormat4(Arena *arena, FontTTFParsedFont *parsedFont
         parsedFont->parsedCMAP.format4.idDeltas[i] = U8ArrayReadBigEndianI16(subtable);
         subtable = U8ArraySkip(subtable, sizeof(i16));
     }
+
+    parsedFont->iroOffset = parsedFont->cmapSubtableOffset + (originalSubtable.len - subtable.len);
     for (u16 i = 0; i < segCount; i++)
     {
         parsedFont->parsedCMAP.format4.idRangeOffsets[i] = U8ArrayReadBigEndianU16(subtable);
@@ -145,7 +147,8 @@ bool fontTTFParseCmapTable(Arena *arena, FontTTFParsedFont *parsedFont)
 
     if (chosenEncoding != FONT_TTF_UNICODE_ENCODING_INVALID)
     {
-        U8Array subtable = U8ArraySkip(U8ArraySkip(parsedFont->fontData, parsedFont->cmapOffset), chosenSubtableOffset);
+        parsedFont->cmapSubtableOffset = parsedFont->cmapOffset + chosenSubtableOffset;
+        U8Array subtable = U8ArraySkip(parsedFont->fontData, parsedFont->cmapSubtableOffset);
         u16 format = U8ArrayReadBigEndianU16(subtable);
         // dont skip the 2 format bytes, you just want to peak the format
         
@@ -354,7 +357,7 @@ void fontTTFParseGlyphShape(Arena *arena, FontTTFParsedFont *parsedFont, u32 gly
         u32 accumX = 0;
         for (u32 iX = 0; iX < numPoints; iX++)
         {
-            shape.points.data[iX].isControlPoint = flags[iX] & 0x01;
+            shape.points.data[iX].isControlPoint = !(flags[iX] & 0x01);
 
             if (flags[iX] & 0x02)
             {
@@ -782,22 +785,186 @@ FontParseErrorKind fontTTFValidateRequiredTablesExist(FontTTFParsedFont parsedFo
     return FONT_ERROR_NONE;
 }
 
-void fontPrintGlyphShape(FontGlyphShape shape)
+FontGlyphShapePointArray fontExpandContourPoints(Arena *arena, FontGlyphShapeContour contour)
 {
-    u32 termWidth = 80;
-    u32 termHeight = 36;
+    FontGlyphShapePointArray ret = {0};
+    u64 expandedPointsCount = 0;
+
+    for (u64 p = 0; p < contour.points.len; p++)
+    {
+        FontGlyphShapePoint cp = contour.points.data[p];
+        FontGlyphShapePoint np = contour.points.data[(p + 1) % contour.points.len];
+
+        if (cp.isControlPoint && np.isControlPoint)
+        {
+            expandedPointsCount++;
+        }
+        else if (!cp.isControlPoint)
+        {
+            expandedPointsCount++;
+        }
+    }
+
+    ret.data = arenaPushArray(arena, FontGlyphShapePoint, expandedPointsCount);
+
+    for (u64 p = 0; p < contour.points.len; p++)
+    {
+        FontGlyphShapePoint cp = contour.points.data[p];
+        FontGlyphShapePoint np = contour.points.data[(p + 1) % contour.points.len];
+
+
+        if (cp.isControlPoint && np.isControlPoint)
+        {
+            FontGlyphShapePoint newPoint = {0};
+
+            newPoint.point.x = (i64)(((f64)np.point.x + (f64)cp.point.x) / 2.0);
+            newPoint.point.y = (i64)(((f64)np.point.y + (f64)cp.point.y) / 2.0);
+
+            ret.data[ret.len++] = newPoint;
+        }
+        else if (!cp.isControlPoint)
+        {
+            ret.data[ret.len++] = cp;
+        }
+    }
+
+    return ret;
+}
+f64 fontGetEmToPixelScale(Font font, f64 pixelSize)
+{
+    return pixelSize / (f64)font.metrics.unitsPerEm;
+}
+
+void drawLine(i32 x0, i32 y0, i32 x1, i32 y1)
+{
+    i32 dy = y1 - y0;
+    i32 dx = x1 - x0;
+
+    i32 stepX = (x1 < x0) ? -1 : 1;
+    i32 stepY = (y1 < y0) ? -1 : 1;
+
+    if (dx == 0)
+    {
+        for (i32 y = y0; y != y1; y += stepY)
+        {
+            basePrintf("\033[%d;%dH#", y + 1, x0 + 1);
+        }
+    }
+    else
+    {
+        f32 step = max((f32)abs(dx), (f32)abs(dy));
+
+        f32 stepx = (f32)dx / step;
+        f32 stepy = (f32)dy / step;
+
+        for (i32 i = 0; i < (i32)(step + 1); i++)
+        {
+            basePrintf("\033[%d;%dH#", (i32)((f32)y0 + (f32)i * stepy) + 1, (i32)((f32)x0 + (f32)i * stepx) + 1);
+        }
+    }
+}
+
+void fontPrintDrawLine(i32 x0, i32 y0, i32 x1, i32 y1) 
+{
+    int dx  =  abs(x1 - x0);
+    int dy  = -abs(y1 - y0);
+    int sx  = x0 < x1 ? 1 : -1;
+    int sy  = y0 < y1 ? 1 : -1;
+    int err = dx + dy;
+
+    while (true) 
+    {
+        basePrintf("\033[%d;%dH#", y0+1, x0+1);
+        if (x0==x1 && y0==y1) break;
+        int e2 = 2 * err;
+
+        if (e2 >= dy) { err += dy; x0 += sx; }  // step x
+        if (e2 <= dx) { err += dx; y0 += sy; }  // step y
+    }
+}
+void fontPrintGlyphShape(Font font, FontGlyphShape shape)
+{ 
+    u32 termWidth = 124;
+    u32 termHeight = 40;
 
     basePrintf("\033[H\033[2J");
 
-    for (u64 i = 0; i < shape.points.len; i++)
-    {
-        vec2i point = shape.points.data[i].point;
-        u32 normX = (u32)(((f32)(point.x - shape.min.x) / (f32)(shape.max.x - shape.min.x)) * (f32)(termWidth - 1));
-        u32 normY = (u32)(((f32)(point.y - shape.min.y) / (f32)(shape.max.y - shape.min.y)) * (f32)(termHeight - 1));
-        normY = (termHeight - 1) - normY;
+    ArenaTemp temp = baseTempBegin(null, 0);
 
-        basePrintf("\033[%d;%dH", normY + 1, normX + 1);
-        basePrintf("#");
+    for (u64 c = 0; c < shape.contours.len; c++)
+    {
+        FontGlyphShapeContour contour = shape.contours.data[c];
+
+        FontGlyphShapePointArray expandedPoints = fontExpandContourPoints(temp.arena, contour);
+        for (u64 p = 0; p < expandedPoints.len; p++)
+        {
+            FontGlyphShapePoint cp = expandedPoints.data[p];
+            if (cp.isControlPoint)
+            {
+                continue;
+            }
+            
+            u64 ni = (p + 1) % expandedPoints.len;
+            while (expandedPoints.data[ni].isControlPoint)
+            {
+                ni = (ni + 1) % expandedPoints.len;
+            }
+
+            FontGlyphShapePoint np = expandedPoints.data[ni];
+
+            i32 normX2 = (i64)(((f32)(np.point.x - shape.min.x) / (f32)(shape.max.x - shape.min.x)) * (f32)(termWidth - 1));
+            i32 normY2 = (i64)(((f32)(np.point.y - shape.min.y) / (f32)(shape.max.y - shape.min.y)) * (f32)(termHeight - 1));
+            normY2 = (termHeight - 1) - normY2;
+
+            i32 normX = (i64)(((f32)(cp.point.x - shape.min.x) / (f32)(shape.max.x - shape.min.x)) * (f32)(termWidth - 1));
+            i32 normY = (i64)(((f32)(cp.point.y - shape.min.y) / (f32)(shape.max.y - shape.min.y)) * (f32)(termHeight - 1));
+            normY = (termHeight - 1) - normY;
+
+            fontPrintDrawLine(normX, normY, normX2, normY2);
+            // if ((normX2 - normX) == 0)
+            // {
+            //     if (normY <= normY2)
+            //     {
+            //         for (i64 y = normY; y < normY2; y++)
+            //         {
+            //             basePrintf("\033[%d;%dH", y + 1, normX + 1);
+            //             basePrintf("#");
+            //         }
+            //     }
+            //     else
+            //     {
+            //         for (i64 y = normY; y > normY2; y--)
+            //         {
+            //             basePrintf("\033[%d;%dH", y + 1, normX + 1);
+            //             basePrintf("#");
+            //         }
+            //     }
+            // }
+            // else
+            // {
+            //     f64 grad = (f64)((f64)normY2 - normY) / (f64)((f64)normX2 - normX);
+
+            //     if (normX <= normX2)
+            //     {
+            //         for (i64 x = normX; x < normX2; x++)
+            //         {
+            //             i64 y = (i64)(normY + grad * (f64)((f64)x - (f64)normX));
+            //             basePrintf("\033[%d;%dH", y + 1, x + 1);
+            //             basePrintf("#");
+            //         }
+            //     }
+            //     else
+            //     {
+            //         for (i64 x = normX; x > normX2; x--)
+            //         {
+            //             i64 y = (i64)(normY + grad * (f64)((f64)x - (f64)normX));
+            //             basePrintf("\033[%d;%dH", y + 1, x + 1);
+            //             basePrintf("#");
+            //         }
+            //     }
+            // }
+        }
+
     }
 }
 
@@ -938,6 +1105,13 @@ Font fontTTFParseFromU8Array(Arena *arena, U8Array fontData)
     }
 
     ret.parsed = parsedFont;
+    ret.metrics.ascent = parsedFont.parsedHhea.ascent;
+    ret.metrics.descent = parsedFont.parsedHhea.descent;
+    ret.metrics.lineGap = parsedFont.parsedHhea.lineGap;
+    ret.metrics.unitsPerEm = parsedFont.parsedHead.unitsPerEm;
+    ret.metrics.min = parsedFont.parsedHead.min;
+    ret.metrics.max = parsedFont.parsedHead.max;
+
     return ret;
 }
 
@@ -969,7 +1143,9 @@ u64 fontGetGlyphIndexFromCodepoint(Font font, u32 codepoint)
             u64 index = 0;
             if (format4.idRangeOffsets[i] != 0)
             {
-                index = *(format4.idRangeOffsets[i]/2 + (codepoint - format4.startCodes[i]) + &format4.idRangeOffsets[i]);
+                u64 iro = font.parsed.iroOffset + i * 2 + format4.idRangeOffsets[i] + (codepoint - format4.startCodes[i]) * 2;
+                index = U8ArrayReadBigEndianU16(U8ArraySkip(font.parsed.fontData, iro));
+                index = index % 65536;
             }
             else
             {

@@ -150,6 +150,8 @@ typedef struct FontTTFParsedFont
 
     u32 maxGlyphs;
     u64 cmapOffset;
+    u64 cmapSubtableOffset;
+    u64 iroOffset;
     u64 glyfOffset;
     u64 headOffset;
     u64 hheaOffset;
@@ -159,10 +161,30 @@ typedef struct FontTTFParsedFont
     FontParseErrorKind error;
 }FontTTFParsedFont;
 
+typedef struct FontMetrics
+{
+    u16 unitsPerEm;
+    vec2i min;
+    vec2i max;
+    i16 ascent;
+    i16 descent;
+    i16 lineGap;
+}FontMetrics;
+
+typedef struct FontGlyph
+{
+    FontGlyphShape shape;
+
+    u16 advanceWidth;
+    i16 leftSideBearing;
+}FontGlyph;
+
 typedef struct Font
 {
     FontTTFParsedFont parsed;
     FontParseErrorKind error;
+
+    FontMetrics metrics;
 }Font;
 
 f32 F32FromFontF2Dot14(FontF2Dot14 val);
@@ -185,7 +207,8 @@ FontParseErrorKind fontTTFValidateRequiredTablesExist(FontTTFParsedFont parsedFo
 Font fontTTFParseFromU8Array(Arena *arena, U8Array fontData);
 Font fontTTFParseFromFile(Arena *arena, str8 file);
 
-void fontPrintGlyphShape(FontGlyphShape shape);
+f64 fontGetEmToPixelScale(Font font, f64 pixelSize);
+void fontPrintGlyphShape(Font font, FontGlyphShape shape);
 u64 fontGetGlyphIndexFromCodepoint(Font font, u32 codepoint);
-
+FontGlyph fontGetGlyphFromCodepoint(Font font, u32 codepoint);
 #endif
