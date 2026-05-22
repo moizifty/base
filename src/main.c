@@ -27,7 +27,9 @@ void ProgramMain(Str8List *args)
         return;
     }
 
-    u64 index = fontGetGlyphIndexFromCodepoint(font, DecodeCodepointFromUtf8((u8*)"P", 1).codepoint);
+    u64 index = fontGetGlyphIndexFromCodepoint(font, DecodeCodepointFromUtf8((u8*)"@", 1).codepoint);
 
     fontPrintGlyphShape(font, font.parsed.parsedGlyf.data[index]);
+
+    getchar();
 }
