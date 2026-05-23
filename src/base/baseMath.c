@@ -1256,3 +1256,44 @@ vec3f quatfRotateZXYVec3f(vec3f v, f32 radX, f32 radY, f32 radZ)
 {
     return quatfMultVec3f(quatfGiveRotateZXY(radX, radY, radZ), v);
 }
+
+f32 lerpF32(f32 a, f32 b, f64 t)
+{
+    return (f32)((f64)a + t * ((f64)b - (f64)a));
+}
+f64 lerpF64(f64 a, f64 b, f64 t)
+{
+    return a + t * (b - a);
+}
+i32 lerpI32(i32 a, i32 b, f64 t)
+{
+    return (i32)((f64)a + t * ((f64)b - (f64)a));
+}
+i64 lerpI64(i64 a, i64 b, f64 t)
+{
+    return (i64)((f64)a + t * ((f64)b - (f64)a));
+}
+
+vec2i lerpVec2i(vec2i a, vec2i b, f64 t)
+{
+    return (vec2i){.x = lerpI64(a.x, b.x, t), .y = lerpI64(a.y, b.y, t)};
+}
+vec2f lerpVec2f(vec2f a, vec2f b, f64 t)
+{
+    return (vec2f){.x = lerpF32(a.x, b.x, t), .y = lerpF32(a.y, b.y, t)};
+}
+
+vec2i quadraticBezierVec2i(vec2i a, vec2i controlpoint, vec2i b, f64 t)
+{
+    vec2i p0 = lerpVec2i(a, controlpoint, t);
+    vec2i p1 = lerpVec2i(controlpoint, b, t);
+
+    return lerpVec2i(p0, p1, t);
+}
+vec2f quadraticBezierVec2f(vec2f a, vec2f controlpoint, vec2f b, f64 t)
+{
+    vec2f p0 = lerpVec2f(a, controlpoint, t);
+    vec2f p1 = lerpVec2f(controlpoint, b, t);
+
+    return lerpVec2f(p0, p1, t);
+}

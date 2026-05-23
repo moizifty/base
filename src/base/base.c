@@ -1,4 +1,5 @@
 #include "baseCore.c"
+#include "baseTerm.c"
 #include "baseMemory.c"
 #include "baseThreads.c"
 #include "baseStrings.c"

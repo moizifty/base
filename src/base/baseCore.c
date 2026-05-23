@@ -2,6 +2,7 @@
 #include <stdarg.h>
 
 #include "baseCore.h"
+#include "baseTerm.h"
 #include "baseMemory.h"
 #include "baseThreads.h"
 #include "baseStrings.h"

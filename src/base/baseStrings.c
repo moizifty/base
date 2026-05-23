@@ -513,7 +513,7 @@ str8 Str8FromU8Array(U8Array arr)
 }
 
 // conversions
-DecodeCodePointInfo baseStringsDecodeCodepointFromUtf8(u8 *bytes, u64 remainingLen)
+DecodeCodePointInfo DecodeCodepointFromUtf8(u8 *bytes, u64 remainingLen)
 {
     BASE_UNUSED_PARAM(remainingLen);
 
@@ -559,7 +559,7 @@ DecodeCodePointInfo baseStringsDecodeCodepointFromUtf8(u8 *bytes, u64 remainingL
 
     return dp;
 }
-DecodeCodePointInfo baseStringsDecodeCodepointFromUtf16(u16 *doubles, u64 remainingLen)
+DecodeCodePointInfo DecodeCodepointFromUtf16(u16 *doubles, u64 remainingLen)
 {
     BASE_UNUSED_PARAM(remainingLen);
     
@@ -645,7 +645,7 @@ str8 Str8FromFromStr16(Arena *arena, str16 str)
         u64 strByteLength = 0;
         for(u64 i = 0; i < str.len;)
         {
-            DecodeCodePointInfo dp = baseStringsDecodeCodepointFromUtf16(doubles + i, str.len - i);
+            DecodeCodePointInfo dp = DecodeCodepointFromUtf16(doubles + i, str.len - i);
             i += dp.advance;
 
             u8 utf8Buf[4] = {0};
@@ -699,7 +699,7 @@ str16 Str16FromFromStr8(Arena *arena, str8 str)
         u64 strByteLength = 0;
         for(u64 i = 0; i < str.len;)
         {
-            DecodeCodePointInfo dp = baseStringsDecodeCodepointFromUtf8(bytes + i, str.len - i);
+            DecodeCodePointInfo dp = DecodeCodepointFromUtf8(bytes + i, str.len - i);
             i += dp.advance;
 
             u16 utf16Buf[2] = {0};

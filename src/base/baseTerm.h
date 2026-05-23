@@ -1,0 +1,22 @@
+#ifndef BASE_TERM_H
+#define BASE_TERM_H
+
+#include "baseCore.h"
+#include "baseMath.h"
+
+#define BASE_TERMINAL_ESC_CODE   			"\033"
+#define BASE_TERMINAL_RESET_CODE   			BASE_TERMINAL_ESC_CODE "[0m"
+#define BASE_TERMINAL_BOLD_CODE   			BASE_TERMINAL_ESC_CODE "[1m"
+#define BASE_TERMINAL_UNDERLINE_CODE   		BASE_TERMINAL_ESC_CODE "[4m"
+
+#define BASE_TERMINAL_FG_RED_CODE  			BASE_TERMINAL_ESC_CODE "[31m"
+#define BASE_TERMINAL_FG_BLUE_CODE  		BASE_TERMINAL_ESC_CODE "[34m"
+#define BASE_TERMINAL_FG_ORANGE_1_CODE  	BASE_TERMINAL_ESC_CODE "[38;2;255;127;80m"
+#define BASE_TERMINAL_FG_GREEN_CODE  		BASE_TERMINAL_ESC_CODE "[38;2;156;254;220m"
+
+#define TERMINAL_BG_RED_CODE  				BASE_TERMINAL_ESC_CODE "[41m"
+
+void termClear(void);
+void termSetChar(vec2i point, i32 ch);
+void termDrawLine(vec2i start, vec2i end, i32 ch);
+#endif

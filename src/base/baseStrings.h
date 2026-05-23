@@ -119,8 +119,8 @@ typedef struct DecodeCodePointInfo
     u64 advance;
 }DecodeCodePointInfo;
 
-DecodeCodePointInfo baseStringsDecodeCodepointFromUtf8(u8 *bytes, u64 remainingLen);
-DecodeCodePointInfo baseStringsDecodeCodepointFromUtf16(u16 *doubles, u64 remainingLen);
+DecodeCodePointInfo DecodeCodepointFromUtf8(u8 *bytes, u64 remainingLen);
+DecodeCodePointInfo DecodeCodepointFromUtf16(u16 *doubles, u64 remainingLen);
 
 // outbuf should be an array of 2 u16s
 u32 baseStringsUtf16FromCodepoint(u32 codepoint, u16 outBuf[2]);

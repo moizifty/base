@@ -81,4 +81,63 @@ typedef struct DateTime
     u16 milli; // 0 - 999;
 }DateTime;
 
+typedef struct U16
+{
+    union
+    {
+        u16 i;
+        u8 v[2];
+        struct
+        {
+            u8 low;
+            u8 high;
+        };
+    };
+}U16;
+
+typedef struct I16
+{
+    union
+    {
+        i16 i;
+        i8 v[2];
+        struct
+        {
+            i8 low;
+            i8 high;
+        };
+    };
+}I16;
+typedef struct U32
+{
+    union
+    {
+        u32 i;
+        u8 v[sizeof(u32)];
+    };
+}U32;
+typedef struct I32
+{
+    union
+    {
+        i32 i;
+        i8 v[sizeof(i32)];
+    };
+}I32;
+typedef struct U64
+{
+    union
+    {
+        u64 i;
+        u8 v[sizeof(u64)];
+    };
+}U64;
+typedef struct I64
+{
+    union
+    {
+        i64 i;
+        i8 v[sizeof(i64)];
+    };
+}I64;
 #endif

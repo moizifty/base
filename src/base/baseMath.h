@@ -8,7 +8,6 @@
 #include <math.h>
 #include "baseCore.h"
 #include "baseMetagen.h"
-#include "baseMath.gen.h"
 
 #define BASE_PI (3.14159265358979323846)
 
@@ -20,6 +19,8 @@
 #define BASE_ACOSF32  acosf
 #define BASE_ATANF32  atanf
 #define BASE_ATAN2F32  atan2f
+#define BASE_CEILF32  ceilf
+#define BASE_CEILF64  ceil
 
 #define baseRadToDegF32(RAD)   ((RAD) * (180.0f) / ((f32)BASE_PI))
 #define baseDegToRadF32(DEG)   ((DEG) * ((f32)(BASE_PI)) / 180.0f)
@@ -81,7 +82,7 @@
 
 
 #define Range2f(X, Y)    ((rangef){(f32)(X), (f32)(Y)})
-#define Range2i(X, Y)    ((rangei){(i64)(X), (i64)(Y)})
+#define Range2iFromVec2i(X, Y)    ((range2i){.min = (X), .max = (Y)})
 #define Range2iDim(R)    ((vec2i){.x = (R).x1 - (R).x0, .y = (R).y1 - (R).y0})
 
 
@@ -644,4 +645,14 @@ vec3f quatfRotateZXYVec3f(vec3f v, f32 radX, f32 radY, f32 radZ);
 
 #include "baseMath.gen.h"
 
+f32 lerpF32(f32 a, f32 b, f64 t);
+f64 lerpF64(f64 a, f64 b, f64 t);
+i32 lerpI32(i32 a, i32 b, f64 t);
+i64 lerpI64(i64 a, i64 b, f64 t);
+
+vec2i lerpVec2i(vec2i a, vec2i b, f64 t);
+vec2f lerpVec2f(vec2f a, vec2f b, f64 t);
+
+vec2i quadraticBezierVec2i(vec2i a, vec2i controlpoint, vec2i b, f64 t);
+vec2f quadraticBezierVec2f(vec2f a, vec2f controlpoint, vec2f b, f64 t);
 #endif

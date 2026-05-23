@@ -3,6 +3,7 @@
 
 #include "baseCtxCrack.h"
 #include "baseCoreTypes.h"
+#include "baseTerm.h"
 #include "baseCore.h"
 #include "baseMemory.h"
 #include "baseThreads.h"
