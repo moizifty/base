@@ -49,8 +49,7 @@ typedef struct FontGlyphShape
     FontGlyphShapePointArray points;
     FontGlyphShapeContourArray contours;
 
-    vec2i min;
-    vec2i max;
+    range2i bounds;
     u16 advanceWidth;
     i16 leftSideBearing;
 }FontGlyphShape;
@@ -176,8 +175,7 @@ typedef struct FontTTFParsedFont
 typedef struct FontMetrics
 {
     u16 unitsPerEm;
-    vec2i min;
-    vec2i max;
+    range2i bounds;
     i16 ascent;
     i16 descent;
     i16 lineGap;
@@ -220,7 +218,10 @@ Font fontTTFParseFromU8Array(Arena *arena, U8Array fontData);
 Font fontTTFParseFromFile(Arena *arena, str8 file);
 
 f64 fontGetEmToPixelScale(Font font, f64 pixelSize);
-void fontPrintGlyphShape(Font font, FontGlyphShape shape);
+
+vec2i fontNormaliseCoordsFromTerminal(vec2i coords, range2i shapeBox, i32 termWidth, i32 termHeight);
+void fontRasteriseEdgesTerminal(FontGlyphShapeEdgeArray edges, range2i shapeBox, i32 termWidth, i32 termHeight);
+void fontRasteriseGlyphShapeTerminal(FontGlyphShape shape, i32 termWidth, i32 termHeight, bool filled);
 u64 fontGetGlyphIndexFromCodepoint(Font font, u32 codepoint);
 FontGlyph fontGetGlyphFromCodepoint(Font font, u32 codepoint);
 #endif

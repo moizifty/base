@@ -27,9 +27,10 @@ void ProgramMain(Str8List *args)
         return;
     }
 
-    //for (u64 i = 893; i < font.parsed.parsedGlyf.len; i++)
+    for (u64 i = 0; i < font.parsed.parsedGlyf.len; i++)
     {
-        fontPrintGlyphShapeFilled(font, font.parsed.parsedGlyf.data[897]);
+        termClear();
+        fontRasteriseGlyphShapeTerminal(font.parsed.parsedGlyf.data[i], 70, 40, true);
         Sleep(250);
     }
 

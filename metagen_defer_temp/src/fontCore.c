@@ -307,8 +307,8 @@ void fontTTFParseGlyphShape(Arena *arena, FontTTFParsedFont *parsedFont, u32 gly
     i16 maxY = U8ArrayReadBigEndianI16(glyphData);
     glyphData = U8ArraySkip(glyphData, sizeof(i16));
 
-    shape.min = Vec2i(minX, minY);
-    shape.max = Vec2i(maxX, maxY);
+    shape.bounds.min = Vec2i(minX, minY);
+    shape.bounds.max = Vec2i(maxX, maxY);
 
     if (numContours > 0)
     {
@@ -899,19 +899,6 @@ FontGlyphShapeEdgeArray fontExpandContourPoints(Arena *arena, FontGlyphShapeCont
     return edges;
 }
 
-f64 fontGetEmToPixelScale(Font font, f64 pixelSize)
-{
-    return pixelSize / (f64)font.metrics.unitsPerEm;
-}
-
-vec2i fontNormaliseCoords(vec2i coords, range2i shapeBox, i32 termWidth, i32 termHeight)
-{
-    i32 normX = (i64)(((f32)(coords.x - shapeBox.min.x) / (f32)(shapeBox.max.x - shapeBox.min.x)) * (f32)(termWidth));
-    i32 normY = (i64)(((f32)(coords.y - shapeBox.min.y) / (f32)(shapeBox.max.y - shapeBox.min.y)) * (f32)(termHeight));
-    normY = termHeight - normY;
-
-    return Vec2i(normX, normY);
-}
 i32 fontGlyphShapeEdgeCompareIntersectionX(const void *p1, const void *p2)
 {
     FontGlyphShapeEdge e1 = *(FontGlyphShapeEdge *)p1;
@@ -919,7 +906,20 @@ i32 fontGlyphShapeEdgeCompareIntersectionX(const void *p1, const void *p2)
 
     return e1.intersection.x - e2.intersection.x;
 }
-void fontFill(FontGlyphShapeEdgeArray edges, range2i shapeBox, i32 termWidth, i32 termHeight)
+f64 fontGetEmToPixelScale(Font font, f64 pixelSize)
+{
+    return pixelSize / (f64)font.metrics.unitsPerEm;
+}
+
+vec2i fontNormaliseCoordsFromTerminal(vec2i coords, range2i shapeBox, i32 termWidth, i32 termHeight)
+{
+    i32 normX = (i64)(((f32)(coords.x - shapeBox.min.x) / (f32)(shapeBox.max.x - shapeBox.min.x)) * (f32)(termWidth));
+    i32 normY = (i64)(((f32)(coords.y - shapeBox.min.y) / (f32)(shapeBox.max.y - shapeBox.min.y)) * (f32)(termHeight));
+    normY = termHeight - normY;
+
+    return Vec2i(normX, normY);
+}
+void fontRasteriseEdgesTerminal(FontGlyphShapeEdgeArray edges, range2i shapeBox, i32 termWidth, i32 termHeight)
 {
     ArenaTemp temp = baseTempBegin(null, 0);
 
@@ -932,8 +932,8 @@ void fontFill(FontGlyphShapeEdgeArray edges, range2i shapeBox, i32 termWidth, i3
         activeEdges.len = 0;
         for (u64 e = 0; e < edges.len; e++)
         {
-            vec2i edgeNormStart = fontNormaliseCoords(edges.data[e].start, shapeBox, termWidth, termHeight);
-            vec2i edgeNormEnd = fontNormaliseCoords(edges.data[e].end, shapeBox, termWidth, termHeight);
+            vec2i edgeNormStart = fontNormaliseCoordsFromTerminal(edges.data[e].start, shapeBox, termWidth, termHeight);
+            vec2i edgeNormEnd = fontNormaliseCoordsFromTerminal(edges.data[e].end, shapeBox, termWidth, termHeight);
 
             if (y >= edgeNormStart.y && y < edgeNormEnd.y || y >= edgeNormEnd.y && y < edgeNormStart.y)
             {
@@ -943,8 +943,8 @@ void fontFill(FontGlyphShapeEdgeArray edges, range2i shapeBox, i32 termWidth, i3
 
         for(u64 e = 0; e < activeEdges.len; e++)
         {
-            vec2i edgeNormStart = fontNormaliseCoords(activeEdges.data[e].start, shapeBox, termWidth, termHeight);
-            vec2i edgeNormEnd = fontNormaliseCoords(activeEdges.data[e].end, shapeBox, termWidth, termHeight);
+            vec2i edgeNormStart = fontNormaliseCoordsFromTerminal(activeEdges.data[e].start, shapeBox, termWidth, termHeight);
+            vec2i edgeNormEnd = fontNormaliseCoordsFromTerminal(activeEdges.data[e].end, shapeBox, termWidth, termHeight);
 
             i64 s = edgeNormEnd.y - edgeNormStart.y;
             activeEdges.data[e].winding = (s < 0) ? -1 : ((s > 0) ? 1 : 0);
@@ -996,54 +996,9 @@ void fontFill(FontGlyphShapeEdgeArray edges, range2i shapeBox, i32 termWidth, i3
 
     baseTempEnd(temp);
 }
-void fontPrintGlyphShape(Font font, FontGlyphShape shape)
+
+void fontRasteriseGlyphShapeTerminal(FontGlyphShape shape, i32 termWidth, i32 termHeight, bool filled)
 { 
-    i32 termWidth = 100;
-    i32 termHeight = 30;
-
-    termClear();
-
-    ArenaTemp temp = baseTempBegin(null, 0);
-
-    // for (u64 i = 0; i < shape.points.len; i++)
-    // {
-    //     FontGlyphShapePoint point = shape.points.data[i];
-    //     if (point.isControlPoint)
-    //     {
-    //         continue;
-    //     }
-
-    //     vec2i p = fontNormaliseCoords(point.point, Range2iFromVec2i(shape.min, shape.max), termWidth, termHeight);
-    //     fontPrintPoint(p);
-    // }
-
-    for (u64 c = 0; c < shape.contours.len; c++)
-    {
-        FontGlyphShapeContour contour = shape.contours.data[c];
-
-        FontGlyphShapeEdgeArray allEdges = fontExpandContourPoints(temp.arena, contour);
-        for (u64 p = 0; p < allEdges.len; p++)
-        {
-            FontGlyphShapeEdge edge = allEdges.data[p];
-            
-            vec2i start = fontNormaliseCoords(edge.start, Range2iFromVec2i(shape.min, shape.max), termWidth, termHeight);
-            vec2i end = fontNormaliseCoords(edge.end, Range2iFromVec2i(shape.min, shape.max), termWidth, termHeight);
-
-            termDrawLine(start, end, '#');
-        }
-    }
-
-
-    baseTempEnd(temp);
-}
-
-void fontPrintGlyphShapeFilled(Font font, FontGlyphShape shape)
-{ 
-    i32 termWidth = 50;
-    i32 termHeight = 40;
-
-    termClear();
-
     ArenaTemp temp = baseTempBegin(null, 0);
 
     u64 totalEdgesRequired = 0;
@@ -1058,29 +1013,35 @@ void fontPrintGlyphShapeFilled(Font font, FontGlyphShape shape)
         {
             FontGlyphShapeEdge edge = edges.data[p];
             
-            vec2i start = fontNormaliseCoords(edge.start, Range2iFromVec2i(shape.min, shape.max), termWidth, termHeight);
-            vec2i end = fontNormaliseCoords(edge.end, Range2iFromVec2i(shape.min, shape.max), termWidth, termHeight);
+            vec2i start = fontNormaliseCoordsFromTerminal(edge.start, shape.bounds, termWidth, termHeight);
+            vec2i end = fontNormaliseCoordsFromTerminal(edge.end, shape.bounds, termWidth, termHeight);
 
-            //fontPrintDrawLine(start, end);
+            if (!filled)
+            {
+                termDrawLine(start, end, '#');
+            }
         }
 
         totalEdgesRequired += edges.len;
     }
 
-    allEdges.data = arenaPushArray(temp.arena, FontGlyphShapeEdge, totalEdgesRequired);
-
-    for (u64 c = 0; c < shape.contours.len; c++)
+    if (filled)
     {
-        FontGlyphShapeContour contour = shape.contours.data[c];
+        allEdges.data = arenaPushArray(temp.arena, FontGlyphShapeEdge, totalEdgesRequired);
 
-        FontGlyphShapeEdgeArray edges = fontExpandContourPoints(temp.arena, contour);
+        for (u64 c = 0; c < shape.contours.len; c++)
+        {
+            FontGlyphShapeContour contour = shape.contours.data[c];
 
-        BASE_MEMCPY(allEdges.data + allEdges.len, edges.data, edges.len * sizeof(FontGlyphShapeEdge));
-        allEdges.len += edges.len;
+            FontGlyphShapeEdgeArray edges = fontExpandContourPoints(temp.arena, contour);
+
+            BASE_MEMCPY(allEdges.data + allEdges.len, edges.data, edges.len * sizeof(FontGlyphShapeEdge));
+            allEdges.len += edges.len;
+        }
+
+        fontRasteriseEdgesTerminal(allEdges, shape.bounds, termWidth, termHeight);
     }
-
-    fontFill(allEdges, Range2iFromVec2i(shape.min, shape.max), termWidth, termHeight);
-
+    
     baseTempEnd(temp);
 }
 
@@ -1225,8 +1186,8 @@ Font fontTTFParseFromU8Array(Arena *arena, U8Array fontData)
     ret.metrics.descent = parsedFont.parsedHhea.descent;
     ret.metrics.lineGap = parsedFont.parsedHhea.lineGap;
     ret.metrics.unitsPerEm = parsedFont.parsedHead.unitsPerEm;
-    ret.metrics.min = parsedFont.parsedHead.min;
-    ret.metrics.max = parsedFont.parsedHead.max;
+    ret.metrics.bounds.min = parsedFont.parsedHead.min;
+    ret.metrics.bounds.max = parsedFont.parsedHead.max;
 
     return ret;
 }
