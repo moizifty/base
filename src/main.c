@@ -27,9 +27,11 @@ void ProgramMain(Str8List *args)
         return;
     }
 
-    u64 index = fontGetGlyphIndexFromCodepoint(font, DecodeCodepointFromUtf8((u8*)"@", 1).codepoint);
-
-    fontPrintGlyphShape(font, font.parsed.parsedGlyf.data[index]);
+    for (u64 i = 600; i < font.parsed.parsedGlyf.len; i++)
+    {
+        fontPrintGlyphShape(font, font.parsed.parsedGlyf.data[i]);
+        Sleep(250);
+    }
 
     getchar();
 }

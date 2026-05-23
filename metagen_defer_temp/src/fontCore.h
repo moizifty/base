@@ -25,6 +25,14 @@ typedef struct FontGlyphShapePoint
 
 BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(FontGlyphShapePointArray, FontGlyphShapePoint)
 
+typedef struct FontGlyphShapeEdge
+{
+    vec2i start;
+    vec2i end;
+}FontGlyphShapeEdge;
+
+BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(FontGlyphShapeEdgeArray, FontGlyphShapeEdge)
+
 typedef struct FontGlyphShapeContour
 {
     FontGlyphShapePointArray points;
@@ -193,7 +201,7 @@ bool fontTTFParseCmapSubtableFormat4(Arena *arena, FontTTFParsedFont *parsedFont
 bool fontTTFParseCmapSubtableFormat12(Arena *arena, FontTTFParsedFont *parsedFont, U8Array subtable);
 bool fontTTFParseCmapTable(Arena *arena, FontTTFParsedFont *parsedFont);
 
-void fontTTFParseCompositeGlyphNumContoursAndPoints(FontTTFParsedFont *parsedFont, U8Array compositeData, u64 *numContours, u64 *numPoints);
+void fontTTFParseCompositeGlyphNumContoursAndPoints(Arena *arena, FontTTFParsedFont *parsedFont, U8Array compositeData, u64 *numContours, u64 *numPoints);
 void fontTTFParseGlyphShape(Arena *arena, FontTTFParsedFont *parsedFont, u32 glyphIndexToParse);
 bool fontTTFParseGlyfTable(Arena *arena, FontTTFParsedFont *parsedFont);
 bool fontTTFParseHeadTable(FontTTFParsedFont *parsedFont);

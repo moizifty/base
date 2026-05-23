@@ -193,7 +193,7 @@ bool fontTTFParseCmapTable(Arena *arena, FontTTFParsedFont *parsedFont)
     return parsedFont->error == FONT_ERROR_NONE;
 }
 
-void fontTTFParseCompositeGlyphNumContoursAndPoints(FontTTFParsedFont *parsedFont, U8Array compositeData, u64 *numContours, u64 *numPoints)
+void fontTTFParseCompositeGlyphNumContoursAndPoints(Arena *arena, FontTTFParsedFont *parsedFont, U8Array compositeData, u64 *numContours, u64 *numPoints)
 {
     *numContours = 0;
     *numPoints = 0;
@@ -210,7 +210,7 @@ void fontTTFParseCompositeGlyphNumContoursAndPoints(FontTTFParsedFont *parsedFon
         u16 glyphIndex = U8ArrayReadBigEndianU16(compositeData);
         compositeData = U8ArraySkip(compositeData, sizeof(u16));
 
-        fontTTFParseGlyphShape(temp.arena, parsedFont, glyphIndex);
+        fontTTFParseGlyphShape(arena, parsedFont, glyphIndex);
 
         FontGlyphShape componentShape = parsedFont->parsedGlyf.data[glyphIndex];
 
@@ -440,7 +440,7 @@ void fontTTFParseGlyphShape(Arena *arena, FontTTFParsedFont *parsedFont, u32 gly
         u64 numTotalContours = 0;
         u64 numTotalPoints = 0;
 
-        fontTTFParseCompositeGlyphNumContoursAndPoints(parsedFont, glyphData, &numTotalContours, &numTotalPoints);
+        fontTTFParseCompositeGlyphNumContoursAndPoints(arena, parsedFont, glyphData, &numTotalContours, &numTotalPoints);
 
         shape.points.data = arenaPushArray(arena, FontGlyphShapePoint, numTotalPoints);
         shape.points.len = 0;
@@ -785,7 +785,7 @@ FontParseErrorKind fontTTFValidateRequiredTablesExist(FontTTFParsedFont parsedFo
     return FONT_ERROR_NONE;
 }
 
-FontGlyphShapePointArray fontExpandContourPoints(Arena *arena, FontGlyphShapeContour contour)
+FontGlyphShapeEdgeArray fontExpandContourPoints(Arena *arena, FontGlyphShapeContour contour)
 {
     FontGlyphShapePointArray expandedMidpoints = {0};
 
@@ -829,7 +829,7 @@ FontGlyphShapePointArray fontExpandContourPoints(Arena *arena, FontGlyphShapeCon
         }
     }
 
-    FontGlyphShapePointArray ret = {0};
+    FontGlyphShapePointArray expandedPoints = {0};
 
     u64 expandedTotalPoints = 0;
 
@@ -850,7 +850,7 @@ FontGlyphShapePointArray fontExpandContourPoints(Arena *arena, FontGlyphShapeCon
         }
     }
 
-    ret.data = arenaPushArray(arena, FontGlyphShapePoint, expandedTotalPoints);
+    expandedPoints.data = arenaPushArray(temp.arena, FontGlyphShapePoint, expandedTotalPoints);
     for (u64 p = 0; p < expandedMidpoints.len; p++)
     {
         FontGlyphShapePoint cp = expandedMidpoints.data[p];
@@ -863,87 +863,115 @@ FontGlyphShapePointArray fontExpandContourPoints(Arena *arena, FontGlyphShapeCon
             for (f64 i = 0; i <= 1.0; i += step)
             {
                 vec2i point = quadraticBezierVec2i(cp.point, np.point, nnp.point, i);
-                ret.data[ret.len].isControlPoint = false;
-                ret.data[ret.len].point = point;
+                expandedPoints.data[expandedPoints.len].isControlPoint = false;
+                expandedPoints.data[expandedPoints.len].point = point;
 
-                ret.len++;
+                expandedPoints.len++;
             }
             p += 1;
         }
         else if (!cp.isControlPoint)
         {
-            ret.data[ret.len++] = cp;
+            expandedPoints.data[expandedPoints.len++] = cp;
         }
     }
 
+    // edge count is equal to total points, since its a closed shape
+    u64 totalEdgeCount = expandedTotalPoints;
+    FontGlyphShapeEdgeArray edges = {0};
+    edges.data = arenaPushArray(arena, FontGlyphShapeEdge, totalEdgeCount);
+    edges.len = totalEdgeCount;
+
+    for (u64 i = 0; i < expandedPoints.len; i++)
+    {
+        FontGlyphShapePoint cp = expandedPoints.data[i];
+        FontGlyphShapePoint np = expandedPoints.data[(i + 1) % expandedPoints.len];
+
+        edges.data[i].start = cp.point;
+        edges.data[i].end = np.point;
+    }
 
     baseTempEnd(temp);
 
-    return ret;
+    return edges;
 }
+
 f64 fontGetEmToPixelScale(Font font, f64 pixelSize)
 {
     return pixelSize / (f64)font.metrics.unitsPerEm;
 }
 
-void fontPrintDrawLine(i32 x0, i32 y0, i32 x1, i32 y1) 
+vec2i fontNormaliseCoords(vec2i coords, range2i shapeBox, i32 termWidth, i32 termHeight)
 {
-    i32 dx = x1 - x0;
-    i32 dy = y1 - y0;
+    i32 normX = (i64)(((f32)(coords.x - shapeBox.min.x) / (f32)(shapeBox.max.x - shapeBox.min.x)) * (f32)(termWidth));
+    i32 normY = (i64)(((f32)(coords.y - shapeBox.min.y) / (f32)(shapeBox.max.y - shapeBox.min.y)) * (f32)(termHeight));
+    normY = termHeight - normY;
 
-    i32 step = max(abs(dx), abs(dy));
+    return Vec2i(normX, normY);
+}
+void fontPrintPoint(vec2i point)
+{
+    basePrintf("\033[%d;%dH#", point.y + 1, point.x + 1);
+}
+void fontPrintDrawLine(vec2i start, vec2i end)
+{
+    i64 dx = end.x - start.x;
+    i64 dy = end.y - start.y;
+
+    i64 step = max(llabs(dx), llabs(dy));
     f64 stepX = (f64)dx / (f64)step;
     f64 stepY = (f64)dy / (f64)step;
 
-    f64 x = x0;
-    f64 y = y0;
-    for (i32 i = 0; i <= step; i++)
+    f64 x = (f64)start.x;
+    f64 y = (f64)start.y;
+    for (i64 i = 0; i <= step; i++)
     {
-        basePrintf("\033[%d;%dH#", (i32)round(y + 1), (i32)round(x + 1));
+        basePrintf("\033[%d;%dH#", (i64)round(y + 1), (i64)round(x + 1));
 
         x += stepX;
         y += stepY;
     }
 }
+void fontFill(FontGlyphShapeEdgeArray edges)
+{
+    for (u64 y = 0; y < 40; y++)
+    {
+    }
+}
 void fontPrintGlyphShape(Font font, FontGlyphShape shape)
 { 
-    i32 termWidth = 130;
-    i32 termHeight = 40;
+    i32 termWidth = 130 / 5;
+    i32 termHeight = 40 / 2;
 
     basePrintf("\033[H\033[2J");
 
     ArenaTemp temp = baseTempBegin(null, 0);
 
+    // for (u64 i = 0; i < shape.points.len; i++)
+    // {
+    //     FontGlyphShapePoint point = shape.points.data[i];
+    //     if (point.isControlPoint)
+    //     {
+    //         continue;
+    //     }
+
+    //     vec2i p = fontNormaliseCoords(point.point, Range2iFromVec2i(shape.min, shape.max), termWidth, termHeight);
+    //     fontPrintPoint(p);
+    // }
+
     for (u64 c = 0; c < shape.contours.len; c++)
     {
         FontGlyphShapeContour contour = shape.contours.data[c];
 
-        FontGlyphShapePointArray expandedPoints = fontExpandContourPoints(temp.arena, contour);
-        for (u64 p = 0; p < expandedPoints.len; p++)
+        FontGlyphShapeEdgeArray allEdges = fontExpandContourPoints(temp.arena, contour);
+        for (u64 p = 0; p < allEdges.len; p++)
         {
-            FontGlyphShapePoint cp = expandedPoints.data[p];
-            if (cp.isControlPoint)
-            {
-                continue;
-            }
+            FontGlyphShapeEdge edge = allEdges.data[p];
             
-            u64 ni = (p + 1) % expandedPoints.len;
-            while (expandedPoints.data[ni].isControlPoint)
-            {
-                ni = (ni + 1) % expandedPoints.len;
-            }
+            vec2i start = fontNormaliseCoords(edge.start, Range2iFromVec2i(shape.min, shape.max), termWidth, termHeight);
+            vec2i end = fontNormaliseCoords(edge.end, Range2iFromVec2i(shape.min, shape.max), termWidth, termHeight);
 
-            FontGlyphShapePoint np = expandedPoints.data[ni];
-
-            i32 normX2 = (i64)(((f32)(np.point.x - shape.min.x) / (f32)(shape.max.x - shape.min.x)) * (f32)(termWidth));
-            i32 normY2 = (i64)(((f32)(np.point.y - shape.min.y) / (f32)(shape.max.y - shape.min.y)) * (f32)(termHeight));
-            normY2 = termHeight - normY2;
-
-            i32 normX = (i64)(((f32)(cp.point.x - shape.min.x) / (f32)(shape.max.x - shape.min.x)) * (f32)(termWidth));
-            i32 normY = (i64)(((f32)(cp.point.y - shape.min.y) / (f32)(shape.max.y - shape.min.y)) * (f32)(termHeight));
-            normY = termHeight - normY;
-
-            fontPrintDrawLine(normX, normY, normX2, normY2);
+            fontPrintDrawLine(start, end);
         }
     }
 
