@@ -27,9 +27,9 @@ void ProgramMain(Str8List *args)
         return;
     }
 
-    for (u64 i = 600; i < font.parsed.parsedGlyf.len; i++)
+    //for (u64 i = 893; i < font.parsed.parsedGlyf.len; i++)
     {
-        fontPrintGlyphShape(font, font.parsed.parsedGlyf.data[i]);
+        fontPrintGlyphShapeFilled(font, font.parsed.parsedGlyf.data[897]);
         Sleep(250);
     }
 

@@ -29,6 +29,10 @@ typedef struct FontGlyphShapeEdge
 {
     vec2i start;
     vec2i end;
+
+    i8 winding;
+    vec2i intersection;
+    vec2i intersectionEm;
 }FontGlyphShapeEdge;
 
 BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(FontGlyphShapeEdgeArray, FontGlyphShapeEdge)
