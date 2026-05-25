@@ -7,6 +7,8 @@
 #include "base/baseThreads.h"
 #include "base/baseMath.h"
 
+#include "bitmap/bitmapCore.h"
+
 #define ARG_1_AND_2_ARE_WORDS 0x0001
 #define ARGS_ARE_XY_VALUES 0x0002
 #define WE_HAVE_A_SCALE 0x0008
@@ -32,7 +34,6 @@ typedef struct FontGlyphShapeEdge
 
     i8 winding;
     vec2i intersection;
-    vec2i intersectionEm;
 }FontGlyphShapeEdge;
 
 BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(FontGlyphShapeEdgeArray, FontGlyphShapeEdge)
@@ -185,9 +186,11 @@ typedef struct FontGlyph
 {
     FontGlyphShape shape;
 
-    u16 advanceWidth;
-    i16 leftSideBearing;
+    u32 codepoint;
+    u32 glyphIndex;
 }FontGlyph;
+
+BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(FontGlyphArray, FontGlyph)
 
 typedef struct Font
 {
@@ -196,6 +199,23 @@ typedef struct Font
 
     FontMetrics metrics;
 }Font;
+
+typedef struct FontAtlasGlyph
+{
+    vec2i pos;
+    vec2i size;
+
+    u32 codepoint;
+}FontAtlasGlyph;
+
+BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(FontAtlasGlyphArray, FontAtlasGlyph)
+
+typedef struct FontAtlas
+{
+    Bitmap bitmap;
+    FontAtlasGlyphArray asciiGlyphs;
+    FontAtlasGlyphArray glyphs;
+}FontAtlas;
 
 f32 F32FromFontF2Dot14(FontF2Dot14 val);
 
@@ -222,6 +242,18 @@ f64 fontGetEmToPixelScale(Font font, f64 pixelSize);
 vec2i fontNormaliseCoordsFromTerminal(vec2i coords, range2i shapeBox, i32 termWidth, i32 termHeight);
 void fontRasteriseEdgesTerminal(FontGlyphShapeEdgeArray edges, range2i shapeBox, i32 termWidth, i32 termHeight);
 void fontRasteriseGlyphShapeTerminal(FontGlyphShape shape, i32 termWidth, i32 termHeight, bool filled);
+
+vec2i fontGetGlyphShapeBitmapDimensions(Font font, FontGlyphShape shape, f64 pixelSize);
+
+FontAtlas fontAtlasFromCodepointRanges(Arena *arena, Font font, RangeI64Array ranges, f64 pixelSize, bool allowNullGlyph);
+// you need bitmap bitmapWidth as a param
+// as you may pass bitmap "slices" into a bigger bitmap, but the stride for going to the next row should be based on the 
+// the stride of the whole bigger bitmap
+void fontRasteriseGlyphShapeToBitmap(Font font, FontGlyphShape shape, Bitmap *bitmap, u64 bitmapWidth, f64 pixelSize);
+void fontRasteriseCodepointToBitmap(Font font, u32 codepoint, Bitmap *bitmap, u64 bitmapWidth, f64 pixelSize, bool allowNullGlyph);
+void fontRasteriseEdgesToBitmap(Font font, FontGlyphShapeEdgeArray edges, range2i shapeBounds, Bitmap *bitmap, u64 bitmapWidth, f64 pixelSize);
+
 u64 fontGetGlyphIndexFromCodepoint(Font font, u32 codepoint);
 FontGlyph fontGetGlyphFromCodepoint(Font font, u32 codepoint);
+
 #endif

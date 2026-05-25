@@ -138,7 +138,7 @@ bool fontTTFParseCmapTable(Arena *arena, FontTTFParsedFont *parsedFont)
                 encodingId == FONT_TTF_UNICODE_ENCODING_FULL)
             {
                 // prefer FULL encoding over BMP
-                if (chosenEncoding == FONT_TTF_UNICODE_ENCODING_INVALID || 
+                if (chosenEncoding == FONT_TTF_UNICODE_ENCODING_INVALID ||
                     chosenEncoding == FONT_TTF_UNICODE_ENCODING_BMP)
                 {
                     chosenEncoding = encodingId;
@@ -154,7 +154,7 @@ bool fontTTFParseCmapTable(Arena *arena, FontTTFParsedFont *parsedFont)
         U8Array subtable = U8ArraySkip(parsedFont->fontData, parsedFont->cmapSubtableOffset);
         u16 format = U8ArrayReadBigEndianU16(subtable);
         // dont skip the 2 format bytes, you just want to peak the format
-        
+
         switch (chosenEncoding)
         {
             case FONT_TTF_UNICODE_ENCODING_BMP:
@@ -168,7 +168,7 @@ bool fontTTFParseCmapTable(Arena *arena, FontTTFParsedFont *parsedFont)
                     parsedFont->error = FONT_ERROR_UNSUPPORTED_CMAP_SUBTABLE_FORMAT;
                 }
             }break;
-            
+
             case FONT_TTF_UNICODE_ENCODING_FULL:
             {
                 if (format == 12)
@@ -192,7 +192,7 @@ bool fontTTFParseCmapTable(Arena *arena, FontTTFParsedFont *parsedFont)
     {
         parsedFont->error = FONT_ERROR_UNSUPPORTED_CMAP;
     }
-    
+
     return parsedFont->error == FONT_ERROR_NONE;
 }
 
@@ -322,9 +322,9 @@ void fontTTFParseGlyphShape(Arena *arena, FontTTFParsedFont *parsedFont, u32 gly
         u16 instLength = U8ArrayReadBigEndianU16(glyphData);
         glyphData = U8ArraySkip(glyphData, sizeof(u16));
         glyphData = U8ArraySkip(glyphData, sizeof(u8) * instLength);
-        
+
         u32 numPoints = endPointsOfContour[numContours - 1] + 1;
-        
+
         u8 *flags = arenaPushArray(temp.arena, u8, numPoints);
         i64 *xCoords = arenaPushArray(temp.arena, i64, numPoints);
         i64 *yCoords = arenaPushArray(temp.arena, i64, numPoints);
@@ -366,7 +366,7 @@ void fontTTFParseGlyphShape(Arena *arena, FontTTFParsedFont *parsedFont, u32 gly
             {
                 shape.points.data[iX].point.x = (i64)glyphData.data[0];
                 glyphData = U8ArraySkip(glyphData, sizeof(u8));
-                
+
                 if (!(flags[iX] & 0x10))
                 {
                     shape.points.data[iX].point.x *= -1;
@@ -396,7 +396,7 @@ void fontTTFParseGlyphShape(Arena *arena, FontTTFParsedFont *parsedFont, u32 gly
             {
                 shape.points.data[iY].point.y = (i64)glyphData.data[0];
                 glyphData = U8ArraySkip(glyphData, sizeof(u8));
-                
+
                 if (!(flags[iY] & 0x20))
                 {
                     shape.points.data[iY].point.y *= -1;
@@ -427,7 +427,7 @@ void fontTTFParseGlyphShape(Arena *arena, FontTTFParsedFont *parsedFont, u32 gly
         {
             u16 endIndex = endPointsOfContour[c];
 
-            FontGlyphShapePointArray pointsForContour = 
+            FontGlyphShapePointArray pointsForContour =
             {
                 .data = shape.points.data + (prevEndIndex + 1),
                 .len = endIndex - prevEndIndex,
@@ -546,7 +546,7 @@ void fontTTFParseGlyphShape(Arena *arena, FontTTFParsedFont *parsedFont, u32 gly
 
                 scaleX = F32FromFontF2Dot14(xScaleRaw);
                 scaleY = F32FromFontF2Dot14(yScaleRaw);
-                
+
                 sheerX = F32FromFontF2Dot14(scale01Raw);
                 sheerY = F32FromFontF2Dot14(scale10Raw);
             }
@@ -568,14 +568,14 @@ void fontTTFParseGlyphShape(Arena *arena, FontTTFParsedFont *parsedFont, u32 gly
             {
                 u16 endIndex = (componentShape.contours.data[i].points.len - 1) + currContourTotalPointsCount;
 
-                FontGlyphShapePointArray pointsForContour = 
+                FontGlyphShapePointArray pointsForContour =
                 {
                     .data = shape.points.data + (prevEndIndex + 1),
                     .len = endIndex - prevEndIndex,
                 };
 
                 shape.contours.data[shape.contours.len].points = pointsForContour;
-                
+
                 shape.contours.len++;
                 currContourTotalPointsCount += componentShape.contours.data[i].points.len;
                 prevEndIndex = endIndex;
@@ -632,7 +632,7 @@ bool fontTTFParseHeadTable(FontTTFParsedFont *parsedFont)
 
     parsed.unitsPerEm = U8ArrayReadBigEndianU16(headTable);
     headTable = U8ArraySkip(headTable, sizeof(u16));
-    
+
     headTable = U8ArraySkip(headTable, sizeof(i64));
     headTable = U8ArraySkip(headTable, sizeof(i64));
 
@@ -769,7 +769,7 @@ FontParseErrorKind fontTTFValidateRequiredTablesExist(FontTTFParsedFont parsedFo
     {
         return FONT_ERROR_MISSING_HHEA;
     }
-    
+
     if (parsedFont.hmtxOffset == 0)
     {
         return FONT_ERROR_MISSING_HMTX;
@@ -913,12 +913,23 @@ f64 fontGetEmToPixelScale(Font font, f64 pixelSize)
 
 vec2i fontNormaliseCoordsFromTerminal(vec2i coords, range2i shapeBox, i32 termWidth, i32 termHeight)
 {
-    i32 normX = (i64)(((f32)(coords.x - shapeBox.min.x) / (f32)(shapeBox.max.x - shapeBox.min.x)) * (f32)(termWidth));
-    i32 normY = (i64)(((f32)(coords.y - shapeBox.min.y) / (f32)(shapeBox.max.y - shapeBox.min.y)) * (f32)(termHeight));
+    i32 normX = (i64)round(((f32)(coords.x - shapeBox.min.x) / (f32)(shapeBox.max.x - shapeBox.min.x)) * (f32)(termWidth));
+    i32 normY = (i64)round(((f32)(coords.y - shapeBox.min.y) / (f32)(shapeBox.max.y - shapeBox.min.y)) * (f32)(termHeight));
     normY = termHeight - normY;
 
     return Vec2i(normX, normY);
 }
+vec2i fontNormaliseCoordsFromBounds(Font font, vec2i coords, range2i shapeBox, f64 pixelSize, i64 bitmapHeight)
+{
+    f64 scale = fontGetEmToPixelScale(font, pixelSize);
+
+    i64 normX = (i64)round((scale * (f64)(coords.x - shapeBox.min.x)));
+    i64 normY = (i64)round(scale * (f64)(coords.y - shapeBox.min.y));
+    normY = bitmapHeight - 1 - normY;
+
+    return Vec2i(normX, normY);
+}
+
 void fontRasteriseEdgesTerminal(FontGlyphShapeEdgeArray edges, range2i shapeBox, i32 termWidth, i32 termHeight)
 {
     ArenaTemp temp = baseTempBegin(null, 0);
@@ -958,7 +969,6 @@ void fontRasteriseEdgesTerminal(FontGlyphShapeEdgeArray edges, range2i shapeBox,
                 f64 m = dx / dy;
 
                 activeEdges.data[e].intersection.x = (i64)round((f64)edgeNormStart.x + (f64)(y - edgeNormStart.y) * m);
-                activeEdges.data[e].intersectionEm.x = (i64)round((f64)activeEdges.data[e].start.x + (f64)(y - activeEdges.data[e].start.y) * m);
             }
             else
             {
@@ -987,18 +997,107 @@ void fontRasteriseEdgesTerminal(FontGlyphShapeEdgeArray edges, range2i shapeBox,
             {
                 termDrawLine(Vec2i(activeEdges.data[a].intersection.x, y), Vec2i(prevX, y), '#');
             }
-            
+
             prevX = activeEdges.data[a].intersection.x;
             winding += activeEdges.data[a].winding;
         }
-            
+
     }
 
     baseTempEnd(temp);
 }
+void fontRasteriseEdgesToBitmap(Font font, FontGlyphShapeEdgeArray edges, range2i shapeBounds, Bitmap *bitmap, u64 bitmapWidth, f64 pixelSize)
+{
+    ArenaTemp temp = baseTempBegin(null, 0);
 
+    // naive allocation,. active edges will be never greater then total number of edges
+    FontGlyphShapeEdgeArray activeEdges = {0};
+    activeEdges.data = arenaPushArray(temp.arena, FontGlyphShapeEdge, edges.len);
+
+    for (i64 y = 0; y < bitmap->size.height; y++)
+    {
+        activeEdges.len = 0;
+        for (u64 e = 0; e < edges.len; e++)
+        {
+            vec2i edgeNormStart = fontNormaliseCoordsFromBounds(font, edges.data[e].start, shapeBounds, pixelSize, bitmap->size.height);
+            vec2i edgeNormEnd = fontNormaliseCoordsFromBounds(font, edges.data[e].end, shapeBounds, pixelSize, bitmap->size.height);
+
+            if (y >= edgeNormStart.y && y < edgeNormEnd.y ||
+                y >= edgeNormEnd.y && y < edgeNormStart.y)
+            {
+                activeEdges.data[activeEdges.len++] = edges.data[e];
+            }
+        }
+
+        for(u64 e = 0; e < activeEdges.len; e++)
+        {
+            vec2i edgeNormStart = fontNormaliseCoordsFromBounds(font, activeEdges.data[e].start, shapeBounds, pixelSize, bitmap->size.height);
+            vec2i edgeNormEnd = fontNormaliseCoordsFromBounds(font, activeEdges.data[e].end, shapeBounds, pixelSize, bitmap->size.height);
+
+            i64 s = edgeNormEnd.y - edgeNormStart.y;
+            activeEdges.data[e].winding = (s < 0) ? -1 : ((s > 0) ? 1 : 0);
+            activeEdges.data[e].intersection.y = y;
+
+            f64 dx = (f64)(edgeNormEnd.x - edgeNormStart.x);
+            f64 dy = (f64)(edgeNormEnd.y - edgeNormStart.y);
+
+            if ((i64)round(dy) != 0)
+            {
+                f64 m = dx / dy;
+
+                activeEdges.data[e].intersection.x = (i64)round((f64)edgeNormStart.x + (f64)(y - edgeNormStart.y) * m);
+            }
+            else
+            {
+                activeEdges.data[e].intersection.x = -1;
+            }
+        }
+
+        qsort(activeEdges.data, activeEdges.len, sizeof(FontGlyphShapeEdge), fontGlyphShapeEdgeCompareIntersectionX);
+
+        i32 winding = 0;
+        i32 prevX = 0;
+        for (u64 a = 0; a < activeEdges.len; a++)
+        {
+            if (activeEdges.data[a].intersection.x == -1 )
+            {
+                continue;
+            }
+
+            // if (activeEdges.data[a].intersection.x == prevX)
+            // {
+            //     winding += activeEdges.data[a].winding;
+            //     continue;
+            // }
+
+            if (winding != 0)
+            {
+                u64 tempWidth = bitmap->size.w;
+                bitmap->size.w = bitmapWidth;
+                bitmapDrawLine(bitmap, Vec2i(activeEdges.data[a].intersection.x, y), Vec2i(prevX, y), Vec4u8(255, 255, 255, 255));
+
+                bitmap->size.w = tempWidth;
+            }
+
+            prevX = activeEdges.data[a].intersection.x;
+            winding += activeEdges.data[a].winding;
+        }
+
+    }
+
+    baseTempEnd(temp);
+}
+vec2i fontGetGlyphShapeBitmapDimensions(Font font, FontGlyphShape shape, f64 pixelSize)
+{
+    f64 scale = fontGetEmToPixelScale(font, pixelSize);
+
+    i64 w = (i64)(ceil((f64)(shape.bounds.max.x - shape.bounds.min.x) * scale));
+    i64 h = (i64)(ceil((f64)(shape.bounds.max.y - shape.bounds.min.y) * scale));
+
+    return Vec2i(w + 1, h + 1);
+}
 void fontRasteriseGlyphShapeTerminal(FontGlyphShape shape, i32 termWidth, i32 termHeight, bool filled)
-{ 
+{
     ArenaTemp temp = baseTempBegin(null, 0);
 
     u64 totalEdgesRequired = 0;
@@ -1012,7 +1111,7 @@ void fontRasteriseGlyphShapeTerminal(FontGlyphShape shape, i32 termWidth, i32 te
         for (u64 p = 0; p < edges.len; p++)
         {
             FontGlyphShapeEdge edge = edges.data[p];
-            
+
             vec2i start = fontNormaliseCoordsFromTerminal(edge.start, shape.bounds, termWidth, termHeight);
             vec2i end = fontNormaliseCoordsFromTerminal(edge.end, shape.bounds, termWidth, termHeight);
 
@@ -1041,18 +1140,85 @@ void fontRasteriseGlyphShapeTerminal(FontGlyphShape shape, i32 termWidth, i32 te
 
         fontRasteriseEdgesTerminal(allEdges, shape.bounds, termWidth, termHeight);
     }
-    
+
     baseTempEnd(temp);
 }
+void fontRasteriseGlyphShapeToBitmap(Font font, FontGlyphShape shape, Bitmap *bitmap, u64 bitmapWidth, f64 pixelSize)
+{
+    ArenaTemp temp = baseTempBegin(null, 0);
 
+    u64 totalEdgesRequired = 0;
+    FontGlyphShapeEdgeArray allEdges = {0};
+
+    for (u64 c = 0; c < shape.contours.len; c++)
+    {
+        FontGlyphShapeContour contour = shape.contours.data[c];
+
+        FontGlyphShapeEdgeArray edges = fontExpandContourPoints(temp.arena, contour);
+        for (u64 p = 0; p < edges.len; p++)
+        {
+            FontGlyphShapeEdge edge = edges.data[p];
+
+            vec2i edgeNormStart = fontNormaliseCoordsFromBounds(font, edge.start, shape.bounds, pixelSize, bitmap->size.height);
+            vec2i edgeNormEnd = fontNormaliseCoordsFromBounds(font, edge.end, shape.bounds, pixelSize, bitmap->size.height);
+
+            // the scanline rastrizer will skip horizontal lines do to how it works
+            if (edgeNormStart.y == edgeNormEnd.y)
+            {   
+                u64 tempWidth = bitmap->size.w;
+                bitmap->size.w = bitmapWidth;
+                bitmapDrawLine(bitmap, edgeNormStart, edgeNormEnd, Vec4u8(255, 255, 255, 255));
+                bitmap->size.w = tempWidth;
+            }
+        }
+
+        totalEdgesRequired += edges.len;
+    }
+
+    {
+        allEdges.data = arenaPushArray(temp.arena, FontGlyphShapeEdge, totalEdgesRequired);
+
+        for (u64 c = 0; c < shape.contours.len; c++)
+        {
+            FontGlyphShapeContour contour = shape.contours.data[c];
+
+            FontGlyphShapeEdgeArray edges = fontExpandContourPoints(temp.arena, contour);
+
+            BASE_MEMCPY(allEdges.data + allEdges.len, edges.data, edges.len * sizeof(FontGlyphShapeEdge));
+            allEdges.len += edges.len;
+        }
+
+        fontRasteriseEdgesToBitmap(font, allEdges, shape.bounds, bitmap, bitmapWidth, pixelSize);
+    }
+
+    baseTempEnd(temp);
+}
+void fontRasteriseCodepointToBitmap(Font font, u32 codepoint, Bitmap *bitmap, u64 bitmapWidth, f64 pixelSize, bool allowInvalidGlyph)
+{
+    FontGlyph glyph = fontGetGlyphFromCodepoint(font, codepoint);
+    if (glyph.glyphIndex == 0 && !allowInvalidGlyph)
+    {
+        return;
+    }
+
+    fontRasteriseGlyphShapeToBitmap(font, glyph.shape, bitmap, bitmapWidth, pixelSize);
+}
+FontGlyph fontGetGlyphFromCodepoint(Font font, u32 codepoint)
+{
+    u64 index = fontGetGlyphIndexFromCodepoint(font, codepoint);
+    FontGlyph glyph = {0};
+    glyph.shape = font.parsed.parsedGlyf.data[index];
+    glyph.codepoint = codepoint;
+    glyph.glyphIndex = index;
+
+    return glyph;
+}
 Font fontTTFParseFromFile(Arena *arena, str8 file)
 {
-    ArenaTemp temp = baseTempBegin(&arena, 1);
-
     Font ret = {0};
     FontTTFParsedFont parsed = {0};
 
-    U8Array fileContents = OSFileReadAll(temp.arena, file);
+    U8Array fileContents = OSFileReadAll(arena, file);
     if (BASE_ANY(fileContents))
     {
         ret = fontTTFParseFromU8Array(arena, fileContents);
@@ -1061,8 +1227,6 @@ Font fontTTFParseFromFile(Arena *arena, str8 file)
     {
         ret.error = FONT_ERROR_EMPTY_OR_FILE_DOESNT_EXIST;
     }
-
-    baseTempEnd(temp);
 
     return ret;
 }
@@ -1077,9 +1241,9 @@ Font fontTTFParseFromU8Array(Arena *arena, U8Array fontData)
     fontData = U8ArraySkip(fontData, sizeof(u16));
 
     // skip rest of table
-    fontData = U8ArraySkip(fontData, sizeof(u16)); 
-    fontData = U8ArraySkip(fontData, sizeof(u16)); 
-    fontData = U8ArraySkip(fontData, sizeof(u16)); 
+    fontData = U8ArraySkip(fontData, sizeof(u16));
+    fontData = U8ArraySkip(fontData, sizeof(u16));
+    fontData = U8ArraySkip(fontData, sizeof(u16));
 
     Font ret = {0};
     FontTTFParsedFont parsedFont = {0};
@@ -1109,7 +1273,7 @@ Font fontTTFParseFromU8Array(Arena *arena, U8Array fontData)
                     return ret;
                 }
             }break;
-            
+
             case (u32)'glyf':
             {
                 parsedFont.glyfOffset = offset;
@@ -1161,7 +1325,7 @@ Font fontTTFParseFromU8Array(Arena *arena, U8Array fontData)
     {
         ret.error = parsedFont.error;
         return ret;
-    }    
+    }
 
     if (!fontTTFParseLocaTable(arena, &parsedFont))
     {
@@ -1192,6 +1356,172 @@ Font fontTTFParseFromU8Array(Arena *arena, U8Array fontData)
     return ret;
 }
 
+i64 fontAtlasGetGlyphArea(FontAtlasGlyph g)
+{
+    return g.size.x * g.size.y;
+}
+i32 fontAtlasGlyphDescendingCompare(const void *g1, const void *g2)
+{
+    FontAtlasGlyph *a = (FontAtlasGlyph*)g1;
+    FontAtlasGlyph *b = (FontAtlasGlyph*)g2;
+
+    return fontAtlasGetGlyphArea(*b) - fontAtlasGetGlyphArea(*a);
+}
+FontAtlas fontAtlasFromCodepointRanges(Arena *arena, Font font, RangeI64Array ranges, f64 pixelSize, bool allowNullGlyph)
+{
+    FontAtlas atlas = {0};
+    i64 bitmapW = 512;
+    i64 bitmapH = 512;
+    atlas.bitmap = bitmapPush(arena, Vec2i(bitmapW, bitmapH), BITMAP_FORMAT_R8G8B8);
+
+    ArenaTemp temp = baseTempBegin(&arena, 1);
+ 
+    u64 numGlyphs = 0;
+    u64 currX = 0;
+    u64 currY = 0;
+    u64 maxGlyphHeightInRow = 0;
+    bool blittedNullGlyph = false;
+    for (u64 i = 0; i < ranges.len; i++)
+    {
+        rangei r = ranges.data[i];
+
+        for (i64 ri = r.start; ri <= r.end; ri++)
+        {
+            FontGlyph glyph = fontGetGlyphFromCodepoint(font, ri);
+            if (glyph.glyphIndex == 0 && (!allowNullGlyph || blittedNullGlyph))
+            {
+                continue;
+            }
+            else if (glyph.glyphIndex == 0 && allowNullGlyph)
+            {
+                // only allow it to be written to bitmap once
+                blittedNullGlyph = true;
+            }
+
+            vec2i d = fontGetGlyphShapeBitmapDimensions(font, glyph.shape, pixelSize);
+
+            if (currX + d.w >= atlas.bitmap.size.w)
+            {
+                currY += maxGlyphHeightInRow;
+                currX = 0;
+                maxGlyphHeightInRow = 0;
+            }
+
+            if (currY + d.height >= atlas.bitmap.size.h)
+            {
+                break;
+            }
+
+            numGlyphs += 1;
+            currX += d.w;
+            maxGlyphHeightInRow = BASE_MAX(maxGlyphHeightInRow, d.h);
+        }   
+    }
+    
+    currX = 0;
+    currY = 0;
+    maxGlyphHeightInRow = 0;
+    blittedNullGlyph = false;
+    
+    u64 asciiTableLen = 128;
+    FontAtlasGlyphArray glyphs = {0};
+    glyphs.data = arenaPushArray(arena, FontAtlasGlyph, numGlyphs + asciiTableLen);
+    glyphs.len = asciiTableLen;
+
+    for (u64 i = 0; i < ranges.len; i++)
+    {
+        rangei r = ranges.data[i];
+
+        for (i64 ri = r.start; ri <= r.end; ri++)
+        {
+            FontGlyph glyph = fontGetGlyphFromCodepoint(font, ri);
+            if (glyph.glyphIndex == 0 && (!allowNullGlyph || blittedNullGlyph))
+            {
+                continue;
+            }
+            else if (glyph.glyphIndex == 0 && allowNullGlyph)
+            {
+                // only allow it to be written to bitmap once
+                blittedNullGlyph = true;
+            }
+
+            vec2i d = fontGetGlyphShapeBitmapDimensions(font, glyph.shape, pixelSize);
+            if (currX + d.w >= atlas.bitmap.size.w)
+            {
+                currY += maxGlyphHeightInRow;
+                currX = 0;
+                maxGlyphHeightInRow = 0;
+            }
+
+            if (currY + d.height >= atlas.bitmap.size.h)
+            {
+                break;
+            }
+
+            if (ri >= 0 && ri <= 127)
+            {
+                glyphs.data[ri].codepoint = ri;
+                glyphs.data[ri].pos = Vec2i(currX, currY);
+                glyphs.data[ri].size = d;
+            }
+            else
+            {
+                glyphs.data[glyphs.len].codepoint = ri;
+                glyphs.data[glyphs.len].pos = Vec2i(currX, currY);
+                glyphs.data[glyphs.len].size = vec2iAdd(d, Vec2i(currX, currY));
+
+                glyphs.len++;
+            }
+            
+            currX += d.w;
+            maxGlyphHeightInRow = BASE_MAX(maxGlyphHeightInRow, d.h);
+        }   
+    }
+
+    currX = 0;
+    currY = 0;
+    maxGlyphHeightInRow = 0;
+    blittedNullGlyph = false;
+    
+    qsort(glyphs.data, glyphs.len, sizeof(FontAtlasGlyph), fontAtlasGlyphDescendingCompare);
+
+    for (u64 i = 0; i < glyphs.len; i++)
+    {
+        FontGlyph glyph = fontGetGlyphFromCodepoint(font, glyphs.data[i].codepoint);
+
+        if (glyph.codepoint == 0)
+        {
+            continue;
+        }
+
+        vec2i d = fontGetGlyphShapeBitmapDimensions(font, glyph.shape, pixelSize);
+        Bitmap slice = atlas.bitmap;
+        slice.size = d;
+
+        if (currX + d.w >= atlas.bitmap.size.w)
+        {
+            currY += maxGlyphHeightInRow;
+            currX = 0;
+            maxGlyphHeightInRow = 0;
+        }
+
+        if (currY + d.height >= atlas.bitmap.size.h)
+        {
+            break;
+        }
+
+        slice.pixels += currY * atlas.bitmap.size.w * atlas.bitmap.bytesPerPixel + atlas.bitmap.bytesPerPixel * currX; 
+        fontRasteriseGlyphShapeToBitmap(font, glyph.shape, &slice, atlas.bitmap.size.w, pixelSize);
+
+        currX += d.w;
+        maxGlyphHeightInRow = BASE_MAX(maxGlyphHeightInRow, d.h);
+    }
+
+    baseTempEnd(temp);
+
+    atlas.glyphs = glyphs;
+    return atlas;
+}
 u64 fontGetGlyphIndexFromCodepoint(Font font, u32 codepoint)
 {
     if (font.parsed.parsedCMAP.isFormat12)
@@ -1232,7 +1562,7 @@ u64 fontGetGlyphIndexFromCodepoint(Font font, u32 codepoint)
             return index;
         }
     }
-    
+
     // no glyph found, return first
     return 0;
 }
