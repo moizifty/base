@@ -9,6 +9,16 @@
 
 OSKey gOSWin32VKToOSKeyTable[256] = 
 {
+    ['0'] = OS_KEY_0,
+    ['1'] = OS_KEY_1,
+    ['2'] = OS_KEY_2,
+    ['3'] = OS_KEY_3,
+    ['4'] = OS_KEY_4,
+    ['5'] = OS_KEY_5,
+    ['6'] = OS_KEY_6,
+    ['7'] = OS_KEY_7,
+    ['8'] = OS_KEY_8,
+    ['9'] = OS_KEY_9,
     ['A'] = OS_KEY_A,
     ['B'] = OS_KEY_B,
     ['C'] = OS_KEY_C,
@@ -39,6 +49,16 @@ OSKey gOSWin32VKToOSKeyTable[256] =
 
 u64 gOSWin32OSKeyToVKTable[OS_KEY_COUNT] = 
 {
+    [OS_KEY_0] = '0',
+    [OS_KEY_1] = '1',
+    [OS_KEY_2] = '2',
+    [OS_KEY_3] = '3',
+    [OS_KEY_4] = '4',
+    [OS_KEY_5] = '5',
+    [OS_KEY_6] = '6',
+    [OS_KEY_7] = '7',
+    [OS_KEY_8] = '8',
+    [OS_KEY_9] = '9',
     [OS_KEY_A] = 'A',
     [OS_KEY_B] = 'B',
     [OS_KEY_C] = 'C',

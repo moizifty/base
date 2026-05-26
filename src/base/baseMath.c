@@ -1,6 +1,8 @@
 #include "baseMath.h"
 #include "baseMath.gen.c"
 
+BASE_CREATE_LL_DEFS(RangeI64List, rangei)
+
 vec2f vec2fAdd(vec2f a, vec2f b)
 {
     return Vec2f(a.x + b.x, a.y + b.y);
@@ -41,6 +43,11 @@ f32 vec2fMag(vec2f a)
 f32 vec2fMagSqr(vec2f a)
 {
     return vec2fDot(a, a);
+}
+
+vec2i vec2iAdd(vec2i a, vec2i b)
+{
+    return Vec2i(a.x + b.x, a.y + b.y);
 }
 
 /// vec3f

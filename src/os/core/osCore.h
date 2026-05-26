@@ -87,6 +87,17 @@ typedef enum OSKey
 {
     OS_KEY_NULL,
     
+    OS_KEY_0,
+    OS_KEY_1,
+    OS_KEY_2,
+    OS_KEY_3,
+    OS_KEY_4,
+    OS_KEY_5,
+    OS_KEY_6,
+    OS_KEY_7,
+    OS_KEY_8,
+    OS_KEY_9,
+
     OS_KEY_A,
     OS_KEY_B,
     OS_KEY_C,

@@ -79,6 +79,7 @@
 #define MAT4F_IDENTITY    (Mat4f(1))
 
 #define Rangef(X, Y)    ((rangef){(X), (Y)})
+#define Rangei(X, Y)    ((rangei){(X), (Y)})
 
 
 #define Range2f(X, Y)    ((rangef){(f32)(X), (f32)(Y)})
@@ -393,6 +394,30 @@ typedef struct rangef
     };
 }rangef;
 
+typedef struct rangei
+{
+    union
+    {
+        struct
+        {
+            i64 start;
+            i64 end;
+        };
+
+        struct
+        {
+            i64 min;
+            i64 max;
+        };
+
+        struct
+        {
+            i64 width;
+            i64 height;
+        };
+    };
+}rangei;
+
 // 2-dimension range
 typedef struct range2f
 {
@@ -499,6 +524,8 @@ vec2f vec2fNorm(vec2f a);
 f32 vec2fDot(vec2f a, vec2f b);
 f32 vec2fMag(vec2f a);
 f32 vec2fMagSqr(vec2f a);
+
+vec2i vec2iAdd(vec2i a, vec2i b);
 
 vec3f vec3fAdd(vec3f a, vec3f b);
 vec3f vec3fSub(vec3f a, vec3f b);
@@ -655,4 +682,7 @@ vec2f lerpVec2f(vec2f a, vec2f b, f64 t);
 
 vec2i quadraticBezierVec2i(vec2i a, vec2i controlpoint, vec2i b, f64 t);
 vec2f quadraticBezierVec2f(vec2f a, vec2f controlpoint, vec2f b, f64 t);
+
+BASE_CREATE_LL_DECLS(RangeI64List, rangei)
+BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(RangeI64Array, rangei)
 #endif

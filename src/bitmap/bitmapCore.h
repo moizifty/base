@@ -15,12 +15,14 @@
 
 BitmapFileKind bitmapFileKindFromPath(str8 path);
 
-Bitmap bitmapFromPath(Arena *arena, str8 file);
+Bitmap bitmapPush(Arena *arena, vec2i size, BitmapFormatKind fmt);
+u8 *bitmapGetPtrToPixel(Bitmap *bitmap, vec2i point);
+void bitmapFastBlitToBitmap(Bitmap *src, Bitmap *dest, range2i srcRangeToCopy, range2i destRangeToPasteInto);
+void bitmapBlitToBitmap(Bitmap *src, Bitmap *dest, range2i srcRangeToCopy, range2i destRangeToPasteInto);
 
-Bitmap bitmapFromBMPRaw(Arena *arena, u8 *rawBytes, u64 byteLen);
-Bitmap bitmapFromBMPPath(Arena *arena, str8 file);
-
-Bitmap bitmapFromTGARaw(Arena *arena, u8 *rawBytes, u64 byteLen);
-Bitmap bitmapFromTGAPath(Arena *arena, str8 file);
+void bitmapBlitToBitmap(Bitmap *src, Bitmap *dest, range2i srcRangeToCopy, range2i destRangeToPasteInto);
+vec4u8 bitmapGetPixelColor4u8(Bitmap *bitmap, vec2i point);
+void bitmapDrawPixel(Bitmap *bitmap, vec2i point, vec4u8 color);
+void bitmapDrawLine(Bitmap *bitmap, vec2i start, vec2i end, vec4u8 color);
 
 #endif
