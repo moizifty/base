@@ -36,16 +36,62 @@ void ProgramMain(Str8List *args)
     //     Sleep(250);
     // }
 
-    FontAtlas atlas = fontAtlasFromCodepointRanges(arena, font, ARRAY_VIEW(RangeI64Array, rangei, {32, 127}), 48, true);
+    FontAtlas atlas = fontAtlasFromCodepointRanges(arena, font, ARRAY_VIEW(RangeI64Array, rangei, {0x231A, 0x232A}), 32, true);
     basePrintf("Finished\n");
+
+
+    Bitmap bm = bitmapPush(arena, atlas.bitmap.size, atlas.bitmap.fmt);
+    str8 testString = STR8("⌚⌨MOIZ");
+
+    u64 x = 0;
+    u64 y = 0;
+    u64 yOffset = 0;
+    u64 bytesDone = 0;
+    while(*testString.data)
+    {
+        DecodeCodePointInfo cp = DecodeCodepointFromUtf8(testString.data, testString.len - bytesDone);
+        testString.data += cp.advance;
+        bytesDone += cp.advance;
+
+        if (cp.codepoint != '\n')
+        {
+            FontAtlasGlyph glyph = {0};
+            fontAtlasTryGetGlyphFromCodepoint(atlas, cp.codepoint, &glyph);
+            
+            x += glyph.bearingLeft;
+            y = yOffset + glyph.bearingTop;
+
+            range2i srcRange = 
+            {
+                .min = glyph.pos,
+                .max = vec2iAdd(glyph.pos, glyph.size),
+            };
+
+            range2i destRange = 
+            {
+                .min = Vec2i(x, y),
+                .max = vec2iAdd(Vec2i(x, y), glyph.size),
+            };
+
+            bitmapFastBlitToBitmap(&atlas.bitmap, &bm, srcRange, destRange);
+
+            x += glyph.size.w + glyph.bearingRight;
+        }
+        else
+        {
+            x = 0;
+            yOffset += atlas.metrics.descent + atlas.metrics.ascent + atlas.metrics.lineGap;
+        }
+        
+    }
 
     OSHandle file = OSFileOpen(STR8("test.ppm"), false, OS_FILEACCESS_WRITE, OS_FILECREATION_CREATE_OVERRITE);
 
-    OSFileWriteFmt(file, "P3\n%lld %lld\n255\n", atlas.bitmap.size.w, atlas.bitmap.size.h);
+    OSFileWriteFmt(file, "P3\n%lld %lld\n255\n", bm.size.w, bm.size.h);
 
-    for (u64 i = 0; i < atlas.bitmap.bytesPerPixel * atlas.bitmap.size.w * atlas.bitmap.size.h; i++)
+    for (u64 i = 0; i < bm.bytesPerPixel * bm.size.w * bm.size.h; i++)
     {
-        OSFileWriteFmt(file, "%lld\n", atlas.bitmap.pixels[i]);
+        OSFileWriteFmt(file, "%lld\n", bm.pixels[i]);
     }
 
     OSFileClose(file);

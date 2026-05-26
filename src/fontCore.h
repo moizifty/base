@@ -205,7 +205,15 @@ typedef struct FontAtlasGlyph
     vec2i pos;
     vec2i size;
 
+    // lsb, y bearing from baseline
+    i64 bearingTop;
+    i64 bearingLeft;
+    i64 bearingRight;
+    u64 advanceWidth;
+
     u32 codepoint;
+
+    bool isInvalidGlyph;
 }FontAtlasGlyph;
 
 BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(FontAtlasGlyphArray, FontAtlasGlyph)
@@ -213,7 +221,10 @@ BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(FontAtlasGlyphArray, FontAtlasGlyph)
 typedef struct FontAtlas
 {
     Bitmap bitmap;
-    FontAtlasGlyphArray asciiGlyphs;
+    FontMetrics metrics;
+
+    // essentially adcii characters are stored first for fast access with ascii codes
+    u64 numFastAccessGlyphs;
     FontAtlasGlyphArray glyphs;
 }FontAtlas;
 
@@ -246,6 +257,8 @@ void fontRasteriseGlyphShapeTerminal(FontGlyphShape shape, i32 termWidth, i32 te
 vec2i fontGetGlyphShapeBitmapDimensions(Font font, FontGlyphShape shape, f64 pixelSize);
 
 FontAtlas fontAtlasFromCodepointRanges(Arena *arena, Font font, RangeI64Array ranges, f64 pixelSize, bool allowNullGlyph);
+bool fontAtlasTryGetGlyphFromCodepoint(FontAtlas atlas, i32 codepoint, FontAtlasGlyph *out);
+
 // you need bitmap bitmapWidth as a param
 // as you may pass bitmap "slices" into a bigger bitmap, but the stride for going to the next row should be based on the 
 // the stride of the whole bigger bitmap

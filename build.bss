@@ -36,7 +36,7 @@ fn runmg()
 fn getsrcdir()
 {
     src = "src";
-    if (pathexists("metagen_defer_temp"))
+    if (pathexists("metagen_defer_temp") && hasflag("mg"))
     {
         src = "metagen_defer_temp/{src}";
     }

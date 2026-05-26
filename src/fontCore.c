@@ -1091,8 +1091,8 @@ vec2i fontGetGlyphShapeBitmapDimensions(Font font, FontGlyphShape shape, f64 pix
 {
     f64 scale = fontGetEmToPixelScale(font, pixelSize);
 
-    i64 w = (i64)(ceil((f64)(shape.bounds.max.x - shape.bounds.min.x) * scale));
-    i64 h = (i64)(ceil((f64)(shape.bounds.max.y - shape.bounds.min.y) * scale));
+    i64 w = (i64)(round((f64)(shape.bounds.max.x - shape.bounds.min.x) * scale));
+    i64 h = (i64)(round((f64)(shape.bounds.max.y - shape.bounds.min.y) * scale));
 
     return Vec2i(w + 1, h + 1);
 }
@@ -1307,7 +1307,7 @@ Font fontTTFParseFromU8Array(Arena *arena, U8Array fontData)
             case (u32)'loca':
             {
                 parsedFont.locaOffset = offset;
-            }
+            }break;
 
             case (u32)'maxp':
             {
@@ -1367,20 +1367,34 @@ i32 fontAtlasGlyphDescendingCompare(const void *g1, const void *g2)
 
     return fontAtlasGetGlyphArea(*b) - fontAtlasGetGlyphArea(*a);
 }
-FontAtlas fontAtlasFromCodepointRanges(Arena *arena, Font font, RangeI64Array ranges, f64 pixelSize, bool allowNullGlyph)
-{
-    FontAtlas atlas = {0};
-    i64 bitmapW = 512;
-    i64 bitmapH = 512;
-    atlas.bitmap = bitmapPush(arena, Vec2i(bitmapW, bitmapH), BITMAP_FORMAT_R8G8B8);
 
-    ArenaTemp temp = baseTempBegin(&arena, 1);
- 
+u64 fontAtlasEstimateNumberOfGlyphsThatFitInBitmap(Font font, vec2i bitmapSize, RangeI64Array ranges, f64 pixelSize, bool allowNullGlyph)
+{
     u64 numGlyphs = 0;
     u64 currX = 0;
     u64 currY = 0;
     u64 maxGlyphHeightInRow = 0;
     bool blittedNullGlyph = false;
+
+    if (allowNullGlyph)
+    {
+        // do the null glyph first
+        FontGlyphShape glyphShape = font.parsed.parsedGlyf.data[0];
+        vec2i d = fontGetGlyphShapeBitmapDimensions(font, glyphShape, pixelSize);
+
+        if (currX + d.w >= bitmapSize.w)
+        {
+            currY += maxGlyphHeightInRow;
+            currX = 0;
+            maxGlyphHeightInRow = 0;
+        }
+
+        currX += d.w;
+        maxGlyphHeightInRow = BASE_MAX(maxGlyphHeightInRow, d.h);
+
+        blittedNullGlyph = true;
+    }
+
     for (u64 i = 0; i < ranges.len; i++)
     {
         rangei r = ranges.data[i];
@@ -1392,22 +1406,17 @@ FontAtlas fontAtlasFromCodepointRanges(Arena *arena, Font font, RangeI64Array ra
             {
                 continue;
             }
-            else if (glyph.glyphIndex == 0 && allowNullGlyph)
-            {
-                // only allow it to be written to bitmap once
-                blittedNullGlyph = true;
-            }
 
             vec2i d = fontGetGlyphShapeBitmapDimensions(font, glyph.shape, pixelSize);
 
-            if (currX + d.w >= atlas.bitmap.size.w)
+            if (currX + d.w >= bitmapSize.w)
             {
                 currY += maxGlyphHeightInRow;
                 currX = 0;
                 maxGlyphHeightInRow = 0;
             }
 
-            if (currY + d.height >= atlas.bitmap.size.h)
+            if (currY + d.height >= bitmapSize.h)
             {
                 break;
             }
@@ -1417,16 +1426,52 @@ FontAtlas fontAtlasFromCodepointRanges(Arena *arena, Font font, RangeI64Array ra
             maxGlyphHeightInRow = BASE_MAX(maxGlyphHeightInRow, d.h);
         }   
     }
-    
-    currX = 0;
-    currY = 0;
-    maxGlyphHeightInRow = 0;
-    blittedNullGlyph = false;
-    
-    u64 asciiTableLen = 128;
-    FontAtlasGlyphArray glyphs = {0};
-    glyphs.data = arenaPushArray(arena, FontAtlasGlyph, numGlyphs + asciiTableLen);
-    glyphs.len = asciiTableLen;
+
+    return numGlyphs;
+}
+
+void fontAtlasFillAtlasGlyphs(Font font, FontAtlas *atlas, RangeI64Array ranges, f64 pixelSize, bool allowNullGlyph)
+{
+    f64 scale = fontGetEmToPixelScale(font, pixelSize);
+
+    u64 currX = 0;
+    u64 currY = 0;
+    u64 maxGlyphHeightInRow = 0;
+    bool blittedNullGlyph = false;
+
+    if (allowNullGlyph)
+    {
+        // do the null glyph first
+        FontGlyphShape glyphShape = font.parsed.parsedGlyf.data[0];
+        vec2i d = fontGetGlyphShapeBitmapDimensions(font, glyphShape, pixelSize);
+
+        if (currX + d.w >= atlas->bitmap.size.w)
+        {
+            currY += maxGlyphHeightInRow;
+            currX = 0;
+            maxGlyphHeightInRow = 0;
+        }
+
+        FontAtlasGlyph atlasGlyph = 
+        {
+            .codepoint = 0,
+            .pos = Vec2i(currX, currY),
+            .size = d,
+            .advanceWidth = (u64)round(scale * (f64)glyphShape.advanceWidth),
+            .bearingLeft = (i64)round(scale * (f64)glyphShape.leftSideBearing),
+            .bearingRight = (i64)round(scale* (f64)(glyphShape.advanceWidth - glyphShape.bounds.max.x)),
+            .bearingTop = (i64)((i64)atlas->metrics.ascent - (i64)round(scale * ((f64)glyphShape.bounds.max.y))),
+            .isInvalidGlyph = true,
+        };
+
+        atlas->glyphs.data[0] = atlasGlyph;
+
+        currX += d.w;
+        maxGlyphHeightInRow = BASE_MAX(maxGlyphHeightInRow, d.h);
+
+
+        blittedNullGlyph = true;
+    }
 
     for (u64 i = 0; i < ranges.len; i++)
     {
@@ -1439,60 +1484,103 @@ FontAtlas fontAtlasFromCodepointRanges(Arena *arena, Font font, RangeI64Array ra
             {
                 continue;
             }
-            else if (glyph.glyphIndex == 0 && allowNullGlyph)
-            {
-                // only allow it to be written to bitmap once
-                blittedNullGlyph = true;
-            }
 
             vec2i d = fontGetGlyphShapeBitmapDimensions(font, glyph.shape, pixelSize);
-            if (currX + d.w >= atlas.bitmap.size.w)
+            if (currX + d.w >= atlas->bitmap.size.w)
             {
                 currY += maxGlyphHeightInRow;
                 currX = 0;
                 maxGlyphHeightInRow = 0;
             }
 
-            if (currY + d.height >= atlas.bitmap.size.h)
+            if (currY + d.height >= atlas->bitmap.size.h)
             {
                 break;
             }
 
+            FontAtlasGlyph atlasGlyph = 
+            {
+                .codepoint = ri,
+                .pos = Vec2i(currX, currY),
+                .size = d,
+                .advanceWidth = (u64)round(scale * (f64)glyph.shape.advanceWidth),
+                .bearingLeft = (i64)round(scale * (f64)glyph.shape.leftSideBearing),
+                .bearingRight = (i64)round(scale* (f64)(glyph.shape.advanceWidth - glyph.shape.bounds.max.x)),
+                .bearingTop = (i64)((i64)atlas->metrics.ascent - (i64)round(scale * ((f64)glyph.shape.bounds.max.y))),
+            };
+
+            if (glyph.glyphIndex == 0)
+            {
+                atlasGlyph.isInvalidGlyph = true;
+            }
+
             if (ri >= 0 && ri <= 127)
             {
-                glyphs.data[ri].codepoint = ri;
-                glyphs.data[ri].pos = Vec2i(currX, currY);
-                glyphs.data[ri].size = d;
+                atlas->glyphs.data[ri] = atlasGlyph;
             }
             else
             {
-                glyphs.data[glyphs.len].codepoint = ri;
-                glyphs.data[glyphs.len].pos = Vec2i(currX, currY);
-                glyphs.data[glyphs.len].size = vec2iAdd(d, Vec2i(currX, currY));
-
-                glyphs.len++;
+                atlas->glyphs.data[atlas->glyphs.len] = atlasGlyph;
+                atlas->glyphs.len++;
             }
             
             currX += d.w;
             maxGlyphHeightInRow = BASE_MAX(maxGlyphHeightInRow, d.h);
         }   
     }
+}
 
-    currX = 0;
-    currY = 0;
-    maxGlyphHeightInRow = 0;
-    blittedNullGlyph = false;
+FontAtlas fontAtlasFromCodepointRanges(Arena *arena, Font font, RangeI64Array ranges, f64 pixelSize, bool allowNullGlyph)
+{
+    FontAtlas atlas = {0};
+    f64 scale = fontGetEmToPixelScale(font, pixelSize);
+
+    atlas.metrics.ascent = (i16)round(scale * (f64)font.metrics.ascent);
+    atlas.metrics.descent= (i16)round(scale * (f64)font.metrics.descent);
+    atlas.metrics.lineGap = (i16)round(scale * (f64)font.metrics.lineGap);
+    atlas.metrics.bounds.min.x = (i64)round(scale * (f64)font.metrics.bounds.min.x);
+    atlas.metrics.bounds.min.y = (i64)round(scale * (f64)font.metrics.bounds.min.y);
+    atlas.metrics.bounds.max.x = (i64)round(scale * (f64)font.metrics.bounds.max.x);
+    atlas.metrics.bounds.max.y = (i64)round(scale * (f64)font.metrics.bounds.max.y);
+    atlas.metrics.unitsPerEm = font.metrics.unitsPerEm;
+
+    i64 bitmapW = 512;
+    i64 bitmapH = 512;
+    atlas.bitmap = bitmapPush(arena, Vec2i(bitmapW, bitmapH), BITMAP_FORMAT_R8G8B8);
+
+    u64 numGlyphs = fontAtlasEstimateNumberOfGlyphsThatFitInBitmap(font, atlas.bitmap.size, ranges, pixelSize, allowNullGlyph);
+    u64 currX = 0;
+    u64 currY = 0;
+    u64 maxGlyphHeightInRow = 0;
+    bool blittedNullGlyph = false;
     
-    qsort(glyphs.data, glyphs.len, sizeof(FontAtlasGlyph), fontAtlasGlyphDescendingCompare);
+    atlas.numFastAccessGlyphs = 128;
+    atlas.glyphs.data = arenaPushArray(arena, FontAtlasGlyph, numGlyphs + atlas.numFastAccessGlyphs);
+    atlas.glyphs.len = atlas.numFastAccessGlyphs;
 
-    for (u64 i = 0; i < glyphs.len; i++)
+    fontAtlasFillAtlasGlyphs(font, &atlas, ranges, pixelSize, allowNullGlyph);
+
+    // qsort(atlas.glyphs.data + atlas.numFastAccessGlyphs, atlas.glyphs.len - atlas.numFastAccessGlyphs, sizeof(FontAtlasGlyph), fontAtlasGlyphDescendingCompare);
+
+    for (u64 i = 0; i < atlas.glyphs.len; i++)
     {
-        FontGlyph glyph = fontGetGlyphFromCodepoint(font, glyphs.data[i].codepoint);
-
-        if (glyph.codepoint == 0)
+        FontGlyph glyph = {0};
+        if (i == 0 && allowNullGlyph)
         {
-            continue;
+            glyph.codepoint = 0;
+            glyph.glyphIndex = 0;
+            glyph.shape = font.parsed.parsedGlyf.data[0];
         }
+        else
+        {
+            glyph = fontGetGlyphFromCodepoint(font, atlas.glyphs.data[i].codepoint);
+
+            if (glyph.codepoint == 0 || glyph.glyphIndex == 0)
+            {
+                continue;
+            }
+        }
+        
 
         vec2i d = fontGetGlyphShapeBitmapDimensions(font, glyph.shape, pixelSize);
         Bitmap slice = atlas.bitmap;
@@ -1517,10 +1605,47 @@ FontAtlas fontAtlasFromCodepointRanges(Arena *arena, Font font, RangeI64Array ra
         maxGlyphHeightInRow = BASE_MAX(maxGlyphHeightInRow, d.h);
     }
 
-    baseTempEnd(temp);
-
-    atlas.glyphs = glyphs;
     return atlas;
+}
+bool fontAtlasTryGetGlyphFromCodepoint(FontAtlas atlas, i32 codepoint, FontAtlasGlyph *out)
+{
+    *out = (FontAtlasGlyph){.isInvalidGlyph = true};
+
+    if (codepoint >= 0 && codepoint <= atlas.numFastAccessGlyphs)
+    {
+        *out = atlas.glyphs.data[codepoint];
+        if (out->codepoint != codepoint)
+        {
+            *out = atlas.glyphs.data[0];
+        }
+
+        return true;
+    }
+
+    FontAtlasGlyph *nullGlyph = null;
+    for (u64 i = atlas.numFastAccessGlyphs; i < atlas.glyphs.len; i++)
+    {
+        if (atlas.glyphs.data[i].codepoint == codepoint)
+        {
+            *out = atlas.glyphs.data[i];
+            return true;
+        }
+
+        if (atlas.glyphs.data[i].isInvalidGlyph)
+        {
+            nullGlyph = atlas.glyphs.data + i;
+        }
+    }
+
+    if (nullGlyph != null)
+    {
+        *out = *nullGlyph;
+    }
+    else
+    {
+        *out = atlas.glyphs.data[0];
+    }
+    return false;
 }
 u64 fontGetGlyphIndexFromCodepoint(Font font, u32 codepoint)
 {
