@@ -287,7 +287,6 @@ Bitmap bitmapFromPNGRaw(Arena *arena, u8 *rawBytes, u64 byteLen)
         }
     }
 
-    bm.srcFile = BITMAP_FILE_KIND_PNG;
     return bm;
 }
 

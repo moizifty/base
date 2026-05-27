@@ -6,6 +6,8 @@
 #include "base/baseMath.h"
 
 #define BITMAP_MAX_MAGIC_BYTES 10
+
+#define BitmapSamplerDefault ((BitmapSampler){0})
 typedef enum BitmapFileKind
 {
     BITMAP_FILE_KIND_UNKNOWN,
@@ -35,6 +37,13 @@ typedef enum BitmapFormatKind
     BITMAP_FORMAT_BGRA_8 = BITMAP_FORMAT_B8G8R8A8,
 }BitmapFormatKind;
 
+typedef enum BitmapAddressModeKind
+{
+    BITMAP_ADDRESS_MODE_WRAP,
+    BITMAP_ADDRESS_MODE_CLAMP,
+    BITMAP_ADDRESS_MODE_DISCARD,
+}BitmapAddressModeKind;
+
 typedef struct BitmapFileKindTableEntry
 {
     BitmapFileKind kind;
@@ -43,11 +52,16 @@ typedef struct BitmapFileKindTableEntry
     u8 numOfMagicBytes;
 }BitmapFileKindTableEntry;
 
+typedef struct BitmapSampler
+{
+    BitmapAddressModeKind addrModeX;
+    BitmapAddressModeKind addrModeY;
+}BitmapSampler;
+
 typedef struct Bitmap
 {
     u8 *pixels;
 
-    BitmapFileKind srcFile;
     vec2i size;
     BitmapFormatKind fmt;
     u64 bytesPerPixel;

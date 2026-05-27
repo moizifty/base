@@ -11,53 +11,6 @@ BitmapFileKindTableEntry gBitmapFileKindsTable[BITMAP_FILE_KIND_COUNT] =
     [BITMAP_FILE_KIND_QOI]     = {.ext = STR8_LIT_COMP_CONST(".qoi"), .kind = BITMAP_FILE_KIND_QOI, .magicBytes = {'q', 'o', 'i', 'f'}, .numOfMagicBytes = 4},
 };
 
-BitmapFileKind bitmapFileKindFromPath(str8 path)
-{
-    for(u64 i = 0; i < BASE_ARRAY_SIZE(gBitmapFileKindsTable); i++)
-    {
-        BitmapFileKindTableEntry entry = gBitmapFileKindsTable[i];
-        
-        if (Str8EndsWith(path, entry.ext, STR_MATCHFLAGS_CASE_INSENSITIVE))
-        {
-            return entry.kind;
-        }
-    }
-    
-    // if we couldnt find it based on path extension, 
-    // open the file and check the magic number
-
-    BitmapFileKind fallBackKind = BITMAP_FILE_KIND_UNKNOWN;
-    ArenaTemp temp = baseTempBegin(null, 0);
-    {
-        U8Array fileBytes = OSFileReadAll(temp.arena, path);
-
-        if (fileBytes.data != null && fileBytes.len >= BITMAP_MAX_MAGIC_BYTES)
-        {
-            for(u64 i = 0; i < BASE_ARRAY_SIZE(gBitmapFileKindsTable); i++)
-            {
-                BitmapFileKindTableEntry entry = gBitmapFileKindsTable[i];
-                
-                // assumes little endian
-                u32 eq = 0;
-                for(u64 mb = 0; mb < entry.numOfMagicBytes; mb++)
-                {
-                    if(entry.magicBytes[mb] == fileBytes.data[mb]) eq++;
-                    else continue;
-                }
-
-                if(eq != 0)
-                {
-                    fallBackKind = entry.kind;
-                }
-            }
-        }
-
-    }
-    baseTempEnd(temp);
-
-    return fallBackKind;
-}
-
 Bitmap bitmapPush(Arena *arena, vec2i size, BitmapFormatKind fmt)
 {
     Bitmap bitmap = {0};
@@ -84,8 +37,42 @@ Bitmap bitmapPush(Arena *arena, vec2i size, BitmapFormatKind fmt)
     return bitmap;
 }
 
-u8 *bitmapGetPtrToPixel(Bitmap *bitmap, vec2i point)
+i64 bitmapApplyAddressMode(i64 coordComponent, i64 size, BitmapAddressModeKind kind)
 {
+    switch (kind)
+    {
+        case BITMAP_ADDRESS_MODE_WRAP:
+        {
+            return ((coordComponent % size) + size) % size;
+        }break;
+        
+        case BITMAP_ADDRESS_MODE_CLAMP:
+        {
+            return BASE_CLAMP(coordComponent, 0, size - 1);
+        }break;
+
+        case BITMAP_ADDRESS_MODE_DISCARD:
+        {
+            return coordComponent >= 0 && coordComponent < size ? coordComponent : -1;
+        }break;
+
+        default:
+        {
+            baseEPrintf("Unhandled address mode.\n");
+            return -1;
+        }break;
+    }
+}
+u8 *bitmapGetPtrToPixel(Bitmap *bitmap, vec2i point, BitmapSampler sampler)
+{
+    point.x = bitmapApplyAddressMode(point.x, bitmap->size.w, sampler.addrModeX);
+    point.y = bitmapApplyAddressMode(point.y, bitmap->size.h, sampler.addrModeY);
+
+    if (point.x == -1 || point.y == -1)
+    {
+        return null;
+    }
+
     u64 index = point.y * bitmap->size.w * bitmap->bytesPerPixel + point.x * bitmap->bytesPerPixel;
 
     return bitmap->pixels + index;
@@ -94,153 +81,156 @@ u8 *bitmapGetPtrToPixel(Bitmap *bitmap, vec2i point)
 // of cource the format could also not be the same which can be useful at time
 // say if dest has format bgr and src has rgb and for whatever reason u want red to be blue and bice versa
 // also assumes that the ranges are set up correctly and dont go over
+// this function doesnt take samplers, as it memcpys rows over,
+// it would defeat the purpose to calculated the sampled pixel coords, as they can wrap around etc, so ud have to check for signs
 void bitmapFastBlitToBitmap(Bitmap *src, Bitmap *dest, range2i srcRangeToCopy, range2i destRangeToPasteInto)
 {
-    if (dest->size.w < src->size.w || 
-        dest->size.h < src->size.h)
+    BitmapSampler sampler = {.addrModeX = BITMAP_ADDRESS_MODE_DISCARD, .addrModeY = BITMAP_ADDRESS_MODE_DISCARD};
+    u8 *srcStart = bitmapGetPtrToPixel(src, srcRangeToCopy.min, sampler);
+
+    vec2i srcRangeStart = 
+    {
+        .x = bitmapApplyAddressMode(srcRangeToCopy.min.x, src->size.w, sampler.addrModeX),
+    };
+
+    vec2i srcRangeEnd = 
+    {
+        .x = bitmapApplyAddressMode(srcRangeToCopy.max.x, src->size.x, sampler.addrModeX),
+    };
+
+    vec2i destRangeStart = 
+    {
+        .x = bitmapApplyAddressMode(destRangeToPasteInto.min.x, dest->size.w, sampler.addrModeX),
+    };
+
+    vec2i destRangeEnd = 
+    {
+        .x = bitmapApplyAddressMode(destRangeToPasteInto.max.x, dest->size.x, sampler.addrModeX),
+    };
+
+    if ((destRangeEnd.x == -1 && destRangeStart.x == -1) ||
+        (srcRangeEnd.x == -1 && srcRangeStart.x == -1))
     {
         return;
     }
-
-    u8 *srcStart = bitmapGetPtrToPixel(src, srcRangeToCopy.min);
-    u8 *srcEnd = bitmapGetPtrToPixel(src, srcRangeToCopy.max);
-
-    for (u64 srcYOffset = 0; srcYOffset < Range2iDim(srcRangeToCopy).h; srcYOffset++)
-    {
-        u64 srcX = srcRangeToCopy.min.x; 
-        u64 srcY = srcRangeToCopy.min.y + srcYOffset;
-
-        u64 destX = destRangeToPasteInto.min.x;
-        u64 destY = destRangeToPasteInto.min.y + srcYOffset;
-
-        u8 *srcRow = bitmapGetPtrToPixel(src, Vec2i(srcX, srcY));
-        u8 *destRow = bitmapGetPtrToPixel(dest, Vec2i(destX, destY));
-
-        BASE_MEMCPY(destRow, srcRow, src->bytesPerPixel * Range2iDim(srcRangeToCopy).w);
-    }
-}
-
-void bitmapBlitToBitmap(Bitmap *src, Bitmap *dest, range2i srcRangeToCopy, range2i destRangeToPasteInto)
-{
-    if (dest->size.w < src->size.w || 
-        dest->size.h < src->size.h)
-    {
-        return;
-    }
-
-    if (destRangeToPasteInto.min.x >= dest->size.w ||
-        destRangeToPasteInto.min.y >= dest->size.h)
-    {
-        return;
-    }
-
-    if (srcRangeToCopy.min.x >= src->size.w ||
-        srcRangeToCopy.min.y >= src->size.h)
-    {
-        return;
-    }
-
-    vec2i clampedSrcRangeEnd = Vec2i(baseClamp(srcRangeToCopy.max.x, srcRangeToCopy.min.x, src->size.w), 
-                                      baseClamp(srcRangeToCopy.max.y, srcRangeToCopy.min.y, src->size.h));
-
-    vec2i clampedDestRangeEnd = Vec2i(baseClamp(destRangeToPasteInto.max.x, destRangeToPasteInto.min.x, dest->size.w), 
-                                      baseClamp(destRangeToPasteInto.max.y, destRangeToPasteInto.min.y, dest->size.h));
     
-    for (u64 srcYOffset = 0; srcYOffset < clampedSrcRangeEnd.y - srcRangeToCopy.min.y; srcYOffset++)
+    srcRangeStart.x = srcRangeStart.x == -1 ? src->size.w : baseClamp(srcRangeStart.x, 0, src->size.w);
+    srcRangeEnd.x = srcRangeEnd.x == -1 ? src->size.w : baseClamp(srcRangeEnd.x, 0, src->size.w);
+
+    destRangeStart.x = destRangeStart.x == -1 ? dest->size.w : baseClamp(destRangeStart.x, 0, dest->size.w);
+    destRangeEnd.x = destRangeEnd.x == -1 ? dest->size.w : baseClamp(destRangeEnd.x, 0, dest->size.w);
+
+    for (i64 srcYOffset = 0; srcYOffset < Range2iDim(srcRangeToCopy).h && srcStart; srcYOffset++)
     {
-        for (u64 srcXOffset = 0; srcXOffset < clampedSrcRangeEnd.x - srcRangeToCopy.min.x; srcXOffset++)
+        srcRangeStart.y = bitmapApplyAddressMode(srcRangeToCopy.min.y + srcYOffset, src->size.h, sampler.addrModeY);
+        destRangeStart.y = bitmapApplyAddressMode(destRangeToPasteInto.min.y + srcYOffset, dest->size.h, sampler.addrModeY);
+
+        srcRangeEnd.y = bitmapApplyAddressMode(srcRangeToCopy.max.y + srcYOffset, src->size.h, sampler.addrModeY);
+        destRangeEnd.y = bitmapApplyAddressMode(destRangeToPasteInto.max.y + srcYOffset, dest->size.h, sampler.addrModeY);
+
+        if ((destRangeEnd.y == -1 && destRangeStart.y == -1) ||
+            (srcRangeEnd.y == -1 && srcRangeStart.y == -1))
         {
-            u64 srcX = srcRangeToCopy.min.x + srcXOffset;
-            u64 srcY = srcRangeToCopy.min.y + srcYOffset;
+            break;
+        }
+        
+        srcRangeStart.y = srcRangeStart.y == -1 ? src->size.h : baseClamp(srcRangeStart.y, 0, src->size.h);
+        srcRangeEnd.y = srcRangeEnd.y == -1 ? src->size.h : baseClamp(srcRangeEnd.y, 0, src->size.h);
 
-            u64 destX = destRangeToPasteInto.min.x + srcXOffset;
-            u64 destY = destRangeToPasteInto.min.y + srcYOffset;
+        destRangeStart.y = destRangeStart.y == -1 ? dest->size.h : baseClamp(destRangeStart.y, 0, dest->size.h);
+        destRangeEnd.y = destRangeEnd.y == -1 ? dest->size.h :  baseClamp(destRangeEnd.y, 0, dest->size.h);
 
-            vec4u8 srcColor = bitmapGetPixelColor4u8(src, Vec2i(srcX, srcY));
+        u8 *srcRow = bitmapGetPtrToPixel(src, Vec2i(srcRangeStart.x, srcRangeStart.y), sampler);
+        u8 *destRow = bitmapGetPtrToPixel(dest, Vec2i(destRangeStart.x, destRangeStart.y), sampler);
 
-            bitmapDrawPixel(dest, Vec2i(destX, destY), srcColor);
+        u64 widthToCopy = min(Range2iDim(Range2iFromVec2i(srcRangeStart, srcRangeEnd)).w, Range2iDim(Range2iFromVec2i(destRangeStart, destRangeEnd)).w);
+
+        if (srcRow && destRow)
+        {
+            BASE_MEMCPY(destRow, srcRow, src->bytesPerPixel * widthToCopy);
         }
     }
 }
-// Bitmap bitmapFromPath(Arena *arena, str8 file)
-// {
-//     Bitmap bm = {0};
-//     ArenaTemp temp = baseTempBegin(&arena, 1);
-//     {
-//         BitmapFileKind kind = bitmapFileKindFromPath(file);
-//         switch(kind)
-//         {
-//             case BITMAP_FILE_KIND_DDS: return bitmapFromDDSPath(arena, file);
-//             case BITMAP_FILE_KIND_PNG: return bitmapFromPNGPath(arena, file);
-//             case BITMAP_FILE_KIND_QOI: return bitmapFromQOIPath(arena, file);
-//             case BITMAP_FILE_KIND_BMP: return bitmapFromDDSPath(arena, file);
-//             case BITMAP_FILE_KIND_TGA: return bitmapFromDDSPath(arena, file);
 
-//             case BITMAP_FILE_KIND_UNKNOWN:
-//             case BITMAP_FILE_KIND_COUNT:
-//             default:
-//             {
-//                 logThreadErrorFmt("Unregognised image file format '%S'", file);
-//             }break;
-//         }
-//     }
-//     baseTempEnd(temp);
+void bitmapBlitToBitmap(Bitmap *src, Bitmap *dest, range2i srcRangeToCopy, range2i destRangeToPasteInto, BitmapSampler srcSampler, BitmapSampler destSampler)
+{
+    vec2i deltas = Vec2i(Range2iDim(srcRangeToCopy).w, Range2iDim(srcRangeToCopy).h);
 
-//     return bm;
-// }
+    for (i64 srcYOffset = 0; srcYOffset < deltas.h; srcYOffset++)
+    {
+        for (i64 srcXOffset = 0; srcXOffset < deltas.w; srcXOffset++)
+        {
+            i64 srcX = srcRangeToCopy.min.x + srcXOffset;
+            i64 srcY = srcRangeToCopy.min.y + srcYOffset;
 
-vec4u8 bitmapGetPixelColor4u8(Bitmap *bitmap, vec2i point)
+            i64 destX = destRangeToPasteInto.min.x + srcXOffset;
+            i64 destY = destRangeToPasteInto.min.y + srcYOffset;
+
+            vec4u8 srcColor = bitmapGetPixelColor4u8(src, Vec2i(srcX, srcY), srcSampler);
+
+            bitmapDrawPixel(dest, Vec2i(destX, destY), srcColor, destSampler);
+        }
+    }
+}
+
+vec4u8 bitmapGetPixelColor4u8(Bitmap *bitmap, vec2i point, BitmapSampler sampler)
 {
     vec4u8 color = {0};
-    u64 index = (((u64)point.y % bitmap->size.height) * bitmap->size.width * bitmap->bytesPerPixel) + 
-                ((u64)point.x % bitmap->size.width) * bitmap->bytesPerPixel;
 
-    switch (bitmap->fmt)
+    u8 *start = bitmapGetPtrToPixel(bitmap, point, sampler);
+
+    if (start)
     {
-        case BITMAP_FORMAT_R8G8B8:
+        switch (bitmap->fmt)
         {
-            color.r = bitmap->pixels[index + 0];
-            color.g = bitmap->pixels[index + 1];
-            color.b = bitmap->pixels[index + 2];
-        }break;
+            case BITMAP_FORMAT_R8G8B8:
+            {
+                color.r = *(start + 0);
+                color.g = *(start + 1);
+                color.b = *(start + 2);
+                color.a = 255;
+            }break;
 
-        case BITMAP_FORMAT_R8G8B8A8:
-        {
-            color.r = bitmap->pixels[index + 0];
-            color.g = bitmap->pixels[index + 1];
-            color.b = bitmap->pixels[index + 2];
-            color.a = bitmap->pixels[index + 3];
-        }break;
+            case BITMAP_FORMAT_R8G8B8A8:
+            {
+                color.r = *(start + 0);
+                color.g = *(start + 1);
+                color.b = *(start + 2);
+                color.a = *(start + 3);
+            }break;
+        }
     }
-
+    
     return color;
 }
 
-void bitmapDrawPixel(Bitmap *bitmap, vec2i point, vec4u8 color)
+void bitmapDrawPixel(Bitmap *bitmap, vec2i point, vec4u8 color, BitmapSampler sampler)
 {
-    u64 index = (((u64)point.y % bitmap->size.height) * bitmap->size.width * bitmap->bytesPerPixel) + 
-                ((u64)point.x % bitmap->size.width) * bitmap->bytesPerPixel;
+    u8 *start = bitmapGetPtrToPixel(bitmap, point, sampler);
 
-    switch (bitmap->fmt)
+    if (start)
     {
-        case BITMAP_FORMAT_R8G8B8:
+        switch (bitmap->fmt)
         {
-            bitmap->pixels[index + 0] = color.r;
-            bitmap->pixels[index + 1] = color.g;
-            bitmap->pixels[index + 2] = color.b;
-        }break;
+            case BITMAP_FORMAT_R8G8B8:
+            {
+                *(start + 0) = color.r;
+                *(start + 1) = color.g;
+                *(start + 2) = color.b;
+            }break;
 
-        case BITMAP_FORMAT_R8G8B8A8:
-        {
-            bitmap->pixels[index + 0] = color.r;
-            bitmap->pixels[index + 1] = color.g;
-            bitmap->pixels[index + 2] = color.b;
-            bitmap->pixels[index + 3] = color.a;
-        }break;
+            case BITMAP_FORMAT_R8G8B8A8:
+            {
+                *(start + 0) = color.r;
+                *(start + 1) = color.g;
+                *(start + 2) = color.b;
+                *(start + 3) = color.a;
+            }break;
+        }
     }
 }
 
-void bitmapDrawLine(Bitmap *bitmap, vec2i start, vec2i end, vec4u8 color)
+void bitmapDrawLine(Bitmap *bitmap, vec2i start, vec2i end, vec4u8 color, BitmapSampler sampler)
 {
     i64 dx = end.x - start.x;
     i64 dy = end.y - start.y;
@@ -253,7 +243,7 @@ void bitmapDrawLine(Bitmap *bitmap, vec2i start, vec2i end, vec4u8 color)
     f64 y = (f64)start.y;
     for (i64 i = 0; i <= step; i++)
     {
-        bitmapDrawPixel(bitmap, Vec2i(round(x), round(y)), color);
+        bitmapDrawPixel(bitmap, Vec2i(round(x), round(y)), color, sampler);
 
         x += stepX;
         y += stepY;

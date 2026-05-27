@@ -334,7 +334,6 @@ Bitmap bitmapFromDDSRaw(Arena *arena, u8 *rawBytes, u64 byteLen)
         }
     }
 
-    bm.srcFile = BITMAP_FILE_KIND_DDS;
     return bm;
 }
 Bitmap bitmapFromDDSPath(Arena *arena, str8 file)

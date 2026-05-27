@@ -13,16 +13,13 @@
 #include "bitmap/bitmapPNG.h"
 #include "bitmap/bitmapQOI.h"
 
-BitmapFileKind bitmapFileKindFromPath(str8 path);
-
 Bitmap bitmapPush(Arena *arena, vec2i size, BitmapFormatKind fmt);
-u8 *bitmapGetPtrToPixel(Bitmap *bitmap, vec2i point);
+u8 *bitmapGetPtrToPixel(Bitmap *bitmap, vec2i point, BitmapSampler sampler);
 void bitmapFastBlitToBitmap(Bitmap *src, Bitmap *dest, range2i srcRangeToCopy, range2i destRangeToPasteInto);
-void bitmapBlitToBitmap(Bitmap *src, Bitmap *dest, range2i srcRangeToCopy, range2i destRangeToPasteInto);
+void bitmapBlitToBitmap(Bitmap *src, Bitmap *dest, range2i srcRangeToCopy, range2i destRangeToPasteInto, BitmapSampler srcSampler, BitmapSampler destSampler);
 
-void bitmapBlitToBitmap(Bitmap *src, Bitmap *dest, range2i srcRangeToCopy, range2i destRangeToPasteInto);
-vec4u8 bitmapGetPixelColor4u8(Bitmap *bitmap, vec2i point);
-void bitmapDrawPixel(Bitmap *bitmap, vec2i point, vec4u8 color);
-void bitmapDrawLine(Bitmap *bitmap, vec2i start, vec2i end, vec4u8 color);
+vec4u8 bitmapGetPixelColor4u8(Bitmap *bitmap, vec2i point, BitmapSampler sampler);
+void bitmapDrawPixel(Bitmap *bitmap, vec2i point, vec4u8 color, BitmapSampler sampler);
+void bitmapDrawLine(Bitmap *bitmap, vec2i start, vec2i end, vec4u8 color, BitmapSampler sampler);
 
 #endif
