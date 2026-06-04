@@ -251,10 +251,6 @@ Font fontTTFParseFromFile(Arena *arena, str8 file);
 
 f64 fontGetEmToPixelScale(Font font, f64 pixelSize);
 
-vec2i fontNormaliseCoordsFromTerminal(vec2i coords, range2i shapeBox, i32 termWidth, i32 termHeight);
-void fontRasteriseEdgesTerminal(FontGlyphShapeEdgeArray edges, range2i shapeBox, i32 termWidth, i32 termHeight);
-void fontRasteriseGlyphShapeTerminal(FontGlyphShape shape, i32 termWidth, i32 termHeight, bool filled);
-
 vec2i fontGetGlyphShapeBitmapDimensions(Font font, FontGlyphShape shape, f64 pixelSize);
 
 FontAtlas fontAtlasFromCodepointRanges(Arena *arena, Font font, RangeI64Array ranges, f64 pixelSize, bool allowNullGlyph);
@@ -263,9 +259,9 @@ bool fontAtlasTryGetGlyphFromCodepoint(FontAtlas atlas, i32 codepoint, FontAtlas
 // you need bitmap bitmapWidth as a param
 // as you may pass bitmap "slices" into a bigger bitmap, but the stride for going to the next row should be based on the 
 // the stride of the whole bigger bitmap
-//void fontRasteriseGlyphShapeToBitmap(Font font, FontGlyphShape shape, Bitmap *bitmap, u64 bitmapWidth, f64 pixelSize);
+void fontRasteriseGlyphShapeToBitmap(Font font, FontGlyphShape shape, Bitmap *bitmap, u64 bitmapWidth, f64 pixelSize);
 void fontRasteriseCodepointToBitmap(Font font, u32 codepoint, Bitmap *bitmap, u64 bitmapWidth, f64 pixelSize, bool allowNullGlyph);
-//void fontRasteriseEdgesToBitmap(Font font, FontGlyphShapeEdgeArray edges, range2i shapeBounds, Bitmap *bitmap, u64 bitmapWidth, f64 pixelSize);
+void fontRasteriseEdgesToBitmap(Font font, FontGlyphShapeEdgeArray edges, range2i shapeBounds, Bitmap *bitmap, u64 bitmapWidth, f64 pixelSize);
 
 u64 fontGetGlyphIndexFromCodepoint(Font font, u32 codepoint);
 FontGlyph fontGetGlyphFromCodepoint(Font font, u32 codepoint);

@@ -911,101 +911,30 @@ f64 fontGetEmToPixelScale(Font font, f64 pixelSize)
     return pixelSize / (f64)font.metrics.unitsPerEm;
 }
 
-vec2i fontNormaliseCoordsFromTerminal(vec2i coords, range2i shapeBox, i32 termWidth, i32 termHeight)
+vec2i fontGetGlyphShapeBitmapDimensions(Font font, FontGlyphShape shape, f64 pixelSize)
 {
-    i32 normX = (i64)round(((f32)(coords.x - shapeBox.min.x) / (f32)(shapeBox.max.x - shapeBox.min.x)) * (f32)(termWidth));
-    i32 normY = (i64)round(((f32)(coords.y - shapeBox.min.y) / (f32)(shapeBox.max.y - shapeBox.min.y)) * (f32)(termHeight));
-    normY = termHeight - normY;
+    f64 scale = fontGetEmToPixelScale(font, pixelSize);
 
-    return Vec2i(normX, normY);
+    i64 w = (i64)(ceil((f64)(shape.bounds.max.x - shape.bounds.min.x) * scale));
+    i64 h = (i64)(ceil((f64)(shape.bounds.max.y - shape.bounds.min.y) * scale));
+
+    return Vec2i(w, h);
 }
+
 vec2i fontNormaliseCoordsFromBounds(Font font, vec2i coords, range2i shapeBox, f64 pixelSize, i64 bitmapHeight)
 {
     f64 scale = fontGetEmToPixelScale(font, pixelSize);
 
+    i64 boundsHeight = (i64)round(scale * (f64)(shapeBox.max.y - shapeBox.min.y));
+
     i64 normX = (i64)round((scale * (f64)(coords.x - shapeBox.min.x)));
     i64 normY = (i64)round(scale * (f64)(coords.y - shapeBox.min.y));
-    normY = bitmapHeight - 1 - normY;
+
+    normY = (i64)ceil(lerpF64((f64)bitmapHeight, 0, ((f64)(normY) / (f64)(boundsHeight))));
 
     return Vec2i(normX, normY);
 }
 
-void fontRasteriseEdgesTerminal(FontGlyphShapeEdgeArray edges, range2i shapeBox, i32 termWidth, i32 termHeight)
-{
-    ArenaTemp temp = baseTempBegin(null, 0);
-
-    // naive allocation,. active edges will be never greater then total number of edges
-    FontGlyphShapeEdgeArray activeEdges = {0};
-    activeEdges.data = arenaPushArray(temp.arena, FontGlyphShapeEdge, edges.len);
-
-    for (i64 y = 0; y < termHeight; y++)
-    {
-        activeEdges.len = 0;
-        for (u64 e = 0; e < edges.len; e++)
-        {
-            vec2i edgeNormStart = fontNormaliseCoordsFromTerminal(edges.data[e].start, shapeBox, termWidth, termHeight);
-            vec2i edgeNormEnd = fontNormaliseCoordsFromTerminal(edges.data[e].end, shapeBox, termWidth, termHeight);
-
-            if (y >= edgeNormStart.y && y < edgeNormEnd.y || y >= edgeNormEnd.y && y < edgeNormStart.y)
-            {
-                activeEdges.data[activeEdges.len++] = edges.data[e];
-            }
-        }
-
-        for(u64 e = 0; e < activeEdges.len; e++)
-        {
-            vec2i edgeNormStart = fontNormaliseCoordsFromTerminal(activeEdges.data[e].start, shapeBox, termWidth, termHeight);
-            vec2i edgeNormEnd = fontNormaliseCoordsFromTerminal(activeEdges.data[e].end, shapeBox, termWidth, termHeight);
-
-            i64 s = edgeNormEnd.y - edgeNormStart.y;
-            activeEdges.data[e].winding = (s < 0) ? -1 : ((s > 0) ? 1 : 0);
-            activeEdges.data[e].intersection.y = y;
-
-            f64 dx = (f64)(edgeNormEnd.x - edgeNormStart.x);
-            f64 dy = (f64)(edgeNormEnd.y - edgeNormStart.y);
-
-            if ((i64)round(dy) != 0)
-            {
-                f64 m = dx / dy;
-
-                activeEdges.data[e].intersection.x = (i64)round((f64)edgeNormStart.x + (f64)(y - edgeNormStart.y) * m);
-            }
-            else
-            {
-                activeEdges.data[e].intersection.x = -1;
-            }
-        }
-
-        qsort(activeEdges.data, activeEdges.len, sizeof(FontGlyphShapeEdge), fontGlyphShapeEdgeCompareIntersectionX);
-
-        i32 winding = 0;
-        i32 prevX = 0;
-        for (u64 a = 0; a < activeEdges.len; a++)
-        {
-            if (activeEdges.data[a].intersection.x == -1 )
-            {
-                continue;
-            }
-
-            if (activeEdges.data[a].intersection.x == prevX)
-            {
-                winding += activeEdges.data[a].winding;
-                continue;
-            }
-
-            if (winding != 0)
-            {
-                termDrawLine(Vec2i(activeEdges.data[a].intersection.x, y), Vec2i(prevX, y), '#');
-            }
-
-            prevX = activeEdges.data[a].intersection.x;
-            winding += activeEdges.data[a].winding;
-        }
-
-    }
-
-    baseTempEnd(temp);
-}
 void fontRasteriseEdgesToBitmap(Font font, FontGlyphShapeEdgeArray edges, range2i shapeBounds, Bitmap *bitmap, u64 bitmapWidth, f64 pixelSize)
 {
     ArenaTemp temp = baseTempBegin(null, 0);
@@ -1041,7 +970,7 @@ void fontRasteriseEdgesToBitmap(Font font, FontGlyphShapeEdgeArray edges, range2
             f64 dx = (f64)(edgeNormEnd.x - edgeNormStart.x);
             f64 dy = (f64)(edgeNormEnd.y - edgeNormStart.y);
 
-            if (!(fabs(dy) >= 0.0 && fabs(dy) <= 0.00001))
+            if (!(fabs(dy) >= 0 && fabs(dy) <= 0.00001))
             {
                 f64 m = dx / dy;
 
@@ -1049,7 +978,7 @@ void fontRasteriseEdgesToBitmap(Font font, FontGlyphShapeEdgeArray edges, range2
             }
             else
             {
-                activeEdges.data[e].intersection.x = -1;
+                bitmapDrawLine(bitmap, Vec2i(edgeNormStart.x, y), Vec2i(edgeNormEnd.x, y), Vec4u8(255, 255, 255, 255), BitmapSamplerDefault);
             }
         }
 
@@ -1087,62 +1016,6 @@ void fontRasteriseEdgesToBitmap(Font font, FontGlyphShapeEdgeArray edges, range2
 
     baseTempEnd(temp);
 }
-vec2i fontGetGlyphShapeBitmapDimensions(Font font, FontGlyphShape shape, f64 pixelSize)
-{
-    f64 scale = fontGetEmToPixelScale(font, pixelSize);
-
-    i64 w = (i64)(round((f64)(shape.bounds.max.x - shape.bounds.min.x) * scale));
-    i64 h = (i64)(round((f64)(shape.bounds.max.y - shape.bounds.min.y) * scale));
-
-    return Vec2i(w + 1, h + 1);
-}
-void fontRasteriseGlyphShapeTerminal(FontGlyphShape shape, i32 termWidth, i32 termHeight, bool filled)
-{
-    ArenaTemp temp = baseTempBegin(null, 0);
-
-    u64 totalEdgesRequired = 0;
-    FontGlyphShapeEdgeArray allEdges = {0};
-
-    for (u64 c = 0; c < shape.contours.len; c++)
-    {
-        FontGlyphShapeContour contour = shape.contours.data[c];
-
-        FontGlyphShapeEdgeArray edges = fontExpandContourPoints(temp.arena, contour);
-        for (u64 p = 0; p < edges.len; p++)
-        {
-            FontGlyphShapeEdge edge = edges.data[p];
-
-            vec2i start = fontNormaliseCoordsFromTerminal(edge.start, shape.bounds, termWidth, termHeight);
-            vec2i end = fontNormaliseCoordsFromTerminal(edge.end, shape.bounds, termWidth, termHeight);
-
-            if (!filled)
-            {
-                termDrawLine(start, end, '#');
-            }
-        }
-
-        totalEdgesRequired += edges.len;
-    }
-
-    if (filled)
-    {
-        allEdges.data = arenaPushArray(temp.arena, FontGlyphShapeEdge, totalEdgesRequired);
-
-        for (u64 c = 0; c < shape.contours.len; c++)
-        {
-            FontGlyphShapeContour contour = shape.contours.data[c];
-
-            FontGlyphShapeEdgeArray edges = fontExpandContourPoints(temp.arena, contour);
-
-            BASE_MEMCPY(allEdges.data + allEdges.len, edges.data, edges.len * sizeof(FontGlyphShapeEdge));
-            allEdges.len += edges.len;
-        }
-
-        fontRasteriseEdgesTerminal(allEdges, shape.bounds, termWidth, termHeight);
-    }
-
-    baseTempEnd(temp);
-}
 void fontRasteriseGlyphShapeToBitmap(Font font, FontGlyphShape shape, Bitmap *bitmap, u64 bitmapWidth, f64 pixelSize)
 {
     ArenaTemp temp = baseTempBegin(null, 0);
@@ -1162,12 +1035,12 @@ void fontRasteriseGlyphShapeToBitmap(Font font, FontGlyphShape shape, Bitmap *bi
             vec2i edgeNormStart = fontNormaliseCoordsFromBounds(font, edge.start, shape.bounds, pixelSize, bitmap->size.height);
             vec2i edgeNormEnd = fontNormaliseCoordsFromBounds(font, edge.end, shape.bounds, pixelSize, bitmap->size.height);
 
-            // the scanline rastrizer will skip horizontal lines do to how it works
+            // // the scanline rastrizer will skip horizontal lines do to how it works
             if (edgeNormStart.y == edgeNormEnd.y)
             {   
                 u64 tempWidth = bitmap->size.w;
                 bitmap->size.w = bitmapWidth;
-                bitmapDrawLine(bitmap, edgeNormStart, edgeNormEnd, Vec4u8(255, 255, 255, 255), BitmapSamplerDefault);
+                //bitmapDrawLine(bitmap, edgeNormStart, edgeNormEnd, Vec4u8(255, 255, 255, 255), BitmapSamplerDefault);
                 bitmap->size.w = tempWidth;
             }
         }
@@ -1409,14 +1282,14 @@ u64 fontAtlasEstimateNumberOfGlyphsThatFitInBitmap(Font font, vec2i bitmapSize, 
 
             vec2i d = fontGetGlyphShapeBitmapDimensions(font, glyph.shape, pixelSize);
 
-            if (currX + d.w >= bitmapSize.w)
+            if (currX + d.w > bitmapSize.w)
             {
                 currY += maxGlyphHeightInRow;
                 currX = 0;
                 maxGlyphHeightInRow = 0;
             }
 
-            if (currY + d.height >= bitmapSize.h)
+            if (currY + d.height > bitmapSize.h)
             {
                 break;
             }
@@ -1445,7 +1318,7 @@ void fontAtlasFillAtlasGlyphs(Font font, FontAtlas *atlas, RangeI64Array ranges,
         FontGlyphShape glyphShape = font.parsed.parsedGlyf.data[0];
         vec2i d = fontGetGlyphShapeBitmapDimensions(font, glyphShape, pixelSize);
 
-        if (currX + d.w >= atlas->bitmap.size.w)
+        if (currX + d.w > atlas->bitmap.size.w)
         {
             currY += maxGlyphHeightInRow;
             currX = 0;
@@ -1486,14 +1359,14 @@ void fontAtlasFillAtlasGlyphs(Font font, FontAtlas *atlas, RangeI64Array ranges,
             }
 
             vec2i d = fontGetGlyphShapeBitmapDimensions(font, glyph.shape, pixelSize);
-            if (currX + d.w >= atlas->bitmap.size.w)
+            if (currX + d.w > atlas->bitmap.size.w)
             {
                 currY += maxGlyphHeightInRow;
                 currX = 0;
                 maxGlyphHeightInRow = 0;
             }
 
-            if (currY + d.height >= atlas->bitmap.size.h)
+            if (currY + d.height > atlas->bitmap.size.h)
             {
                 break;
             }
@@ -1586,14 +1459,14 @@ FontAtlas fontAtlasFromCodepointRanges(Arena *arena, Font font, RangeI64Array ra
         Bitmap slice = atlas.bitmap;
         slice.size = d;
 
-        if (currX + d.w >= atlas.bitmap.size.w)
+        if (currX + d.w > atlas.bitmap.size.w)
         {
             currY += maxGlyphHeightInRow;
             currX = 0;
             maxGlyphHeightInRow = 0;
         }
 
-        if (currY + d.height >= atlas.bitmap.size.h)
+        if (currY + d.height > atlas.bitmap.size.h)
         {
             break;
         }
