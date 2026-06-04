@@ -1289,6 +1289,10 @@ vec2f lerpVec2f(vec2f a, vec2f b, f64 t)
 {
     return (vec2f){.x = lerpF32(a.x, b.x, t), .y = lerpF32(a.y, b.y, t)};
 }
+vec2f64 lerpVec2f64(vec2f64 a, vec2f64 b, f64 t)
+{
+    return (vec2f64){.x = lerpF64(a.x, b.x, t), .y = lerpF64(a.y, b.y, t)};
+}
 
 vec2i quadraticBezierVec2i(vec2i a, vec2i controlpoint, vec2i b, f64 t)
 {
@@ -1303,4 +1307,11 @@ vec2f quadraticBezierVec2f(vec2f a, vec2f controlpoint, vec2f b, f64 t)
     vec2f p1 = lerpVec2f(controlpoint, b, t);
 
     return lerpVec2f(p0, p1, t);
+}
+vec2f64 quadraticBezierVec2f64(vec2f64 a, vec2f64 controlpoint, vec2f64 b, f64 t)
+{
+    vec2f64 p0 = lerpVec2f64(a, controlpoint, t);
+    vec2f64 p1 = lerpVec2f64(controlpoint, b, t);
+
+    return lerpVec2f64(p0, p1, t);
 }

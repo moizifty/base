@@ -242,7 +242,7 @@ BssAstFunc *bssParserParseFunc(BssInterp *interp)
                             ast->params = params;
 
                             BssSymTableSlotEntry *entry = BSS_SYMTABLE_SLOT_ENTRY_ZERO;
-                            bssScopePushEntry(interp->rootScope, iden.lexeme, &entry);
+                            bssScopePushEntry(interp->rootScope, iden.lexeme, &entry, false);
 
                             entry->value = bssAllocValueFn(interp->rootScope->scopeArena, ast);
                         }

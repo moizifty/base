@@ -70,11 +70,11 @@ BSS_BUILTIN_FUNCTION_DEF(Run)
                 value = bssAllocValueObj(scopeArena, bssAllocScope(scopeArena, null, false));
 
                 BssSymTableSlotEntry *outEntry = null;
-                bssScopePushEntry(value->obj, STR8_LIT("out"), &outEntry);
+                bssScopePushEntry(value->obj, STR8_LIT("out"), &outEntry, false);
                 outEntry->value = bssAllocValueStr8(scopeArena, Str8ListJoin(scopeArena, &outStrList, null));
 
                 BssSymTableSlotEntry *errEntry = null;
-                bssScopePushEntry(value->obj, STR8_LIT("err"), &errEntry);
+                bssScopePushEntry(value->obj, STR8_LIT("err"), &errEntry, false);
                 errEntry->value = bssAllocValueStr8(scopeArena, Str8ListJoin(scopeArena, &errStrList, null));
             }
             baseTempEnd(temp);

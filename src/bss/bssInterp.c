@@ -45,7 +45,7 @@ BssScope *bssInterpreterCreateFuncScopeAndPushArgs(BssInterp *interp, BssTokList
     BASE_LIST_FOREACH_INDEX(BssTokListNode, param, params, index)
     {
         BssSymTableSlotEntry *paramEntry = BSS_SYMTABLE_SLOT_ENTRY_ZERO;
-        bssScopePushEntry(interp->currScope, param->val.lexeme, &paramEntry);
+        bssScopePushEntry(interp->currScope, param->val.lexeme, &paramEntry, true);
 
         paramEntry->value = argValues.data[index];
     }
@@ -554,7 +554,7 @@ BssValue *bssInterpreterInterpExpr(BssInterp *interp, Arena *scopeArena, BssAstE
                     if (ne->isNamed)
                     {
                         BssSymTableSlotEntry *entry = BSS_SYMTABLE_SLOT_ENTRY_ZERO;
-                        bssScopePushEntry(scope, ne->lhs->iden.lexeme, &entry);
+                        bssScopePushEntry(scope, ne->lhs->iden.lexeme, &entry, false);
 
                         entry->value = bssInterpreterInterpExpr(interp, scopeArena, ne->rhs);
                         if (entry->value == BSS_VALUE_ZERO)
@@ -697,7 +697,7 @@ bool bssInterpreterInterpStmt(BssInterp *interp, Arena *scopeArena, BssAstStmt *
             {
                 str8 iden = stmt->assign.lhs->iden.lexeme;
                 BssSymTableSlotEntry *entry = BSS_SYMTABLE_SLOT_ENTRY_ZERO;
-                bssScopePushEntry(interp->currScope, iden, &entry);
+                bssScopePushEntry(interp->currScope, iden, &entry, false);
 
                 if (entry != BSS_SYMTABLE_SLOT_ENTRY_ZERO)
                 {
@@ -842,7 +842,7 @@ bool bssInterpreterInterpStmt(BssInterp *interp, Arena *scopeArena, BssAstStmt *
                         interp->currScope = blockScope;
                         
                         BssSymTableSlotEntry *idenEntry = BSS_SYMTABLE_SLOT_ENTRY_ZERO;
-                        bssScopePushEntry(blockScope, stmt->forStmt.iden.lexeme, &idenEntry);
+                        bssScopePushEntry(blockScope, stmt->forStmt.iden.lexeme, &idenEntry, false);
                         idenEntry->value = v;
 
                         if(bssInterpreterInterpBlock(interp, stmt->forStmt.block, false) == BSS_VALUE_ZERO)

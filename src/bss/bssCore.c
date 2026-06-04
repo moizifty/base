@@ -137,7 +137,7 @@ void bssBuiltinFunctionPushEntry(BssInterp *interp, str8 name, int numParams, Bs
     BssBuiltinFuncListPushNodeLast(&interp->builtins, builtin);
 
     BssSymTableSlotEntry *entry = BSS_SYMTABLE_SLOT_ENTRY_ZERO;
-    bssScopePushEntry(interp->rootScope, name, &entry);
+    bssScopePushEntry(interp->rootScope, name, &entry, false);
 
     entry->name = name;
     entry->value = arenaPushType(interp->arena, BssValue);
@@ -259,7 +259,7 @@ BssValue *bssAllocValueCopy(Arena *arena, BssValue *other)
         BASE_LIST_FOREACH(BssSymTableSlotEntry, entry, other->obj->symTable.entries)
         {
             BssSymTableSlotEntry *copyEntry = BSS_SYMTABLE_SLOT_ENTRY_ZERO;
-            bssScopePushEntry(value->obj, entry->name, &copyEntry);
+            bssScopePushEntry(value->obj, entry->name, &copyEntry, false);
             copyEntry->value = bssAllocValueCopy(arena, entry->value);
         }
     }

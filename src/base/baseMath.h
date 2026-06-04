@@ -31,6 +31,9 @@
 #define Vec2f(X, Y)    ((vec2f){.x = (f32)(X), .y = (f32)(Y)})
 #define Vec2fFromVec(V)   (Vec2f((V).x, (V).y))
 
+#define Vec2f64(X, Y)    ((vec2f64){.x = (f64)(X), .y = (f64)(Y)})
+#define Vec2f64FromVec(V)   (Vec2f64((V).x, (V).y))
+
 #define Vec2i(X, Y)    ((vec2i){.x = (i64)(X), .y = (i64)(Y)})
 #define Vec2iFromVec(V)   (Vec2i((V).x, (V).y))
 
@@ -112,6 +115,29 @@ typedef struct vec2f
         };
     };   
 }vec2f;
+
+typedef struct vec2f64
+{
+    union
+    {
+        f64 v[2];
+        struct
+        {
+            f64 x;
+            f64 y;
+        };
+        struct
+        {
+            f64 width;
+            f64 height;
+        };
+        struct
+        {
+            f64 w;
+            f64 h;
+        };
+    };   
+}vec2f64;
 
 typedef struct vec2i
 {
@@ -679,9 +705,11 @@ i64 lerpI64(i64 a, i64 b, f64 t);
 
 vec2i lerpVec2i(vec2i a, vec2i b, f64 t);
 vec2f lerpVec2f(vec2f a, vec2f b, f64 t);
+vec2f64 lerpVec2f64(vec2f64 a, vec2f64 b, f64 t);
 
 vec2i quadraticBezierVec2i(vec2i a, vec2i controlpoint, vec2i b, f64 t);
 vec2f quadraticBezierVec2f(vec2f a, vec2f controlpoint, vec2f b, f64 t);
+vec2f64 quadraticBezierVec2f64(vec2f64 a, vec2f64 controlpoint, vec2f64 b, f64 t);
 
 BASE_CREATE_LL_DECLS(RangeI64List, rangei)
 BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(RangeI64Array, rangei)

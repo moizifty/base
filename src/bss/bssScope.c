@@ -29,11 +29,11 @@ BssSymTableSlotEntry *bssScopeFindEntry(BssScope *scope, str8 name)
 
     return scope->parent ? bssScopeFindEntry(scope->parent, name) : BSS_SYMTABLE_SLOT_ENTRY_ZERO;
 }
-bool bssScopePushEntry(BssScope *scope, str8 name, BssSymTableSlotEntry **out)
+bool bssScopePushEntry(BssScope *scope, str8 name, BssSymTableSlotEntry **out, bool ignoreExisting)
 {
     BssSymTableSlotEntry *existing = bssScopeFindEntry(scope, name);
     bool exists = existing != BSS_SYMTABLE_SLOT_ENTRY_ZERO;
-    if (!exists)
+    if (!exists || ignoreExisting)
     {
         existing = arenaPushType(scope->scopeArena, BssSymTableSlotEntry);
         existing->name = name;

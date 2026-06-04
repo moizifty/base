@@ -43,6 +43,6 @@ global BssSymTableSlotEntry gBsSymTableSlotEntryEmpty;
 
 BssScope *bssAllocScope(Arena *scopesArena, BssScope *parent, bool isScopeInFunction);
 BssSymTableSlotEntry *bssScopeFindEntry(BssScope *scope, str8 name);
-bool bssScopePushEntry(BssScope *scope, str8 name, BssSymTableSlotEntry **out);
+bool bssScopePushEntry(BssScope *scope, str8 name, BssSymTableSlotEntry **out, bool ignoreExisting);
 
 #endif
