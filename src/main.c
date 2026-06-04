@@ -36,12 +36,11 @@ void ProgramMain(Str8List *args)
     //     Sleep(250);
     // }
 
-    FontAtlas atlas = fontAtlasFromCodepointRanges(arena, font, ARRAY_VIEW(RangeI64Array, rangei, {0x231A, 0x232A}), 32, true);
+    FontAtlas atlas = fontAtlasFromCodepointRanges(arena, font, ARRAY_VIEW(RangeI64Array, rangei, {32, 128}), 32, true);
     basePrintf("Finished\n");
 
-
-    Bitmap bm = bitmapPush(arena, atlas.bitmap.size, atlas.bitmap.fmt);
-    str8 testString = STR8("⌚⌨MOIZ");
+    Bitmap bm = bitmapPush(arena, atlas.bitmap.size, BITMAP_FORMAT_R8G8B8);
+    str8 testString = STR8("  A BCD");
 
     u64 x = 0;
     u64 y = 0;
@@ -73,14 +72,14 @@ void ProgramMain(Str8List *args)
                 .max = vec2iAdd(Vec2i(x, y), glyph.size),
             };
 
-            bitmapFastBlitToBitmap(&atlas.bitmap, &bm, srcRange, destRange);
+            bitmapBlitToBitmap(&atlas.bitmap, &bm, srcRange, destRange, BitmapSamplerDefault, BitmapSamplerDefault);
 
             x += glyph.size.w + glyph.bearingRight;
         }
         else
         {
             x = 0;
-            yOffset += atlas.metrics.descent + atlas.metrics.ascent + atlas.metrics.lineGap;
+            yOffset += (atlas.metrics.ascent - atlas.metrics.descent) + atlas.metrics.lineGap;
         }
         
     }

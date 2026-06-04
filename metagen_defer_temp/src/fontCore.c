@@ -1041,7 +1041,7 @@ void fontRasteriseEdgesToBitmap(Font font, FontGlyphShapeEdgeArray edges, range2
             f64 dx = (f64)(edgeNormEnd.x - edgeNormStart.x);
             f64 dy = (f64)(edgeNormEnd.y - edgeNormStart.y);
 
-            if ((i64)round(dy) != 0)
+            if (!(fabs(dy) >= 0.0 && fabs(dy) <= 0.00001))
             {
                 f64 m = dx / dy;
 
@@ -1074,7 +1074,7 @@ void fontRasteriseEdgesToBitmap(Font font, FontGlyphShapeEdgeArray edges, range2
             {
                 u64 tempWidth = bitmap->size.w;
                 bitmap->size.w = bitmapWidth;
-                bitmapDrawLine(bitmap, Vec2i(activeEdges.data[a].intersection.x, y), Vec2i(prevX, y), Vec4u8(255, 255, 255, 255));
+                bitmapDrawLine(bitmap, Vec2i(activeEdges.data[a].intersection.x, y), Vec2i(prevX, y), Vec4u8(255, 255, 255, 255), BitmapSamplerDefault);
 
                 bitmap->size.w = tempWidth;
             }
@@ -1167,7 +1167,7 @@ void fontRasteriseGlyphShapeToBitmap(Font font, FontGlyphShape shape, Bitmap *bi
             {   
                 u64 tempWidth = bitmap->size.w;
                 bitmap->size.w = bitmapWidth;
-                bitmapDrawLine(bitmap, edgeNormStart, edgeNormEnd, Vec4u8(255, 255, 255, 255));
+                bitmapDrawLine(bitmap, edgeNormStart, edgeNormEnd, Vec4u8(255, 255, 255, 255), BitmapSamplerDefault);
                 bitmap->size.w = tempWidth;
             }
         }
@@ -1506,7 +1506,7 @@ void fontAtlasFillAtlasGlyphs(Font font, FontAtlas *atlas, RangeI64Array ranges,
                 .advanceWidth = (u64)round(scale * (f64)glyph.shape.advanceWidth),
                 .bearingLeft = (i64)round(scale * (f64)glyph.shape.leftSideBearing),
                 .bearingRight = (i64)round(scale* (f64)(glyph.shape.advanceWidth - glyph.shape.bounds.max.x)),
-                .bearingTop = (i64)((i64)atlas->metrics.ascent - (i64)round(scale * ((f64)glyph.shape.bounds.max.y))),
+                .bearingTop = (i64)((i64)atlas->metrics.ascent - (i64)floor(scale * ((f64)glyph.shape.bounds.max.y))),
             };
 
             if (glyph.glyphIndex == 0)
