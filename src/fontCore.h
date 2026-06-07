@@ -21,7 +21,7 @@ typedef i16 FontF2Dot14;
 
 typedef struct FontGlyphShapePoint
 {
-    vec2i point;
+    vec2f64 point;
     bool isControlPoint;
 }FontGlyphShapePoint;
 
@@ -29,11 +29,12 @@ BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(FontGlyphShapePointArray, FontGlyphShapePoint)
 
 typedef struct FontGlyphShapeEdge
 {
-    vec2i start;
-    vec2i end;
+    vec2f64 start;
+    vec2f64 end;
 
     i8 winding;
-    vec2i intersection;
+    vec2f64 intersection;
+    bool ignore;
 }FontGlyphShapeEdge;
 
 BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(FontGlyphShapeEdgeArray, FontGlyphShapeEdge)

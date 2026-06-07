@@ -356,15 +356,15 @@ void fontTTFParseGlyphShape(Arena *arena, FontTTFParsedFont *parsedFont, u32 gly
             }
         }
 
-        vec2i accumPoint = Vec2i(0, 0);
-        u32 accumX = 0;
+        vec2f64 accumPoint = Vec2f64(0, 0);
+        f64 accumX = 0;
         for (u32 iX = 0; iX < numPoints; iX++)
         {
             shape.points.data[iX].isControlPoint = !(flags[iX] & 0x01);
 
             if (flags[iX] & 0x02)
             {
-                shape.points.data[iX].point.x = (i64)glyphData.data[0];
+                shape.points.data[iX].point.x = (f64)glyphData.data[0];
                 glyphData = U8ArraySkip(glyphData, sizeof(u8));
 
                 if (!(flags[iX] & 0x10))
@@ -389,12 +389,12 @@ void fontTTFParseGlyphShape(Arena *arena, FontTTFParsedFont *parsedFont, u32 gly
             }
         }
 
-        accumPoint = Vec2i(0, 0);
+        accumPoint = Vec2f64(0, 0);
         for (u32 iY = 0; iY < numPoints; iY++)
         {
             if (flags[iY] & 0x04)
             {
-                shape.points.data[iY].point.y = (i64)glyphData.data[0];
+                shape.points.data[iY].point.y = (f64)glyphData.data[0];
                 glyphData = U8ArraySkip(glyphData, sizeof(u8));
 
                 if (!(flags[iY] & 0x20))
@@ -553,11 +553,11 @@ void fontTTFParseGlyphShape(Arena *arena, FontTTFParsedFont *parsedFont, u32 gly
 
             for (u64 i = 0; i < componentShape.points.len; i++)
             {
-                i64 newX = 0;
-                i64 newY = 0;
+                f64 newX = 0;
+                f64 newY = 0;
 
-                newX = componentShape.points.data[i].point.x * (i64)scaleX + (i64)sheerY * componentShape.points.data[i].point.y + arg1;
-                newY = componentShape.points.data[i].point.x * (i64)sheerX + (i64)scaleY * componentShape.points.data[i].point.y + arg2;
+                newX = componentShape.points.data[i].point.x * scaleX + sheerY * componentShape.points.data[i].point.y + arg1;
+                newY = componentShape.points.data[i].point.x * sheerX + scaleY * componentShape.points.data[i].point.y + arg2;
                 shape.points.data[shape.points.len].point.x = newX;
                 shape.points.data[shape.points.len].point.y = newY;
 
@@ -825,8 +825,8 @@ FontGlyphShapeEdgeArray fontExpandContourPoints(Arena *arena, FontGlyphShapeCont
         {
             FontGlyphShapePoint newPoint = {0};
 
-            newPoint.point.x = (i64)(((f64)np.point.x + (f64)cp.point.x) / 2.0);
-            newPoint.point.y = (i64)(((f64)np.point.y + (f64)cp.point.y) / 2.0);
+            newPoint.point.x = (((f64)np.point.x + (f64)cp.point.x) / 2.0);
+            newPoint.point.y = (((f64)np.point.y + (f64)cp.point.y) / 2.0);
 
             expandedMidpoints.data[expandedMidpoints.len++] = newPoint;
         }
@@ -865,7 +865,7 @@ FontGlyphShapeEdgeArray fontExpandContourPoints(Arena *arena, FontGlyphShapeCont
             f64 step = 1.0 / bezierPoints;
             for (f64 i = 0; i <= 1.0; i += step)
             {
-                vec2i point = quadraticBezierVec2i(cp.point, np.point, nnp.point, i);
+                vec2f64 point = quadraticBezierVec2f64(cp.point, np.point, nnp.point, i);
                 expandedPoints.data[expandedPoints.len].isControlPoint = false;
                 expandedPoints.data[expandedPoints.len].point = point;
 
@@ -904,8 +904,12 @@ i32 fontGlyphShapeEdgeCompareIntersectionX(const void *p1, const void *p2)
     FontGlyphShapeEdge e1 = *(FontGlyphShapeEdge *)p1;
     FontGlyphShapeEdge e2 = *(FontGlyphShapeEdge *)p2;
 
-    return e1.intersection.x - e2.intersection.x;
+    if (e1.intersection.x < e2.intersection.x) return -1;
+    if (e1.intersection.x > e2.intersection.x) return 1;
+
+    return 0;
 }
+
 f64 fontGetEmToPixelScale(Font font, f64 pixelSize)
 {
     return pixelSize / (f64)font.metrics.unitsPerEm;
@@ -963,7 +967,7 @@ vec2i fontGetGlyphShapeBitmapDimensions(Font font, FontGlyphShape shape, f64 pix
     return Vec2i(bitmapW, bitmapH);
 }
 
-vec2i fontNormaliseCoordsFromBounds(Font font, vec2i coords, range2i shapeBox, f64 pixelSize, i64 bitmapHeight)
+vec2f64 fontNormaliseCoordsFromBounds(Font font, vec2f64 coords, range2i shapeBox, f64 pixelSize)
 {
     f64 scale = fontGetEmToPixelScale(font, pixelSize);
 
@@ -972,10 +976,17 @@ vec2i fontNormaliseCoordsFromBounds(Font font, vec2i coords, range2i shapeBox, f
     f64 px = (f64)coords.x * scale - (f64)pixelBounds.min.x;
     f64 py = -(f64)coords.y * scale - (f64)pixelBounds.min.y;  // negate Y, subtract box top
 
-    i64 nx = (i64)round(px);
-    i64 ny = (i64)round(py);
+    return Vec2f64(px, py);
+}
 
-    if (nx >= Range2iDim(pixelBounds).w) nx = Range2iDim(pixelBounds).w - 1;
+vec2i fontFloatingCoordsToPixelPerfect(Font font, vec2f64 coords, range2i shapeBox, f64 pixelSize)
+{
+    range2i pixelBounds = fontEmBoundsToPixelBounds(font, shapeBox, pixelSize);
+
+    i64 nx = (i64)floor(coords.x);
+    i64 ny = (i64)floor(coords.y);
+
+    //if (nx >= Range2iDim(pixelBounds).w) nx = Range2iDim(pixelBounds).w - 1;
     if (ny >= Range2iDim(pixelBounds).h) ny = Range2iDim(pixelBounds).h - 1;
 
     return Vec2i(nx, ny);
@@ -989,15 +1000,15 @@ void fontRasteriseEdgesToBitmap(Font font, FontGlyphShapeEdgeArray edges, range2
     FontGlyphShapeEdgeArray activeEdges = {0};
     activeEdges.data = arenaPushArray(temp.arena, FontGlyphShapeEdge, edges.len);
 
-    for (i64 y = 0; y < bitmap->size.height; y++)
+    for (f64 y = 0; y < (f64)bitmap->size.height; y++)
     {
         activeEdges.len = 0;
         for (u64 e = 0; e < edges.len; e++)
         {
-            vec2i edgeNormStart = fontNormaliseCoordsFromBounds(font, edges.data[e].start, shapeBounds, pixelSize, bitmap->size.height);
-            vec2i edgeNormEnd = fontNormaliseCoordsFromBounds(font, edges.data[e].end, shapeBounds, pixelSize, bitmap->size.height);
+            vec2f64 edgeNormStart = fontNormaliseCoordsFromBounds(font, edges.data[e].start, shapeBounds, pixelSize);
+            vec2f64 edgeNormEnd = fontNormaliseCoordsFromBounds(font, edges.data[e].end, shapeBounds, pixelSize);
 
-            f64 dy = (f64)(edgeNormEnd.y - edgeNormStart.y);
+            f64 dy = edgeNormEnd.y - edgeNormStart.y;
 
             if (y >= edgeNormStart.y && y < edgeNormEnd.y ||
                 y >= edgeNormEnd.y && y < edgeNormStart.y)
@@ -1008,53 +1019,49 @@ void fontRasteriseEdgesToBitmap(Font font, FontGlyphShapeEdgeArray edges, range2
             {
                 u64 tempWidth = bitmap->size.w;
                 bitmap->size.w = bitmapWidth;
-                bitmapDrawLine(bitmap, Vec2i(edgeNormStart.x, y), Vec2i(edgeNormEnd.x, y), Vec4u8(255, 255, 255, 255), BitmapSamplerDefault);
+
+                vec2i coordsStart = fontFloatingCoordsToPixelPerfect(font, edgeNormStart, shapeBounds, pixelSize);
+                vec2i coordsEnd = fontFloatingCoordsToPixelPerfect(font, edgeNormStart, shapeBounds, pixelSize);
+                bitmapDrawLine(bitmap, coordsStart, coordsEnd, Vec4u8(255, 255, 255, 255), BitmapSamplerDefault);
                 bitmap->size.w = tempWidth;
             }
         }
 
         for(u64 e = 0; e < activeEdges.len; e++)
         {
-            vec2i edgeNormStart = fontNormaliseCoordsFromBounds(font, activeEdges.data[e].start, shapeBounds, pixelSize, bitmap->size.height);
-            vec2i edgeNormEnd = fontNormaliseCoordsFromBounds(font, activeEdges.data[e].end, shapeBounds, pixelSize, bitmap->size.height);
+            vec2f64 edgeNormStart = fontNormaliseCoordsFromBounds(font, activeEdges.data[e].start, shapeBounds, pixelSize);
+            vec2f64 edgeNormEnd = fontNormaliseCoordsFromBounds(font, activeEdges.data[e].end, shapeBounds, pixelSize);
 
-            i64 s = edgeNormEnd.y - edgeNormStart.y;
-            activeEdges.data[e].winding = (s < 0) ? -1 : ((s > 0) ? 1 : 0);
+            f64 s = edgeNormEnd.y - edgeNormStart.y;
+            activeEdges.data[e].winding = (s < 0.0) ? -1.0 : ((s > 0.0) ? 1.0 : 0.0);
             activeEdges.data[e].intersection.y = y;
 
-            f64 dx = (f64)(edgeNormEnd.x - edgeNormStart.x);
-            f64 dy = (f64)(edgeNormEnd.y - edgeNormStart.y);
+            f64 dx = (edgeNormEnd.x - edgeNormStart.x);
+            f64 dy = (edgeNormEnd.y - edgeNormStart.y);
 
             if (edgeNormEnd.y != edgeNormStart.y)
             {
                 f64 m = dx / dy;
 
-                activeEdges.data[e].intersection.x = (i64)floor((f64)edgeNormStart.x + (f64)(y - edgeNormStart.y) * m);
+                activeEdges.data[e].intersection.x = (f64)edgeNormStart.x + (f64)(y - edgeNormStart.y) * m;
             }
         }
 
         qsort(activeEdges.data, activeEdges.len, sizeof(FontGlyphShapeEdge), fontGlyphShapeEdgeCompareIntersectionX);
 
         i32 winding = 0;
-        i32 prevX = 0;
+        f64 prevX = 0;
         for (u64 a = 0; a < activeEdges.len; a++)
         {
-            if (activeEdges.data[a].intersection.x == -1 )
-            {
-                continue;
-            }
-
-            // if (activeEdges.data[a].intersection.x == prevX)
-            // {
-            //     winding += activeEdges.data[a].winding;
-            //     continue;
-            // }
-
             if (winding != 0)
             {
                 u64 tempWidth = bitmap->size.w;
                 bitmap->size.w = bitmapWidth;
-                bitmapDrawLine(bitmap, Vec2i(activeEdges.data[a].intersection.x, y), Vec2i(prevX, y), Vec4u8(255, 255, 255, 255), BitmapSamplerDefault);
+
+                vec2i startCoords = fontFloatingCoordsToPixelPerfect(font, activeEdges.data[a].intersection, shapeBounds, pixelSize);
+                vec2i endCoords = fontFloatingCoordsToPixelPerfect(font, Vec2f64(prevX, y), shapeBounds, pixelSize);
+
+                bitmapDrawLine(bitmap, startCoords, endCoords, Vec4u8(255, 255, 255, 255), BitmapSamplerDefault);
 
                 bitmap->size.w = tempWidth;
             }
@@ -1079,23 +1086,6 @@ void fontRasteriseGlyphShapeToBitmap(Font font, FontGlyphShape shape, Bitmap *bi
         FontGlyphShapeContour contour = shape.contours.data[c];
 
         FontGlyphShapeEdgeArray edges = fontExpandContourPoints(temp.arena, contour);
-        for (u64 p = 0; p < edges.len; p++)
-        {
-            FontGlyphShapeEdge edge = edges.data[p];
-
-            vec2i edgeNormStart = fontNormaliseCoordsFromBounds(font, edge.start, shape.bounds, pixelSize, bitmap->size.height);
-            vec2i edgeNormEnd = fontNormaliseCoordsFromBounds(font, edge.end, shape.bounds, pixelSize, bitmap->size.height);
-
-            // // the scanline rastrizer will skip horizontal lines do to how it works
-            if (edgeNormStart.y == edgeNormEnd.y)
-            {   
-                u64 tempWidth = bitmap->size.w;
-                bitmap->size.w = bitmapWidth;
-                //bitmapDrawLine(bitmap, edgeNormStart, edgeNormEnd, Vec4u8(255, 255, 255, 255), BitmapSamplerDefault);
-                bitmap->size.w = tempWidth;
-            }
-        }
-
         totalEdgesRequired += edges.len;
     }
 
