@@ -214,6 +214,7 @@ void fontRasteriseGlyphShapeToBitmap(Font font, FontGlyphShape shape, Bitmap *bi
 void fontRasteriseCodepointToBitmap(Font font, u32 codepoint, Bitmap *bitmap, u64 bitmapWidth, f64 pixelSize, bool allowNullGlyph);
 void fontRasteriseEdgesToBitmap(Font font, FontGlyphShapeEdgeArray edges, range2i shapeBounds, Bitmap *bitmap, u64 bitmapWidth, f64 pixelSize);
 
+void fontRasteriseNaiveAntiAliasedGlyphShapeToBitmap(Font font, FontGlyphShape shape, Bitmap *bitmap, u64 bitmapWidth, f64 pixelSize);
 u64 fontGetGlyphIndexFromCodepoint(Font font, u32 codepoint);
 FontGlyph fontGetGlyphFromCodepoint(Font font, u32 codepoint);
 

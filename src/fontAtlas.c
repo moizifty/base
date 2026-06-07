@@ -236,7 +236,7 @@ FontAtlas fontAtlasFromCodepointRanges(Arena *arena, Font font, RangeI64Array ra
         }
 
         slice.pixels += currY * atlas.bitmap.size.w * atlas.bitmap.bytesPerPixel + atlas.bitmap.bytesPerPixel * currX; 
-        fontRasteriseGlyphShapeToBitmap(font, glyph.shape, &slice, atlas.bitmap.size.w, pixelSize);
+        fontRasteriseNaiveAntiAliasedGlyphShapeToBitmap(font, glyph.shape, &slice, atlas.bitmap.size.w, pixelSize);
 
         currX += d.w;
         maxGlyphHeightInRow = BASE_MAX(maxGlyphHeightInRow, d.h);
