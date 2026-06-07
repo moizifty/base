@@ -997,17 +997,11 @@ void fontRasteriseEdgesToBitmap(Font font, FontGlyphShapeEdgeArray edges, range2
             f64 dy = edgeNormEnd.y - edgeNormStart.y;
 
             if (y >= edgeNormStart.y && y < edgeNormEnd.y ||
-                y >= edgeNormEnd.y && y < edgeNormStart.y ||
-                (y == (f64)(bitmap->size.height - 1) && 
-                (edgeNormStart.y == (f64)bitmap->size.height || edgeNormEnd.y == (f64)bitmap->size.height) &&
-                (edgeNormStart.y != edgeNormEnd.y)))
+                y >= edgeNormEnd.y && y < edgeNormStart.y)
             {
                 activeEdges.data[activeEdges.len++] = edges.data[e];
             }
-            else if ((y == edgeNormStart.y && edgeNormStart.y == edgeNormEnd.y) ||
-                     (y == (f64)(bitmap->size.height - 1) && 
-                     (edgeNormStart.y == (f64)bitmap->size.height || edgeNormEnd.y == (f64)bitmap->size.height) && 
-                     (edgeNormStart.y == edgeNormEnd.y)))
+            else if (y == edgeNormStart.y && edgeNormStart.y == edgeNormEnd.y)
             {
                 u64 tempWidth = bitmap->size.w;
                 bitmap->size.w = bitmapWidth;
@@ -1016,6 +1010,27 @@ void fontRasteriseEdgesToBitmap(Font font, FontGlyphShapeEdgeArray edges, range2
                 vec2i coordsEnd = fontFloatingCoordsToPixelPerfect(font, edgeNormEnd, shapeBounds, pixelSize);
                 bitmapDrawLine(bitmap, coordsStart, coordsEnd, Vec4u8(255, 255, 255, 255), BitmapSamplerDefault);
                 bitmap->size.w = tempWidth;
+            }
+            else if (y == (f64)(bitmap->size.height - 1))
+            {
+                if (edgeNormStart.y == (f64)bitmap->size.height ||
+                    edgeNormEnd.y == (f64)bitmap->size.height)
+                {
+                    if (edgeNormStart.y == edgeNormEnd.y)
+                    {
+                        u64 tempWidth = bitmap->size.w;
+                        bitmap->size.w = bitmapWidth;
+
+                        vec2i coordsStart = fontFloatingCoordsToPixelPerfect(font, edgeNormStart, shapeBounds, pixelSize);
+                        vec2i coordsEnd = fontFloatingCoordsToPixelPerfect(font, edgeNormEnd, shapeBounds, pixelSize);
+                        bitmapDrawLine(bitmap, coordsStart, coordsEnd, Vec4u8(255, 255, 255, 255), BitmapSamplerDefault);
+                        bitmap->size.w = tempWidth;
+                    }
+                    else
+                    {
+                        activeEdges.data[activeEdges.len++] = edges.data[e];
+                    }
+                }
             }
         }
 
@@ -1031,11 +1046,25 @@ void fontRasteriseEdgesToBitmap(Font font, FontGlyphShapeEdgeArray edges, range2
             f64 dx = (edgeNormEnd.x - edgeNormStart.x);
             f64 dy = (edgeNormEnd.y - edgeNormStart.y);
 
-            if (edgeNormEnd.y != edgeNormStart.y)
+            vec2f64 start = edgeNormStart.y > edgeNormEnd.y ? edgeNormEnd : edgeNormStart;
+            vec2f64 end = edgeNormStart.y > edgeNormEnd.y ? edgeNormStart : edgeNormEnd;
+
+            if (start.y != end.y)
             {
                 f64 m = dx / dy;
 
-                activeEdges.data[e].intersection.x = (f64)edgeNormStart.x + (f64)(y - edgeNormStart.y) * m;
+                f64 x0 = start.x;
+                f64 y0 = start.y;
+                f64 y1 = y;
+
+                if (y0 > y1)
+                {
+                    activeEdges.data[e].intersection.x = x0;
+                }
+                else
+                {
+                    activeEdges.data[e].intersection.x = x0 + (y1 - y0) * m;
+                }
             }
         }
 

@@ -36,7 +36,7 @@ void ProgramMain(Str8List *args)
     //     Sleep(250);
     // }
 
-    FontAtlas atlas = fontAtlasFromCodepointRanges(arena, font, ARRAY_VIEW(RangeI64Array, rangei, {32, 255}), 32, true);
+    FontAtlas atlas = fontAtlasFromCodepointRanges(arena, font, ARRAY_VIEW(RangeI64Array, rangei, {32, 128}), 32, true);
     basePrintf("Finished\n");
 
     Bitmap bm = bitmapPush(arena, atlas.bitmap.size, BITMAP_FORMAT_R8G8B8);
