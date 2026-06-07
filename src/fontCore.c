@@ -935,20 +935,6 @@ vec2i fontGetGlyphShapeBitmapDimensions(Font font, FontGlyphShape shape, f64 pix
 {
     f64 scale = fontGetEmToPixelScale(font, pixelSize);
 
-    // f64 minX = scale * shape.bounds.min.x;
-    // f64 minY = scale * shape.bounds.min.y;
-
-    // f64 maxX = scale * shape.bounds.max.x;
-    // f64 maxY = scale * shape.bounds.max.y;
-
-    // f64 width = (maxX - minX);
-    // f64 height = (maxY - minY);
-
-    // i64 w = (i64)(ceil((f64)(shape.bounds.max.x - shape.bounds.min.x) * scale));
-    // i64 h = (i64)(ceil((f64)(shape.bounds.max.y - shape.bounds.min.y) * scale));
-
-    // scaled box edges — floor on min, ceil on max (stb style)
-    // note Y is negated because font Y-up → bitmap Y-down
     f64 x0f = (f64)shape.bounds.min.x * scale;
     f64 x1f = (f64)shape.bounds.max.x * scale;
     f64 y0f = -(f64)shape.bounds.max.y * scale;  // top    (negated yMax)
@@ -1011,17 +997,23 @@ void fontRasteriseEdgesToBitmap(Font font, FontGlyphShapeEdgeArray edges, range2
             f64 dy = edgeNormEnd.y - edgeNormStart.y;
 
             if (y >= edgeNormStart.y && y < edgeNormEnd.y ||
-                y >= edgeNormEnd.y && y < edgeNormStart.y)
+                y >= edgeNormEnd.y && y < edgeNormStart.y ||
+                (y == (f64)(bitmap->size.height - 1) && 
+                (edgeNormStart.y == (f64)bitmap->size.height || edgeNormEnd.y == (f64)bitmap->size.height) &&
+                (edgeNormStart.y != edgeNormEnd.y)))
             {
                 activeEdges.data[activeEdges.len++] = edges.data[e];
             }
-            else if (y == edgeNormStart.y && edgeNormStart.y == edgeNormEnd.y)
+            else if ((y == edgeNormStart.y && edgeNormStart.y == edgeNormEnd.y) ||
+                     (y == (f64)(bitmap->size.height - 1) && 
+                     (edgeNormStart.y == (f64)bitmap->size.height || edgeNormEnd.y == (f64)bitmap->size.height) && 
+                     (edgeNormStart.y == edgeNormEnd.y)))
             {
                 u64 tempWidth = bitmap->size.w;
                 bitmap->size.w = bitmapWidth;
 
                 vec2i coordsStart = fontFloatingCoordsToPixelPerfect(font, edgeNormStart, shapeBounds, pixelSize);
-                vec2i coordsEnd = fontFloatingCoordsToPixelPerfect(font, edgeNormStart, shapeBounds, pixelSize);
+                vec2i coordsEnd = fontFloatingCoordsToPixelPerfect(font, edgeNormEnd, shapeBounds, pixelSize);
                 bitmapDrawLine(bitmap, coordsStart, coordsEnd, Vec4u8(255, 255, 255, 255), BitmapSamplerDefault);
                 bitmap->size.w = tempWidth;
             }
