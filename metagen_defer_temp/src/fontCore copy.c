@@ -912,13 +912,25 @@ f64 fontGetEmToPixelScale(Font font, f64 pixelSize)
     return pixelSize / (f64)font.metrics.unitsPerEm;
 }
 
+vec2i fontGetGlyphShapeBitmapDimensions(Font font, FontGlyphShape shape, f64 pixelSize)
+{
+    f64 scale = fontGetEmToPixelScale(font, pixelSize);
+
+    i64 w = (i64)(ceil((f64)(shape.bounds.max.x - shape.bounds.min.x) * scale));
+    i64 h = (i64)(ceil((f64)(shape.bounds.max.y - shape.bounds.min.y) * scale));
+
+    return Vec2i(w, h);
+}
 vec2f64 fontNormaliseCoordsFromBounds(Font font, vec2f64 coords, range2i shapeBox, f64 pixelSize, i64 bitmapHeight)
 {
     f64 scale = fontGetEmToPixelScale(font, pixelSize);
 
-    f64 normX = (scale * (f64)(coords.x - (f64)shapeBox.min.x));
-    f64 normY = (scale * (f64)(coords.y - (f64)shapeBox.min.y));
-    normY = (f64)bitmapHeight - 1.0 - normY;
+    f64 boundsHeight = floor(scale * (f64)(shapeBox.max.y - shapeBox.min.y));
+
+    f64 normX = (scale * (f64)(coords.x - shapeBox.min.x));
+    f64 normY = (scale * (f64)(coords.y - shapeBox.min.y));
+
+    normY = lerpF64((f64)bitmapHeight, 0, ((f64)(normY) / (f64)(boundsHeight)));
 
     return Vec2f64(normX, normY);
 }
@@ -1008,15 +1020,6 @@ void fontRasteriseEdgesToBitmap(Font font, FontGlyphShapeEdgeArray edges, range2
     }
 
     baseTempEnd(temp);
-}
-vec2i fontGetGlyphShapeBitmapDimensions(Font font, FontGlyphShape shape, f64 pixelSize)
-{
-    f64 scale = fontGetEmToPixelScale(font, pixelSize);
-
-    i64 w = (i64)(round((f64)(shape.bounds.max.x - shape.bounds.min.x) * scale));
-    i64 h = (i64)(round((f64)(shape.bounds.max.y - shape.bounds.min.y) * scale));
-
-    return Vec2i(w + 1, h + 1);
 }
 void fontRasteriseGlyphShapeToBitmap(Font font, FontGlyphShape shape, Bitmap *bitmap, u64 bitmapWidth, f64 pixelSize)
 {

@@ -911,28 +911,74 @@ f64 fontGetEmToPixelScale(Font font, f64 pixelSize)
     return pixelSize / (f64)font.metrics.unitsPerEm;
 }
 
+range2i fontEmBoundsToPixelBounds(Font font, range2i emBounds, f64 pixelSize)
+{
+    f64 scale = fontGetEmToPixelScale(font, pixelSize);
+
+    f64 x0f = (f64)emBounds.min.x * scale;
+    f64 x1f = (f64)emBounds.max.x * scale;
+    f64 y0f = -(f64)emBounds.max.y * scale;  // top    (negated yMax)
+    f64 y1f = -(f64)emBounds.min.y * scale;  // bottom (negated yMin)
+
+    i64 ix0 = (i64)floor(x0f);
+    i64 iy0 = (i64)floor(y0f);
+    i64 ix1 = (i64)ceil(x1f);
+    i64 iy1 = (i64)ceil(y1f);
+
+    return Range2iFromVec2i(Vec2i(ix0, iy0), Vec2i(ix1, iy1));
+}
 vec2i fontGetGlyphShapeBitmapDimensions(Font font, FontGlyphShape shape, f64 pixelSize)
 {
     f64 scale = fontGetEmToPixelScale(font, pixelSize);
 
-    i64 w = (i64)(ceil((f64)(shape.bounds.max.x - shape.bounds.min.x) * scale));
-    i64 h = (i64)(ceil((f64)(shape.bounds.max.y - shape.bounds.min.y) * scale));
+    // f64 minX = scale * shape.bounds.min.x;
+    // f64 minY = scale * shape.bounds.min.y;
 
-    return Vec2i(w, h);
+    // f64 maxX = scale * shape.bounds.max.x;
+    // f64 maxY = scale * shape.bounds.max.y;
+
+    // f64 width = (maxX - minX);
+    // f64 height = (maxY - minY);
+
+    // i64 w = (i64)(ceil((f64)(shape.bounds.max.x - shape.bounds.min.x) * scale));
+    // i64 h = (i64)(ceil((f64)(shape.bounds.max.y - shape.bounds.min.y) * scale));
+
+    // scaled box edges — floor on min, ceil on max (stb style)
+    // note Y is negated because font Y-up → bitmap Y-down
+    f64 x0f = (f64)shape.bounds.min.x * scale;
+    f64 x1f = (f64)shape.bounds.max.x * scale;
+    f64 y0f = -(f64)shape.bounds.max.y * scale;  // top    (negated yMax)
+    f64 y1f = -(f64)shape.bounds.min.y * scale;  // bottom (negated yMin)
+
+    i64 ix0 = (i64)floor(x0f);
+    i64 iy0 = (i64)floor(y0f);
+    i64 ix1 = (i64)ceil(x1f);
+    i64 iy1 = (i64)ceil(y1f);
+
+    range2i pixelBounds = fontEmBoundsToPixelBounds(font, shape.bounds, pixelSize);
+
+    i64 bitmapW = Range2iDim(pixelBounds).w;
+    i64 bitmapH = Range2iDim(pixelBounds).h;
+
+    return Vec2i(bitmapW, bitmapH);
 }
 
 vec2i fontNormaliseCoordsFromBounds(Font font, vec2i coords, range2i shapeBox, f64 pixelSize, i64 bitmapHeight)
 {
     f64 scale = fontGetEmToPixelScale(font, pixelSize);
 
-    i64 boundsHeight = (i64)round(scale * (f64)(shapeBox.max.y - shapeBox.min.y));
+    range2i pixelBounds = fontEmBoundsToPixelBounds(font, shapeBox, pixelSize);
 
-    i64 normX = (i64)round((scale * (f64)(coords.x - shapeBox.min.x)));
-    i64 normY = (i64)round(scale * (f64)(coords.y - shapeBox.min.y));
+    f64 px = (f64)coords.x * scale - (f64)pixelBounds.min.x;
+    f64 py = -(f64)coords.y * scale - (f64)pixelBounds.min.y;  // negate Y, subtract box top
 
-    normY = (i64)ceil(lerpF64(bitmapHeight, 0, ((f64)(normY) / (f64)(boundsHeight))));
+    i64 nx = (i64)round(px);
+    i64 ny = (i64)round(py);
 
-    return Vec2i(normX, normY);
+    if (nx >= Range2iDim(pixelBounds).w) nx = Range2iDim(pixelBounds).w - 1;
+    if (ny >= Range2iDim(pixelBounds).h) ny = Range2iDim(pixelBounds).h - 1;
+
+    return Vec2i(nx, ny);
 }
 
 void fontRasteriseEdgesToBitmap(Font font, FontGlyphShapeEdgeArray edges, range2i shapeBounds, Bitmap *bitmap, u64 bitmapWidth, f64 pixelSize)
@@ -951,10 +997,19 @@ void fontRasteriseEdgesToBitmap(Font font, FontGlyphShapeEdgeArray edges, range2
             vec2i edgeNormStart = fontNormaliseCoordsFromBounds(font, edges.data[e].start, shapeBounds, pixelSize, bitmap->size.height);
             vec2i edgeNormEnd = fontNormaliseCoordsFromBounds(font, edges.data[e].end, shapeBounds, pixelSize, bitmap->size.height);
 
+            f64 dy = (f64)(edgeNormEnd.y - edgeNormStart.y);
+
             if (y >= edgeNormStart.y && y < edgeNormEnd.y ||
                 y >= edgeNormEnd.y && y < edgeNormStart.y)
             {
                 activeEdges.data[activeEdges.len++] = edges.data[e];
+            }
+            else if (y == edgeNormStart.y && edgeNormStart.y == edgeNormEnd.y)
+            {
+                u64 tempWidth = bitmap->size.w;
+                bitmap->size.w = bitmapWidth;
+                bitmapDrawLine(bitmap, Vec2i(edgeNormStart.x, y), Vec2i(edgeNormEnd.x, y), Vec4u8(255, 255, 255, 255), BitmapSamplerDefault);
+                bitmap->size.w = tempWidth;
             }
         }
 
@@ -970,15 +1025,11 @@ void fontRasteriseEdgesToBitmap(Font font, FontGlyphShapeEdgeArray edges, range2
             f64 dx = (f64)(edgeNormEnd.x - edgeNormStart.x);
             f64 dy = (f64)(edgeNormEnd.y - edgeNormStart.y);
 
-            if (!(fabs(dy) >= 0 && fabs(dy) <= 0.00001))
+            if (edgeNormEnd.y != edgeNormStart.y)
             {
                 f64 m = dx / dy;
 
-                activeEdges.data[e].intersection.x = (i64)round((f64)edgeNormStart.x + (f64)(y - edgeNormStart.y) * m);
-            }
-            else
-            {
-                bitmapDrawLine(bitmap, Vec2i(edgeNormStart.x, y), Vec2i(edgeNormEnd.x, y), Vec4u8(255, 255, 255, 255), BitmapSamplerDefault);
+                activeEdges.data[e].intersection.x = (i64)floor((f64)edgeNormStart.x + (f64)(y - edgeNormStart.y) * m);
             }
         }
 
@@ -1317,7 +1368,6 @@ void fontAtlasFillAtlasGlyphs(Font font, FontAtlas *atlas, RangeI64Array ranges,
         // do the null glyph first
         FontGlyphShape glyphShape = font.parsed.parsedGlyf.data[0];
         vec2i d = fontGetGlyphShapeBitmapDimensions(font, glyphShape, pixelSize);
-
         if (currX + d.w > atlas->bitmap.size.w)
         {
             currY += maxGlyphHeightInRow;
@@ -1325,17 +1375,15 @@ void fontAtlasFillAtlasGlyphs(Font font, FontAtlas *atlas, RangeI64Array ranges,
             maxGlyphHeightInRow = 0;
         }
 
-        FontAtlasGlyph atlasGlyph = 
-        {
-            .codepoint = 0,
-            .pos = Vec2i(currX, currY),
-            .size = d,
-            .advanceWidth = (u64)round(scale * (f64)glyphShape.advanceWidth),
-            .bearingLeft = (i64)round(scale * (f64)glyphShape.leftSideBearing),
-            .bearingRight = (i64)round(scale* (f64)(glyphShape.advanceWidth - glyphShape.bounds.max.x)),
-            .bearingTop = (i64)((i64)atlas->metrics.ascent - (i64)round(scale * ((f64)glyphShape.bounds.max.y))),
-            .isInvalidGlyph = true,
-        };
+        FontAtlasGlyph atlasGlyph = {0};
+        atlasGlyph.codepoint = 0;
+        atlasGlyph.pos = Vec2i(currX, currY);
+        atlasGlyph.size = d;
+        atlasGlyph.advanceWidth = (u64)ceil(scale * (f64)glyphShape.advanceWidth);
+        atlasGlyph.bearingLeft = (i64)ceil(scale * (f64)glyphShape.leftSideBearing);
+        atlasGlyph.bearingRight = (i64)ceil(scale* (f64)(glyphShape.advanceWidth - glyphShape.bounds.max.x));
+        atlasGlyph.bearingTop = (i64)((i64)atlas->metrics.ascent - (i64)ceil(scale * ((f64)glyphShape.bounds.max.y)));
+        atlasGlyph.isInvalidGlyph = true;
 
         atlas->glyphs.data[0] = atlasGlyph;
 
@@ -1371,16 +1419,15 @@ void fontAtlasFillAtlasGlyphs(Font font, FontAtlas *atlas, RangeI64Array ranges,
                 break;
             }
 
-            FontAtlasGlyph atlasGlyph = 
-            {
-                .codepoint = ri,
-                .pos = Vec2i(currX, currY),
-                .size = d,
-                .advanceWidth = (u64)round(scale * (f64)glyph.shape.advanceWidth),
-                .bearingLeft = (i64)round(scale * (f64)glyph.shape.leftSideBearing),
-                .bearingRight = (i64)round(scale* (f64)(glyph.shape.advanceWidth - glyph.shape.bounds.max.x)),
-                .bearingTop = (i64)((i64)atlas->metrics.ascent - (i64)floor(scale * ((f64)glyph.shape.bounds.max.y))),
-            };
+            FontAtlasGlyph atlasGlyph = {0};
+            atlasGlyph.codepoint = ri;
+            atlasGlyph.pos = Vec2i(currX, currY);
+            atlasGlyph.size = d;
+            atlasGlyph.advanceWidth = (u64)ceil(scale * (f64)glyph.shape.advanceWidth);
+            atlasGlyph.bearingLeft = (i64)ceil(scale * (f64)glyph.shape.leftSideBearing);
+            atlasGlyph.bearingRight = (i64)ceil(scale* (f64)(glyph.shape.advanceWidth - glyph.shape.bounds.max.x));
+            atlasGlyph.bearingTop = (i64)((i64)atlas->metrics.ascent - (i64)ceil(scale * ((f64)glyph.shape.bounds.max.y)));
+            atlasGlyph.isInvalidGlyph = false;
 
             if (glyph.glyphIndex == 0)
             {
@@ -1408,18 +1455,15 @@ FontAtlas fontAtlasFromCodepointRanges(Arena *arena, Font font, RangeI64Array ra
     FontAtlas atlas = {0};
     f64 scale = fontGetEmToPixelScale(font, pixelSize);
 
-    atlas.metrics.ascent = (i16)round(scale * (f64)font.metrics.ascent);
-    atlas.metrics.descent= (i16)round(scale * (f64)font.metrics.descent);
-    atlas.metrics.lineGap = (i16)round(scale * (f64)font.metrics.lineGap);
-    atlas.metrics.bounds.min.x = (i64)round(scale * (f64)font.metrics.bounds.min.x);
-    atlas.metrics.bounds.min.y = (i64)round(scale * (f64)font.metrics.bounds.min.y);
-    atlas.metrics.bounds.max.x = (i64)round(scale * (f64)font.metrics.bounds.max.x);
-    atlas.metrics.bounds.max.y = (i64)round(scale * (f64)font.metrics.bounds.max.y);
+    atlas.metrics.ascent = (i16)ceil(scale * (f64)font.metrics.ascent);
+    atlas.metrics.descent= (i16)ceil(scale * (f64)font.metrics.descent);
+    atlas.metrics.lineGap = (i16)ceil(scale * (f64)font.metrics.lineGap);
+    atlas.metrics.bounds = fontEmBoundsToPixelBounds(font, font.metrics.bounds, pixelSize);
     atlas.metrics.unitsPerEm = font.metrics.unitsPerEm;
 
     i64 bitmapW = 512;
     i64 bitmapH = 512;
-    atlas.bitmap = bitmapPush(arena, Vec2i(bitmapW, bitmapH), BITMAP_FORMAT_R8G8B8);
+    atlas.bitmap = bitmapPush(arena, Vec2i(bitmapW, bitmapH), BITMAP_FORMAT_R8G8B8A8);
 
     u64 numGlyphs = fontAtlasEstimateNumberOfGlyphsThatFitInBitmap(font, atlas.bitmap.size, ranges, pixelSize, allowNullGlyph);
     u64 currX = 0;

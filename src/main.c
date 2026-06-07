@@ -1,12 +1,12 @@
 #include "base/base.h"
 #include "os/core/osCore.h"
 #include "bitmap/bitmapCore.h"
-#include "font.h"
+#include "fontCore.h"
 
 #include "base/base.c"
 #include "os/core/osCore.c"
 #include "bitmap/bitmapCore.c"
-#include "font.c"
+#include "fontCore.c"
 
 #include "os/core/osEntryPoint.c"
 
@@ -36,55 +36,55 @@ void ProgramMain(Str8List *args)
     //     Sleep(250);
     // }
 
-    FontAtlas atlas = fontAtlasFromCodepointRanges(arena, font, ARRAY_VIEW(RangeI64Array, rangei, {32, 128}), 24, false);
+    FontAtlas atlas = fontAtlasFromCodepointRanges(arena, font, ARRAY_VIEW(RangeI64Array, rangei, {32, 128}), 32, false);
     basePrintf("Finished\n");
 
-    Bitmap bm = atlas.bitmap;//bitmapPush(arena, atlas.bitmap.size, BITMAP_FORMAT_R8G8B8);
-    // str8 testString = STR8(" ABCXYZFGHI£");
+    Bitmap bm = bitmapPush(arena, atlas.bitmap.size, BITMAP_FORMAT_R8G8B8);
+    str8 testString = STR8("ABCD123455\nmoiz is a maniac!!\"hi\"\n#$100%");
 
-    // u64 x = 0;
-    // u64 y = 0;
-    // u64 yOffset = 0;
-    // u64 bytesDone = 0;
-    // while(*testString.data)
-    // {
-    //     DecodeCodePointInfo cp = DecodeCodepointFromUtf8(testString.data, testString.len - bytesDone);
-    //     testString.data += cp.advance;
-    //     bytesDone += cp.advance;
+    u64 x = 0;
+    u64 y = 0;
+    u64 yOffset = 0;
+    u64 bytesDone = 0;
+    while(*testString.data)
+    {
+        DecodeCodePointInfo cp = DecodeCodepointFromUtf8(testString.data, testString.len - bytesDone);
+        testString.data += cp.advance;
+        bytesDone += cp.advance;
 
-    //     if (cp.codepoint != '\n')
-    //     {
-    //         FontAtlasGlyph glyph = {0};
-    //         fontAtlasTryGetGlyphFromCodepoint(atlas, cp.codepoint, &glyph);
+        if (cp.codepoint != '\n')
+        {
+            FontAtlasGlyph glyph = {0};
+            fontAtlasTryGetGlyphFromCodepoint(atlas, cp.codepoint, &glyph);
             
-    //         x += glyph.bearingLeft;
-    //         y = yOffset + glyph.bearingTop;
+            x += glyph.bearingLeft;
+            y = yOffset + glyph.bearingTop;
 
-    //         range2i srcRange = 
-    //         {
-    //             .min = glyph.pos,
-    //             .max = vec2iAdd(glyph.pos, glyph.size),
-    //         };
+            range2i srcRange = 
+            {
+                .min = glyph.pos,
+                .max = vec2iAdd(glyph.pos, glyph.size),
+            };
 
-    //         range2i destRange = 
-    //         {
-    //             .min = Vec2i(x, y),
-    //             .max = vec2iAdd(Vec2i(x, y), glyph.size),
-    //         };
+            range2i destRange = 
+            {
+                .min = Vec2i(x, y),
+                .max = vec2iAdd(Vec2i(x, y), glyph.size),
+            };
 
-    //         bitmapBlitToBitmap(&atlas.bitmap, &bm, srcRange, destRange, BitmapSamplerDefault, BitmapSamplerDefault);
+            bitmapBlitToBitmap(&atlas.bitmap, &bm, srcRange, destRange, BitmapSamplerDefault, BitmapSamplerDefault);
 
-    //         x += glyph.size.w + glyph.bearingRight;
-    //     }
-    //     else
-    //     {
-    //         x = 0;
-    //         yOffset += (atlas.metrics.ascent - atlas.metrics.descent) + atlas.metrics.lineGap;
-    //     }
+            x += glyph.size.w + glyph.bearingRight;
+        }
+        else
+        {
+            x = 0;
+            yOffset += (atlas.metrics.ascent - atlas.metrics.descent) + atlas.metrics.lineGap;
+        }
         
-    // }
+    }
 
-    OSHandle file = OSFileOpen(STR8("test.ppm"), false, OS_FILEACCESS_WRITE, OS_FILECREATION_CREATE_OVERRITE);
+    OSHandle file = OSFileOpen(STR8("test2.ppm"), false, OS_FILEACCESS_WRITE, OS_FILECREATION_CREATE_OVERRITE);
 
     OSFileWriteFmt(file, "P3\n%lld %lld\n255\n", bm.size.w, bm.size.h);
 

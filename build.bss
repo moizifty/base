@@ -91,4 +91,6 @@ if (hasflag("mg"))
 {
     runmg();
 }
+
 compile(src, includes, flags, "builds/main.exe");
+//compile({"{getsrcdir()}\stbtest.c"}, includes, flags, "builds/stb.exe");
