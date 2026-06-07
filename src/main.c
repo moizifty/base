@@ -1,12 +1,12 @@
 #include "base/base.h"
 #include "os/core/osCore.h"
 #include "bitmap/bitmapCore.h"
-#include "fontCore.h"
+#include "font.h"
 
 #include "base/base.c"
 #include "os/core/osCore.c"
 #include "bitmap/bitmapCore.c"
-#include "fontCore.c"
+#include "font.c"
 
 #include "os/core/osEntryPoint.c"
 
@@ -40,7 +40,7 @@ void ProgramMain(Str8List *args)
     basePrintf("Finished\n");
 
     Bitmap bm = bitmapPush(arena, atlas.bitmap.size, BITMAP_FORMAT_R8G8B8);
-    str8 testString = STR8("ABCD123455\nmoiz is a maniac!!\"hi\"\n#$100%£");
+    str8 testString = STR8("ABCDEFGHIJKLMNOP\nQRSTUVWXYZ\nabcdefghijklmnop\nqrstuvwxyz\n0123456789");
 
     u64 x = 0;
     u64 y = 0;

@@ -34,7 +34,6 @@ typedef struct FontGlyphShapeEdge
 
     i8 winding;
     vec2f64 intersection;
-    bool ignore;
 }FontGlyphShapeEdge;
 
 BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(FontGlyphShapeEdgeArray, FontGlyphShapeEdge)
@@ -201,61 +200,12 @@ typedef struct Font
     FontMetrics metrics;
 }Font;
 
-typedef struct FontAtlasGlyph
-{
-    vec2i pos;
-    vec2i size;
-
-    // lsb, y bearing from baseline
-    i64 bearingTop;
-    i64 bearingLeft;
-    i64 bearingRight;
-    u64 advanceWidth;
-
-    u32 codepoint;
-
-    bool isInvalidGlyph;
-}FontAtlasGlyph;
-
-BASE_CREATE_ARRAY_VIEW_DECLS_DEFS(FontAtlasGlyphArray, FontAtlasGlyph)
-
-typedef struct FontAtlas
-{
-    Bitmap bitmap;
-    FontMetrics metrics;
-
-    // essentially adcii characters are stored first for fast access with ascii codes
-    u64 numFastAccessGlyphs;
-    FontAtlasGlyphArray glyphs;
-}FontAtlas;
-
-f64 fontCustomRound(f64 f);
 f32 F32FromFontF2Dot14(FontF2Dot14 val);
 
-bool fontTTFParseCmapSubtableFormat4(Arena *arena, FontTTFParsedFont *parsedFont, U8Array subtable);
-bool fontTTFParseCmapSubtableFormat12(Arena *arena, FontTTFParsedFont *parsedFont, U8Array subtable);
-bool fontTTFParseCmapTable(Arena *arena, FontTTFParsedFont *parsedFont);
-
-void fontTTFParseCompositeGlyphNumContoursAndPoints(Arena *arena, FontTTFParsedFont *parsedFont, U8Array compositeData, u64 *numContours, u64 *numPoints);
-void fontTTFParseGlyphShape(Arena *arena, FontTTFParsedFont *parsedFont, u32 glyphIndexToParse);
-bool fontTTFParseGlyfTable(Arena *arena, FontTTFParsedFont *parsedFont);
-bool fontTTFParseHeadTable(FontTTFParsedFont *parsedFont);
-bool fontTTFParseHheaTable(FontTTFParsedFont *parsedFont);
-bool fontTTFParseHmtxTable(FontTTFParsedFont *parsedFont);
-bool fontTTFParseLocaTable(Arena *arena, FontTTFParsedFont *parsedFont);
-bool fontTTFParseMaxpTable(FontTTFParsedFont *parsedFont);
-
-FontParseErrorKind fontTTFValidateRequiredTablesExist(FontTTFParsedFont parsedFont);
-
-Font fontTTFParseFromU8Array(Arena *arena, U8Array fontData);
-Font fontTTFParseFromFile(Arena *arena, str8 file);
-
 f64 fontGetEmToPixelScale(Font font, f64 pixelSize);
-
+range2i fontEmBoundsToPixelBounds(Font font, range2i emBounds, f64 pixelSize);
+vec2f64 fontNormaliseCoordsFromBounds(Font font, vec2f64 coords, range2i shapeBox, f64 pixelSize);
 vec2i fontGetGlyphShapeBitmapDimensions(Font font, FontGlyphShape shape, f64 pixelSize);
-
-FontAtlas fontAtlasFromCodepointRanges(Arena *arena, Font font, RangeI64Array ranges, f64 pixelSize, bool allowNullGlyph);
-bool fontAtlasTryGetGlyphFromCodepoint(FontAtlas atlas, i32 codepoint, FontAtlasGlyph *out);
 
 // you need bitmap bitmapWidth as a param
 // as you may pass bitmap "slices" into a bigger bitmap, but the stride for going to the next row should be based on the 
