@@ -40,7 +40,7 @@ void ProgramMain(Str8List *args)
     basePrintf("Finished\n");
 
     Bitmap bm = bitmapPush(arena, atlas.bitmap.size, BITMAP_FORMAT_R8G8B8);
-    str8 testString = STR8("ABCDEFGHIJKLMNOP\nQRSTUVWXYZ\nabcdefghijklmnop\nqrstuvwxyz\n0123456789$£");
+    str8 testString = STR8("ABCDEFGHIJKLMNOP\nQRSTUVWXYZ\nabcdefghijklmnop\nqrstuvwxyz\n0123456789$£\nint main(void){return 0;}");
 
     u64 x = 0;
     u64 y = 0;

@@ -200,6 +200,13 @@ typedef struct Font
     FontMetrics metrics;
 }Font;
 
+typedef enum FontRasteriseAntiAliasingKind
+{
+    FONT_RASTERISE_ANTI_ALIASING_NONE,
+    FONT_RASTERISE_ANTI_ALIASING_NAIVE,
+    FONT_RASTERISE_ANTI_ALIASING_COVERAGE_ACCUMULATION,
+}FontRasteriseAntiAliasingKind;
+
 f32 F32FromFontF2Dot14(FontF2Dot14 val);
 
 f64 fontGetEmToPixelScale(Font font, f64 pixelSize);
@@ -210,11 +217,10 @@ vec2i fontGetGlyphShapeBitmapDimensions(Font font, FontGlyphShape shape, f64 pix
 // you need bitmap bitmapWidth as a param
 // as you may pass bitmap "slices" into a bigger bitmap, but the stride for going to the next row should be based on the 
 // the stride of the whole bigger bitmap
-void fontRasteriseGlyphShapeToBitmap(Font font, FontGlyphShape shape, Bitmap *bitmap, u64 bitmapWidth, f64 pixelSize);
-void fontRasteriseCodepointToBitmap(Font font, u32 codepoint, Bitmap *bitmap, u64 bitmapWidth, f64 pixelSize, bool allowNullGlyph);
-void fontRasteriseEdgesToBitmap(Font font, FontGlyphShapeEdgeArray edges, range2i shapeBounds, Bitmap *bitmap, u64 bitmapWidth, f64 pixelSize);
+void fontRasteriseBinaryEdgesToBitmap(Font font, FontGlyphShapeEdgeArray edges, range2i shapeBounds, Bitmap *bitmap, u64 bitmapWidth, f64 pixelSize);
+void fontRasteriseGlyphShapeToBitmap(Font font, FontGlyphShape shape, Bitmap *bitmap, u64 bitmapWidth, f64 pixelSize, FontRasteriseAntiAliasingKind antialiasing);
+void fontRasteriseCodepointToBitmap(Font font, u32 codepoint, Bitmap *bitmap, u64 bitmapWidth, f64 pixelSize, bool allowNullGlyph, FontRasteriseAntiAliasingKind antialiasing);
 
-void fontRasteriseNaiveAntiAliasedGlyphShapeToBitmap(Font font, FontGlyphShape shape, Bitmap *bitmap, u64 bitmapWidth, f64 pixelSize);
 u64 fontGetGlyphIndexFromCodepoint(Font font, u32 codepoint);
 FontGlyph fontGetGlyphFromCodepoint(Font font, u32 codepoint);
 
