@@ -183,7 +183,7 @@ FontAtlas fontAtlasFromCodepointRanges(Arena *arena, Font font, RangeI64Array ra
 
     i64 bitmapW = 512;
     i64 bitmapH = 512;
-    atlas.bitmap = bitmapPush(arena, Vec2i(bitmapW, bitmapH), BITMAP_FORMAT_R8G8B8A8);
+    atlas.bitmap = bitmapPush(arena, Vec2i(bitmapW, bitmapH), BITMAP_FORMAT_R8_GRAYSCALE);
 
     u64 numGlyphs = fontAtlasEstimateNumberOfGlyphsThatFitInBitmap(font, atlas.bitmap.size, ranges, pixelSize, allowNullGlyph);
     u64 currX = 0;

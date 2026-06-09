@@ -107,6 +107,8 @@ MetagenCStruct *metagenTypeDictFindTypeByName(MetagenTypeDict *dict, str8 name)
 
 bool metagenHandleEmbedFile(Arena *arena, MetagenOutput *output, CTokArray nextToks)
 {
+    ArenaTemp temp = baseTempBegin(&arena, 1);
+
     if (nextToks.len >= 7) // (mode, path) = 5 tokens
     {
         if (METAGEN_TOK_MATCH_KIND(nextToks.data[0], '('))
@@ -119,8 +121,12 @@ bool metagenHandleEmbedFile(Arena *arena, MetagenOutput *output, CTokArray nextT
                 {
                     if (nextToks.data[3].kind == CTOK_STR_LIT)
                     {
-                        str8 path = baseCLexerGetStr8RepFromTokLexeme(arena, nextToks.data[3]);
-                        U8Array contents = OSFileReadAll(arena,  path);
+                        str8 relativeToCWDpath = baseCLexerGetStr8RepFromTokLexeme(arena, nextToks.data[3]);
+                        str8 relativeToSrcFilePath = Str8Contains(output->inputPath, STR8("/"), STR_MATCHFLAGS_SLASH_INSENSITIVE) ?
+                                                     Str8PushFmt(temp.arena, "%S/%S", Str8ChopPast(output->inputPath, STR8("/"), STR_MATCHFLAGS_FIND_LAST | STR_MATCHFLAGS_SLASH_INSENSITIVE), relativeToCWDpath) :
+                                                     relativeToCWDpath;
+                                                     
+                        U8Array contents = OSFileReadAll(arena, relativeToSrcFilePath);
 
                         if (METAGEN_TOK_MATCH_KIND(nextToks.data[4], ','))
                         {
@@ -132,9 +138,9 @@ bool metagenHandleEmbedFile(Arena *arena, MetagenOutput *output, CTokArray nextT
                                 Str8List headerEntryList = {0};
                                 Str8List implEntryList = {0};
 
-                                Str8ListPushLastFmt(arena, &implEntryList, "// metagen_embedfile(%S, %S), line: %lld\n", name, path, nextToks.data[0].pos.line);
+                                Str8ListPushLastFmt(arena, &implEntryList, "// metagen_embedfile(%S, %S), line: %lld\n", name, relativeToSrcFilePath, nextToks.data[0].pos.line);
                                 
-                                Str8ListPushLastFmt(arena, &headerEntryList, "// metagen_embedfile(%S, %S), line: %lld\n", name, path, nextToks.data[0].pos.line);
+                                Str8ListPushLastFmt(arena, &headerEntryList, "// metagen_embedfile(%S, %S), line: %lld\n", name, relativeToSrcFilePath, nextToks.data[0].pos.line);
                                 Str8ListPushLastFmt(arena, &headerEntryList, "extern U8Array %S;\n", name);
 
 
@@ -205,6 +211,8 @@ bool metagenHandleEmbedFile(Arena *arena, MetagenOutput *output, CTokArray nextT
             }
         }
     }
+
+    baseTempEnd(temp);
 
     return true;
 }

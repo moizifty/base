@@ -19,6 +19,7 @@ Bitmap bitmapPush(Arena *arena, vec2i size, BitmapFormatKind fmt)
 
     switch (bitmap.fmt)
     {
+        case BITMAP_FORMAT_R8_GRAYSCALE: bitmap.bytesPerPixel = 1; break;
         case BITMAP_FORMAT_A8: bitmap.bytesPerPixel = 1; break;
         case BITMAP_FORMAT_R8G8B8: bitmap.bytesPerPixel = 3; break;
 
@@ -183,6 +184,19 @@ vec4u8 bitmapGetPixelColor4u8(Bitmap *bitmap, vec2i point, BitmapSampler sampler
     {
         switch (bitmap->fmt)
         {
+            case BITMAP_FORMAT_R8_GRAYSCALE:
+            {
+                color.r = *(start + 0);
+                color.g = *(start + 0);
+                color.b = *(start + 0);
+                color.a = 255;
+            }break;
+
+            case BITMAP_FORMAT_A8:
+            {
+                color.a = *(start + 0);
+            }break;
+
             case BITMAP_FORMAT_R8G8B8:
             {
                 color.r = *(start + 0);
@@ -204,7 +218,7 @@ vec4u8 bitmapGetPixelColor4u8(Bitmap *bitmap, vec2i point, BitmapSampler sampler
     return color;
 }
 
-void bitmapDrawPixel(Bitmap *bitmap, vec2i point, vec4u8 color, BitmapSampler sampler)
+void bitmapSetPixelColor4u8(Bitmap *bitmap, vec2i point, vec4u8 color, BitmapSampler sampler)
 {
     u8 *start = bitmapGetPtrToPixel(bitmap, point, sampler);
 
@@ -212,6 +226,16 @@ void bitmapDrawPixel(Bitmap *bitmap, vec2i point, vec4u8 color, BitmapSampler sa
     {
         switch (bitmap->fmt)
         {
+            case BITMAP_FORMAT_R8_GRAYSCALE:
+            {
+                *(start + 0) = color.r;
+            }break;
+
+            case BITMAP_FORMAT_A8:
+            {
+                *(start + 0) = color.a;
+            }break;
+
             case BITMAP_FORMAT_R8G8B8:
             {
                 *(start + 0) = color.r;
@@ -228,6 +252,10 @@ void bitmapDrawPixel(Bitmap *bitmap, vec2i point, vec4u8 color, BitmapSampler sa
             }break;
         }
     }
+}
+void bitmapDrawPixel(Bitmap *bitmap, vec2i point, vec4u8 color, BitmapSampler sampler)
+{
+    bitmapSetPixelColor4u8(bitmap, point, color, sampler);
 }
 
 void bitmapDrawLine(Bitmap *bitmap, vec2i start, vec2i end, vec4u8 color, BitmapSampler sampler)
