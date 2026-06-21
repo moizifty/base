@@ -253,9 +253,30 @@ void bitmapSetPixelColor4u8(Bitmap *bitmap, vec2i point, vec4u8 color, BitmapSam
         }
     }
 }
+void bitmapClear(Bitmap *bitmap, vec4u8 color)
+{
+    for (u64 y = 0; y < bitmap->size.height; y++)
+    {
+        for (u64 x = 0; x < bitmap->size.width; x++)
+        {
+            bitmapDrawPixel(bitmap, Vec2i(x, y), color, BitmapSamplerDefault);
+        }
+    }
+}
 void bitmapDrawPixel(Bitmap *bitmap, vec2i point, vec4u8 color, BitmapSampler sampler)
 {
     bitmapSetPixelColor4u8(bitmap, point, color, sampler);
+}
+
+void bitmapDrawRect(Bitmap *bitmap, vec2i pos, vec2i dim, vec4u8 color, BitmapSampler sampler)
+{
+    for (u64 row = 0; row < dim.height; row++)
+    {
+        for (u64 col = 0; col < dim.width; col++)
+        {
+            bitmapSetPixelColor4u8(bitmap, Vec2i(pos.x + col, pos.y + row), color, sampler);
+        }
+    }
 }
 
 void bitmapDrawLine(Bitmap *bitmap, vec2i start, vec2i end, vec4u8 color, BitmapSampler sampler)

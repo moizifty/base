@@ -275,12 +275,14 @@ void cmdlineUsage(void)
     {
         str8 programName = Str8ChopBefore(OSGetProgramPath(temp.arena), STR8_LIT("/"), STR_MATCHFLAGS_SLASH_INSENSITIVE | STR_MATCHFLAGS_FIND_LAST);
         
-        basePrintf("Usage: %S <args> %S", programName, gBaseCmdlineTrailingHelp);
-
+        basePrintf("Usage: %S", programName);
         if (gBaseCmdlineArgDefs.len > 0)
         {
+            basePrintf(" <args>");
             basePrintf("\nargs:", programName);
         }
+
+        basePrintf(" %S", gBaseCmdlineTrailingHelp);
 
         for(u64 i = 0; i < gBaseCmdlineArgDefs.len; i++)
         {
