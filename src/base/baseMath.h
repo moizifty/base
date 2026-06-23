@@ -576,6 +576,8 @@ f32 vec4fDot(vec4f a, vec4f b);
 f32 vec4fMag(vec4f a);
 f32 vec4fMagSqr(vec4f a);
 
+vec4u8 vec4u8Sub(vec4u8 a, vec4u8 b);
+
 //mat3f
 mat3f mat3fFromColVec3f(vec3f cols[3]);
 mat3f mat3fFromRowVec3f(vec3f rows[3]);

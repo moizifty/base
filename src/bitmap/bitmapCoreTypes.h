@@ -45,6 +45,13 @@ typedef enum BitmapAddressModeKind
     BITMAP_ADDRESS_MODE_DISCARD,
 }BitmapAddressModeKind;
 
+typedef enum BitmapBlendOp
+{
+    // no alpha blending
+    BITMAP_BLEND_NONE,
+    BITMAP_BLEND_SRC_OVER_DEST, // src takes precedent
+}BitmapBlendOp;
+
 typedef struct BitmapFileKindTableEntry
 {
     BitmapFileKind kind;
@@ -57,6 +64,8 @@ typedef struct BitmapSampler
 {
     BitmapAddressModeKind addrModeX;
     BitmapAddressModeKind addrModeY;
+
+    BitmapBlendOp blendOp;
 }BitmapSampler;
 
 typedef struct Bitmap

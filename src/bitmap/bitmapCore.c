@@ -168,7 +168,6 @@ void bitmapBlitToBitmap(Bitmap *src, Bitmap *dest, range2i srcRangeToCopy, range
             i64 destY = destRangeToPasteInto.min.y + srcYOffset;
 
             vec4u8 srcColor = bitmapGetPixelColor4u8(src, Vec2i(srcX, srcY), srcSampler);
-
             bitmapDrawPixel(dest, Vec2i(destX, destY), srcColor, destSampler);
         }
     }
@@ -245,11 +244,29 @@ void bitmapSetPixelColor4u8(Bitmap *bitmap, vec2i point, vec4u8 color, BitmapSam
 
             case BITMAP_FORMAT_R8G8B8A8:
             {
-                *(start + 0) = color.r;
-                *(start + 1) = color.g;
-                *(start + 2) = color.b;
-                *(start + 3) = color.a;
-            }break;
+                switch (sampler.blendOp)
+                {
+                    case BITMAP_BLEND_NONE:
+                    {
+                        *(start + 0) = color.r;
+                        *(start + 1) = color.g;
+                        *(start + 2) = color.b;
+                        *(start + 3) = color.a;
+                    }break;
+
+                    case BITMAP_BLEND_SRC_OVER_DEST:
+                    {
+                        u8 alpha = color.a;
+
+                        // the dest will contribute inverse alpha, as it is overwritten (Src is over dest)
+                        u8 inverseAlpha = 255 - alpha;
+                        *(start + 0) = (u8)((color.r * alpha + *(start + 0) * inverseAlpha) / 255);
+                        *(start + 1) = (u8)((color.g * alpha + *(start + 1) * inverseAlpha) / 255);
+                        *(start + 2) = (u8)((color.b * alpha + *(start + 2) * inverseAlpha) / 255);
+                        *(start + 3) = color.a;
+                    }break;
+                }
+            } break;
         }
     }
 }

@@ -140,6 +140,11 @@ f32 vec4fMagSqr(vec4f a)
     return vec4fDot(a, a);
 }
 
+vec4u8 vec4u8Sub(vec4u8 a, vec4u8 b)
+{
+    return Vec4u8(a.x - b.x, a.y - b.y, a.z - b.z, a.w - b.w);
+}
+
 //mat3f
 mat3f mat3fFromColVec3f(vec3f cols[3])
 {
