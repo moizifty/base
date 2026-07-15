@@ -138,6 +138,7 @@ str8 jsonParserSkipWhitespace(str8 jsonStr)
 }
 JSONValue JSONValueFromStr8(Arena *arena, str8 str)
 {
+    JSONValue zeroVal = {0};
     JSONValue ret = {0};
 
     if (BASE_NULL_OR_EMPTY(str))
@@ -166,6 +167,8 @@ JSONValue JSONValueFromStr8(Arena *arena, str8 str)
 
                 if (membNameValue.kind != JSON_VALUE_INVALID)
                 {
+                    str = Str8Skip(str, membNameValue.strRep.len);
+
                     memb->name = Str8PushFmt(arena, "%S", membNameValue.asStr8);
 
                     str = jsonParserSkipWhitespace(str);
@@ -173,8 +176,10 @@ JSONValue JSONValueFromStr8(Arena *arena, str8 str)
                     if (str.data[0] == ':')
                     {
                         str = Str8Skip(str, 1);
-                        memb->value = JSONValueFromStr8(arena, str);
 
+                        memb->value = JSONValueFromStr8(arena, str);
+                        
+                        str = Str8Skip(str, memb->value.strRep.len);
                         str = jsonParserSkipWhitespace(str);
 
                         if (str.data[0] != '}')
@@ -182,7 +187,7 @@ JSONValue JSONValueFromStr8(Arena *arena, str8 str)
                             if (str.data[0] != ',')
                             {
                                 // error
-                                break;
+                                return zeroVal;
                             }
                             else
                             {
@@ -195,14 +200,24 @@ JSONValue JSONValueFromStr8(Arena *arena, str8 str)
                     else
                     {
                         // error
-                        break;
+                        return zeroVal;
                     }
                 }
                 else
                 {
                     // error
-                    break;
+                    return zeroVal;
                 }
+            }
+
+            if (str.len && str.data[0] == '}')
+            {
+                ret.strRep.len = (u64)(str.data - ret.strRep.data);
+            }
+            else
+            {
+                // error
+                return zeroVal;
             }
         }break;
 
@@ -217,12 +232,14 @@ JSONValue JSONValueFromStr8(Arena *arena, str8 str)
                 JSONValue value = JSONValueFromStr8(arena, str);
                 if (value.kind != JSON_VALUE_INVALID)
                 {
+                    str = Str8Skip(str, value.strRep.len);
+
                     if (str.data[0] != ']')
                     {
                         if (str.data[0] != ',')
                         {
                             // error
-                            break;
+                            return zeroVal;
                         }
                         else
                         {
@@ -235,9 +252,19 @@ JSONValue JSONValueFromStr8(Arena *arena, str8 str)
                 else
                 {
                     // error
-                    break;
+                    return zeroVal;
                 }
 
+            }
+
+            if (str.len && str.data[0] == ']')
+            {
+                ret.strRep.len = (u64)(str.data - ret.strRep.data);
+            }
+            else
+            {
+                // error
+                return zeroVal;
             }
         }break;
 

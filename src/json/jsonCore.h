@@ -25,8 +25,8 @@ typedef struct JSONValueList
     u64 totalSize; 
 }JSONValueList;
 
-typedef struct JSONValue JSONValue;
-BASE_CREATE_EFFICIENT_LL_DECLS(JSONObjMembList, JSONValue)
+typedef struct JSONObjMemb JSONObjMemb;
+BASE_CREATE_EFFICIENT_LL_DECLS(JSONObjMembList, JSONObjMemb)
 
 typedef struct JSONValue
 {
