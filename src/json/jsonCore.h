@@ -43,7 +43,7 @@ typedef struct JSONValue
 }JSONValue;
 
 BASE_CREATE_LL_JUST_NODE_DECLS_EX(JSONValueList, JSONValueListNode, JSONValue)
-BASE_CREATE_LL_JUST_LIST_DECLS_EX(JSONValueList, JSONValueListNode, JSONValue)
+BASE_CREATE_LL_JUST_LIST_FUNC_DECLS_EX(JSONValueList, JSONValueListNode, JSONValue)
 
 typedef struct JSONObjMemb
 {

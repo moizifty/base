@@ -125,7 +125,7 @@
 #define BASE_PTR_LL_LAST(pLL, DEFVAL)      (BASE_ANY_PTR(pLL) ? (pLL)->last->val : DEFVAL)
 #define BASE_LL_LAST(LL, DEFVAL)           (BASE_ANY(LL) ? (LL).last->val : DEFVAL)
 
-#define BASE_CREATE_LL_JUST_LIST_DECLS_EX(NAME, NODENAME, ELEM) \
+#define BASE_CREATE_LL_JUST_LIST_TYPE_DECLS_EX(NAME, NODENAME, ELEM) \
 typedef struct NAME NAME; \
 typedef struct NODENAME NODENAME; \
 typedef struct NAME \
@@ -134,7 +134,13 @@ typedef struct NAME \
 	NODENAME *last; \
 	u64 len; \
 	u64 totalSize; \
-}NAME; \
+}NAME; 
+
+#define BASE_CREATE_LL_JUST_LIST_DECLS_EX(NAME, NODENAME, ELEM) \
+BASE_CREATE_LL_JUST_LIST_TYPE_DECLS_EX(NAME, NODENAME, ELEM) \
+BASE_CREATE_LL_JUST_LIST_FUNC_DECLS_EX(NAME, NODENAME, ELEM)
+
+#define BASE_CREATE_LL_JUST_LIST_FUNC_DECLS_EX(NAME, NODENAME, ELEM) \
 typedef bool (*NAME##FirstFunc)(NODENAME *node); \
 typedef bool (*NAME##FirstCaptureFunc)(NODENAME *node, void *capture); \
 inline NODENAME *NAME##First(NAME *l, NAME##FirstFunc func); \
@@ -147,7 +153,7 @@ void NAME##InsertNode(NAME *l, NODENAME *prev, NODENAME *node); \
 void NAME##PushLast(struct Arena *arena, NAME *l, ELEM value); \
 void NAME##PushFirst(struct Arena *arena, NAME *l, ELEM value); \
 void NAME##PushInsert(struct Arena *arena, NAME *l, NODENAME *prev, ELEM value); \
-ArrayView NAME##FlattenToArray(struct Arena *arena, NAME *l); \
+ArrayView NAME##FlattenToArray(struct Arena *arena, NAME *l);
 
 #define BASE_CREATE_LL_JUST_NODE_DECLS_EX(NAME, NODENAME, ELEM) \
 typedef struct NAME NAME; \
