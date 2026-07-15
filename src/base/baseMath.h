@@ -139,6 +139,7 @@ typedef struct vec2f64
     };   
 }vec2f64;
 
+metagen_introspect(only: "x", "y")
 typedef struct vec2i
 {
     union

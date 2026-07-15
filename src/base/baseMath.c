@@ -466,8 +466,8 @@ mat3f mat3fGiveRotateY(f32 rad)
     mat3f m =
     {
         .m00 = c,
+        .m02 = s,
         .m11 = 1,
-        .m12 = s,
         .m20 = -s,
         .m22 = c,
     };

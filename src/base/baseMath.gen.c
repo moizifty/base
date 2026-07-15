@@ -1,7 +1,7 @@
 /**********************************************************************/
 // GENERATED FILE
 // Input: .\src\base\baseMath.h
-// Date-Time: 28/3/2026 - 14:51
+// Date-Time: 23/6/2026 - 20:55
 /**********************************************************************/
 
 #include "baseMath.gen.h"
@@ -22,6 +22,23 @@ MetagenStruct gvec2fStructInfo=
    .size=8,
    .align=4,
    .membs=&gvec2fMembDefsTable,
+};
+MetagenStructMembArray gvec2iMembDefsTable=
+{
+	.data=(MetagenStructMemb[2])
+	{
+		{.name = STR8_LIT_COMP_CONST("x"), .note = STR8_LIT_COMP_CONST(""), .type = METAGEN_TYPE_i64, .size=8, .offset=0,},
+		{.name = STR8_LIT_COMP_CONST("y"), .note = STR8_LIT_COMP_CONST(""), .type = METAGEN_TYPE_i64, .size=8, .offset=8,},
+	},
+	.len=2,
+};
+MetagenStruct gvec2iStructInfo=
+{
+   .name=STR8_LIT_COMP_CONST("vec2i"),
+   .typeid=METAGEN_TYPE_vec2i,
+   .size=16,
+   .align=8,
+   .membs=&gvec2iMembDefsTable,
 };
 MetagenStructMembArray gvec3fMembDefsTable=
 {
