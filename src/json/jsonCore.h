@@ -16,7 +16,15 @@ typedef enum JSONValueKind
     JSON_VALUE_STRING,
 }JSONValueKind;
 
-BASE_CREATE_LL_DECLS(JSONValueList, JSONValue)
+typedef struct JSONValueList 
+{ 
+    struct JSONValueListNode *first; 
+    struct JSONValueListNode *last; 
+    u64 len; 
+    u64 totalSize; 
+}JSONValueList;
+
+typedef struct JSONValue JSONValue;
 BASE_CREATE_EFFICIENT_LL_DECLS(JSONObjMembList, JSONValue)
 
 typedef struct JSONValue
@@ -27,10 +35,13 @@ typedef struct JSONValue
     {
         bool asBool;
         JSONValueList asArray;
+        JSONObjMembList asObj;
         f64 asNumber;
         str8 asStr8;
     };
 }JSONValue;
+
+BASE_CREATE_LL_JUST_NODE_DECLS_EX(JSONValueList, JSONValueListNode, JSONValue)
 
 typedef struct JSONObjMemb
 {
