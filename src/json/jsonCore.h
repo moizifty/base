@@ -8,6 +8,7 @@
 
 typedef enum JSONValueKind
 {
+    JSON_VALUE_INVALID,
     JSON_VALUE_BOOL,
     JSON_VALUE_NULL,
     JSON_VALUE_OBJ,
@@ -42,6 +43,7 @@ typedef struct JSONValue
 }JSONValue;
 
 BASE_CREATE_LL_JUST_NODE_DECLS_EX(JSONValueList, JSONValueListNode, JSONValue)
+BASE_CREATE_LL_JUST_LIST_DECLS_EX(JSONValueList, JSONValueListNode, JSONValue)
 
 typedef struct JSONObjMemb
 {
