@@ -1,8 +1,9 @@
 #include "jsonParser.h"
 
-JSONValue jsonParserTryParseStringLiteral(str8 jsonStr)
+JSONValue jsonParserTryParseStringLiteral(str8 jsonStr, u64 *charsToAdvance)
 {
     JSONValue literal = {0};
+    *charsToAdvance = 0;
 
     if (jsonStr.data[0] == '\"')
     {
@@ -34,11 +35,14 @@ JSONValue jsonParserTryParseStringLiteral(str8 jsonStr)
         literal.asStr8 = Str8SubStr8(literal.strRep, 1, literal.strRep.len - 1);
     }
 
+    *charsToAdvance = literal.strRep.len;
     return literal;
 }
-JSONValue jsonParserTryParseLiteral(str8 jsonStr)
+JSONValue jsonParserTryParseLiteral(str8 jsonStr, u64 *charsToAdvance)
 {
     JSONValue literal = {0};
+    *charsToAdvance = 0;
+
     switch (jsonStr.data[0])
     {
         case 't':
@@ -56,28 +60,25 @@ JSONValue jsonParserTryParseLiteral(str8 jsonStr)
             {
                 literal.kind = JSON_VALUE_BOOL;
                 literal.asBool = false;
-                return literal;
             }
             else if(Str8Equals(literal.strRep, STR8("true"), 0))
             {
                 literal.kind = JSON_VALUE_BOOL;
                 literal.asBool = true;
-                return literal;
             }
             else if(Str8Equals(literal.strRep, STR8("null"), 0))
             {
                 literal.kind = JSON_VALUE_NULL;
-                return literal;
             }
             else
             {
-                return literal;
+                return (JSONValue){0};
             }
         }break;
 
         case '\"':
         {
-            return jsonParserTryParseStringLiteral(jsonStr);
+            return jsonParserTryParseStringLiteral(jsonStr, charsToAdvance);
         }break;
 
         case '0':
@@ -125,13 +126,16 @@ JSONValue jsonParserTryParseLiteral(str8 jsonStr)
         }break;
     }
 
+    *charsToAdvance = literal.strRep.len;
     return literal;
 }
-str8 jsonParserSkipWhitespace(str8 jsonStr)
+str8 jsonParserSkipWhitespace(str8 jsonStr, u64 *charsToAdvance)
 {
+    *charsToAdvance = 0;
     while (jsonStr.len && isspace(*jsonStr.data))
     {
         jsonStr = Str8Skip(jsonStr, 1);
+        *charsToAdvance += 1;
     }
 
     return jsonStr;
@@ -146,7 +150,8 @@ JSONValue JSONValueFromStr8(Arena *arena, str8 str)
         return ret;
     }
 
-    str = jsonParserSkipWhitespace(str);
+    u64 dummy = 0;
+    str = jsonParserSkipWhitespace(str, &dummy);
 
     switch (str.data[0])
     {
@@ -156,14 +161,15 @@ JSONValue JSONValueFromStr8(Arena *arena, str8 str)
             ret.strRep.data = str.data;
             str = Str8Skip(str, 1);
 
+            u64 extraCharsToAdvance = 0;
             while (str.len && str.data[0] != '}')
             {
-                str = jsonParserSkipWhitespace(str);
-
+                str = jsonParserSkipWhitespace(str, &extraCharsToAdvance);
+                
                 // maybe do this in temp arena first then copy after all valid obj membs have been parsed
                 // because right now if the code fails, it still allocates, which isnt really ideal
                 JSONObjMemb *memb = arenaPushType(arena, JSONObjMemb);
-                JSONValue membNameValue = jsonParserTryParseStringLiteral(str);
+                JSONValue membNameValue = jsonParserTryParseStringLiteral(str, &extraCharsToAdvance);
 
                 if (membNameValue.kind != JSON_VALUE_INVALID)
                 {
@@ -171,16 +177,19 @@ JSONValue JSONValueFromStr8(Arena *arena, str8 str)
 
                     memb->name = Str8PushFmt(arena, "%S", membNameValue.asStr8);
 
-                    str = jsonParserSkipWhitespace(str);
+                    str = jsonParserSkipWhitespace(str, &extraCharsToAdvance);
 
                     if (str.data[0] == ':')
                     {
                         str = Str8Skip(str, 1);
 
+                        str = jsonParserSkipWhitespace(str, &extraCharsToAdvance);
+
                         memb->value = JSONValueFromStr8(arena, str);
                         
                         str = Str8Skip(str, memb->value.strRep.len);
-                        str = jsonParserSkipWhitespace(str);
+
+                        str = jsonParserSkipWhitespace(str, &extraCharsToAdvance);
 
                         if (str.data[0] != '}')
                         {
@@ -226,13 +235,18 @@ JSONValue JSONValueFromStr8(Arena *arena, str8 str)
             ret.kind = JSON_VALUE_ARRAY;
             ret.strRep.data = str.data;
             str = Str8Skip(str, 1);
+            u64 extraCharsToAdvance = 0;
 
             while (str.len && str.data[0] != ']')
             {
+                str = jsonParserSkipWhitespace(str, &extraCharsToAdvance);
+
                 JSONValue value = JSONValueFromStr8(arena, str);
                 if (value.kind != JSON_VALUE_INVALID)
                 {
                     str = Str8Skip(str, value.strRep.len);
+
+                    str = jsonParserSkipWhitespace(str, &extraCharsToAdvance);
 
                     if (str.data[0] != ']')
                     {
@@ -283,7 +297,7 @@ JSONValue JSONValueFromStr8(Arena *arena, str8 str)
         case '8':
         case '9':
         {
-            ret = jsonParserTryParseLiteral(str);
+            ret = jsonParserTryParseLiteral(str, &dummy);
 
             if (ret.kind == JSON_VALUE_INVALID)
             {
