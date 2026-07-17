@@ -57,9 +57,11 @@ typedef struct JSONObjMemb
 // path can be example: obj.child.subchild.etc
 // if its an array, you can do, obj.child.array[9]
 // or even obj.child.array[12].name.len[1]
-JSONValue *jsonFind(JSONValue root, str8 path);
+JSONValue *jsonFind(JSONValue *root, str8 path);
 
-f64 jsonFindNumber(JSONValue root, str8 path, f64 default);
-str8 jsonFindStr8(JSONValue root, str8 path, str8 default);
-bool jsonFindBool(JSONValue root, str8 path, bool default);
+f64 jsonFindNumber(JSONValue *root, str8 path, f64 def);
+str8 jsonFindStr8(JSONValue *root, str8 path, str8 def);
+bool jsonFindBool(JSONValue *root, str8 path, bool def);
+
+JSONValue *jsonArrayIndex(JSONValue *array, u64 index);
 #endif
