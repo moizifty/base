@@ -12,9 +12,31 @@ JSONValue *jsonFind(JSONValue *root, str8 path)
 
         BASE_LIST_FOREACH(Str8ListNode, pathNode, pathSplit)
         {
-            if (root->kind == JSON_VALUE_OBJ)
+            u64 subscript = 0;
+            if (U64TryFromStr8(pathNode->val, &subscript) && root->kind == JSON_VALUE_ARRAY)
+            {
+                if (subscript < root->asArray.len)
+                {
+                    u64 i = 0;
+                    BASE_LIST_FOREACH_INDEX(JSONValueListNode, valNode, root->asArray, i)
+                    {
+                        if (i == subscript)
+                        {
+                            root = &valNode->val;
+                            break;
+                        }
+                    }
+                }
+                else
+                {
+                    baseTempEnd(temp);
+                    return null;
+                }
+            }
+            else if (root->kind == JSON_VALUE_OBJ)
             {
                 bool found = false;
+                
                 BASE_LIST_FOREACH(JSONObjMemb, memb, root->asObj)
                 {
                     if (Str8Equals(memb->name, pathNode->val, 0))
